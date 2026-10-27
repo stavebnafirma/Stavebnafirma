@@ -229,7 +229,9 @@ async function offerFile(filename,data){
    ===================================================================== */
 let BILL=null,PRICES=null,billBusy=false;
 async function loadBilling(){if(!TID)return;const {data,error}=await SB.rpc("billing_status",{t:TID});if(!error&&data)BILL=data}
-async function loadPrices(){if(PRICES)return;try{const {data,error}=await SB.functions.invoke("billing",{body:{action:"prices"}});if(!error&&data&&data.prices)PRICES=data.prices;else PRICES={}}catch(e){PRICES={}}render()}
+let STRIPE_PRICES=[];
+async function loadPrices(){if(PRICES)return;PRICES={};try{const {data,error}=await SB.functions.invoke("billing",{body:{action:"prices"}});if(!error&&data&&data.prices){PRICES=data.prices;STRIPE_PRICES=data.stripePrices||[]}}catch(e){}render()}
+const pricesMissing=()=>{if(!PRICES||!Object.keys(PRICES).length)return null;const miss=[];MODULES.forEach(([k])=>["month","year"].forEach(i=>{if(!(PRICES[k]&&PRICES[k][i]))miss.push(k+"_"+i)}));return miss};
 const daysLeft=iso=>Math.ceil((new Date(iso)-new Date())/864e5);
 const dmy=iso=>{const d=new Date(iso);return `${d.getDate()}. ${d.getMonth()+1}. ${d.getFullYear()}`};
 function modStatus(k){if(!BILL)return {t:"",cls:""};const pm=(BILL.paid_modules||{})[k];
@@ -259,6 +261,10 @@ function modulesHTML(){
     ${admin&&!B.complimentary?`<div class="seg" role="radiogroup" style="align-self:flex-start"><label><input type="radio" name="bInt" value="month" ${D.interval==="month"?"checked":""}><span>Mesačne</span></label><label><input type="radio" name="bInt" value="year" ${D.interval==="year"?"checked":""}><span>Ročne${yearSave?` (−${yearSave} %)`:""}</span></label></div>`:""}
     <div class="mods">${cards}</div>
     ${admin&&!B.complimentary?`${PRICES&&!Object.keys(PRICES).length?`<div class="note cnote">Ceny sa nepodarilo načítať zo Stripe. Platbu zatiaľ nie je možné spustiť.</div>`:""}
+      ${(()=>{const miss=pricesMissing();if(!miss||!miss.length)return "";
+        return `<div class="note cnote hard"><b>V Stripe chýbajú ceny s kľúčom (Lookup key):</b> ${miss.map(x=>`<code>${x}</code>`).join(", ")}.
+          ${STRIPE_PRICES.length?`<div style="margin-top:6px">Ceny, ktoré v Stripe sú:</div><ul style="margin:4px 0 0 18px">${STRIPE_PRICES.map(p=>`<li>${esc(p.product||"?")} – ${p.amount.toLocaleString("sk-SK",{minimumFractionDigits:2})} € / ${p.interval==="year"?"rok":p.interval==="month"?"mesiac":esc(p.interval)} – lookup key: <b>${p.lookup_key?esc(p.lookup_key):"nevyplnený"}</b></li>`).join("")}</ul>`:`<div style="margin-top:6px">V Stripe (v režime, ktorého kľúč je v Supabase) sa nenašla žiadna opakovaná cena.</div>`}
+          <div style="margin-top:6px">Doplň kľúč pri každej cene v Stripe: produkt → cena → ⋯ Edit price → Lookup key.</div></div>`})()}
       <div class="row"><b>Spolu: ${sum.toLocaleString("sk-SK",{minimumFractionDigits:2,maximumFractionDigits:2})} € / ${D.interval==="year"?"rok":"mesiac"}</b><span class="muted" style="font-size:13px">${PRICES&&Object.keys(PRICES).length?"bez DPH":""}</span></div>
       <div class="row"><button class="btn primary" data-a="billPay" ${billBusy||!D.mods.length?"disabled":""}>${billBusy?"Pripravujem…":hasSub?"Uložiť zmenu predplatného":"Prejsť na platbu"}</button>
         ${B.has_customer?`<button class="btn" data-a="billPortal" ${billBusy?"disabled":""}>Platobná karta, faktúry a zrušenie</button>`:""}</div>

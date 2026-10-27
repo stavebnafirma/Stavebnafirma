@@ -20,7 +20,10 @@ Deno.serve(async (req) => {
       const P = await pricesByKey();
       const out: Record<string, Record<string, { amount: number; currency: string } | null>> = {};
       for (const m of MODULES) { out[m] = {}; for (const i of INTERVALS) { const p = P[lookupKey(m, i)]; out[m][i] = p ? { amount: p.unit_amount / 100, currency: p.currency } : null; } }
-      return json({ prices: out });
+      // na kontrolu nastavenia: všetky aktívne opakované ceny v Stripe (aj bez správneho lookup_key)
+      const all = await stripe("GET", "prices", { active: true, type: "recurring", limit: 100, expand: ["data.product"] }).catch(() => ({ data: [] }));
+      const stripePrices = (all.data || []).map((p: any) => ({ product: p.product?.name || "", lookup_key: p.lookup_key || "", interval: p.recurring?.interval || "", amount: (p.unit_amount || 0) / 100, livemode: !!p.livemode }));
+      return json({ prices: out, stripePrices });
     }
 
     const tid = String(body.tenant_id || "");
