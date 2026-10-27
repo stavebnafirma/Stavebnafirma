@@ -1465,6 +1465,11 @@ function attSet(wid,d){if(!canEdit("personal"))return;const tool=view.attTool||"
 function newPdf(orientation){if(!window.jspdf||!window.jspdf.jsPDF){toast("Knižnica na PDF sa nenačítala. Skús stránku obnoviť.");return null}
   const doc=new window.jspdf.jsPDF({orientation,unit:"mm",format:"a4"});if(typeof doc.autoTable!=="function"){toast("Knižnica na tabuľky v PDF sa nenačítala.");return null}
   doc.addFileToVFS("DVC.ttf",PDF_FONT_R);doc.addFont("DVC.ttf","DVC","normal");doc.addFileToVFS("DVCB.ttf",PDF_FONT_B);doc.addFont("DVCB.ttf","DVC","bold");return doc}
+/* pečiatka (s podpisom) nad podpisovou čiarou: x = začiatok čiary, yLine = výška čiary */
+const firmStamp=()=>S.firm&&S.firm.stamp&&S.firm.stamp.data?S.firm.stamp:null;
+const stampGap=()=>firmStamp()?12:0;
+function pdfStamp(doc,st,x,yLine,maxW,h){if(!st||!st.data||!st.w||!st.h)return;h=h||22;maxW=maxW||60;let w=h*st.w/st.h,hh=h;if(w>maxW){w=maxW;hh=w*st.h/st.w}
+  try{doc.addImage(st.data,"PNG",x+4,yLine-1-hh,w,hh)}catch(e){}}
 function pdfFirmHeader(doc,title,sub){const F=S.firm||{},W=doc.internal.pageSize.getWidth();let x=14;
   if(F.logo){const lh=10,lw=Math.min(40,lh*F.logo.w/F.logo.h);try{doc.addImage(F.logo.data,"PNG",14,8,lw,lw*F.logo.h/F.logo.w);x=14+lw+4}catch(e){}}
   doc.setFont("DVC","bold");doc.setFontSize(13);doc.text(title,x,14);doc.setFont("DVC","normal");doc.setFontSize(8.5);
@@ -1483,8 +1488,8 @@ function attEmployeePage(doc,w,days,from,to){
   doc.setFont("DVC","bold");doc.setFontSize(9.5);doc.text("Súhrn za obdobie",14,y);doc.setFont("DVC","normal");doc.setFontSize(9);
   const lines=[["Fond pracovného času",`${nf1(s.fond)} h`],["Odpracované hodiny (vrátane služobných ciest)",`${nf1(s.h)} h`],["Dovolenka",`${nf1(s.D)} dní`],["Práceneschopnosť (PN)",`${s.PN} dní`],["OČR",`${s.OCR} dní`],["Priepustky",`${nf1(s.P)} h`],["Náhradné voľno",`${s.NV} dní`],["Neplatené voľno",`${s.NPV} dní`],["Absencia",`${s.A} dní`]];
   lines.forEach(([l,v],i)=>{doc.text(l,14,y+6+i*4.6);doc.text(v,110,y+6+i*4.6,{align:"right"})});
-  y=y+6+lines.length*4.6+16;if(y>275){doc.addPage();y=40}
-  doc.line(14,y,84,y);doc.text("Podpis zamestnanca",14,y+4);doc.line(126,y,196,y);doc.text(`Za zamestnávateľa${S.firm.repName?": "+S.firm.repName:""}`,126,y+4)}
+  y=y+6+lines.length*4.6+16+stampGap();if(y>275){doc.addPage();y=40}
+  pdfStamp(doc,firmStamp(),126,y);doc.line(14,y,84,y);doc.text("Podpis zamestnanca",14,y+4);doc.line(126,y,196,y);doc.text(`Za zamestnávateľa${S.firm.repName?": "+S.firm.repName:""}`,126,y+4)}
 function attExport(from,to,who){
   if(!from||!to||to<from){toast("Skontroluj obdobie od – do");return}
   const days=daysBetween(from,to);if(days.length>370){toast("Obdobie môže mať najviac jeden rok");return}
@@ -1595,7 +1600,7 @@ function skolPDF(s){
     columnStyles:{0:{cellWidth:13,halign:"center"},1:{cellWidth:58},2:{cellWidth:18,halign:"center"},3:{cellWidth:40},4:{cellWidth:"auto"}}});
   y=doc.lastAutoTable.finalY+8;if(y>235){doc.addPage();y=30}
   doc.setFontSize(8.5);doc.setTextColor(70);const t=doc.splitTextToSize("Svojím podpisom účastník potvrdzuje, že sa školenia zúčastnil, obsahu porozumel a bude sa ním riadiť.",182);doc.text(t,14,y);doc.setTextColor(0);
-  y+=t.length*4+20;doc.setFontSize(9);doc.line(14,y,84,y);doc.text(`Školiteľ${s.lector?": "+s.lector:""}`,14,y+4);doc.text("dátum, podpis",14,y+8);
+  y+=t.length*4+20+stampGap();if(y>270){doc.addPage();y=40}doc.setFontSize(9);pdfStamp(doc,firmStamp(),126,y);doc.line(14,y,84,y);doc.text(`Školiteľ${s.lector?": "+s.lector:""}`,14,y+4);doc.text("dátum, podpis",14,y+8);
   doc.line(126,y,196,y);doc.text(`Za zamestnávateľa${F.repName?": "+F.repName:""}`,126,y+4);doc.text("dátum, podpis",126,y+8);
   const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(`${skolName(s)} · ${plain(d2(s.date))}`,14,290);doc.text(`Strana ${k} / ${n}`,196,290,{align:"right"});doc.setTextColor(0)}
   offerFile(`Prezencna_listina_${s.type}_${s.date}`.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w.-]+/g,"_")+".pdf",doc.output("arraybuffer"))}
@@ -1807,7 +1812,7 @@ function logPDF(m,from,to){const rows=logRowsFor(m,from,to);if(!rows.length){toa
     styles:{font:"DVC",fontSize:8.5,cellPadding:1.3,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255},
     footStyles:{font:"DVC",fontStyle:"bold",fillColor:[226,240,231],textColor:[20,28,24]},showFoot:"lastPage",showHead:"everyPage",
     columnStyles:{0:{cellWidth:8},1:{cellWidth:20},2:{cellWidth:36},3:{cellWidth:36},5:{cellWidth:34},6:{cellWidth:16,halign:"right"},7:{cellWidth:16,halign:"right"},8:{cellWidth:44}}});
-  let y=doc.lastAutoTable.finalY+16;if(y>190){doc.addPage();y=30}doc.setFontSize(8.5);doc.line(10,y,80,y);doc.text("Podpis vodiča",10,y+4);doc.line(217,y,287,y);doc.text("Skontroloval, dátum",217,y+4);
+  let y=doc.lastAutoTable.finalY+16+stampGap();if(y>190){doc.addPage();y=40}doc.setFontSize(8.5);pdfStamp(doc,firmStamp(),217,y);doc.line(10,y,80,y);doc.text("Podpis vodiča",10,y+4);doc.line(217,y,287,y);doc.text("Skontroloval, dátum",217,y+4);
   const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(`Kniha jázd · ${m.name}`,10,205);doc.text(`Strana ${k} / ${n}`,287,205,{align:"right"});doc.setTextColor(0)}
   offerFile(`Kniha_jazd_${m.ecv||m.name}_${from}_${to}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_")+".pdf",doc.output("arraybuffer"))}
 function logExportHTML(){const vs=(S.machines||[]).filter(x=>NEEDS_DRIVER.includes(x.cat));if(!vs.length)return "";const ym=todayIso().slice(0,7);
@@ -1910,7 +1915,7 @@ function dxPDF(mode){const X=dxState(),rows=dxRows(X);if(!rows.length){toast("Ž
   if(pre){doc.text("* predbežné – úloha nemá vyplnenú knihu jázd (hodiny z času úlohy, km z odhadu).",10,y);y+=4.5}
   if(T.own){doc.text("Pri úlohách s dohodnutou cenou sú hodiny a km informatívne, suma je dohodnutá cena úlohy.",10,y);y+=4.5}
   doc.text("Sumy sú bez DPH.",10,y);y+=14;if(y>190){doc.addPage();y=30}
-  doc.setFontSize(8.5);doc.line(10,y,80,y);doc.text("Vypracoval, dátum",10,y+4);doc.line(217,y,287,y);doc.text("Odsúhlasil (objednávateľ)",217,y+4);
+  y+=stampGap();if(y>195){doc.addPage();y=40}doc.setFontSize(8.5);pdfStamp(doc,firmStamp(),10,y);doc.line(10,y,80,y);doc.text("Vypracoval, dátum",10,y+4);doc.line(217,y,287,y);doc.text("Odsúhlasil (objednávateľ)",217,y+4);
   const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(`Súpis výkonov strojov · ${plain(d2(X.from))} – ${plain(d2(X.to))}`,10,205);doc.text(`Strana ${k} / ${n}`,287,205,{align:"right"});doc.setTextColor(0)}
   offerFile(dxFile(X,mode==="days"?"po_dnoch":"sumar")+".pdf",doc.output("arraybuffer"))}
 function dxFile(X,suf){return `Supis_strojov_${X.client||"vsetci"}_${X.from}_${X.to}_${suf}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_")}
@@ -2036,7 +2041,7 @@ function wTicket(doc,w,y0,label){const F=S.firm||{},L=12,Rx=198;let x=L;
       ["Materiál",w.material||"","2. váženie",w.time2?`${plain(d2(w.date2||w.date))} ${w.time2}`:""],
       ["Hmotnosť brutto",{content:kgNum(wKg(w.gross))+" kg",styles:{halign:"right"}},"Hmotnosť tara",{content:kgNum(wKg(w.tare))+" kg",styles:{halign:"right"}}],
       [{content:"HMOTNOSŤ NETTO",colSpan:2,styles:{fontStyle:"bold",fontSize:12,fillColor:[226,240,231]}},{content:`${kgNum(wNet(w))} kg  (${tNum(wNet(w))} t)`,colSpan:2,styles:{fontStyle:"bold",fontSize:13,halign:"right",fillColor:[226,240,231]}}]]});
-  const y=y0+124;doc.setFontSize(8.5);doc.setDrawColor(120);doc.line(L,y,L+62,y);doc.text("Vážil (meno a podpis)",L,y+4);doc.line(Rx-62,y,Rx,y);doc.text("Vodič (podpis)",Rx-62,y+4)}
+  const y=y0+124;doc.setFontSize(8.5);doc.setDrawColor(120);pdfStamp(doc,firmStamp(),L,y,58,20);doc.line(L,y,L+62,y);doc.text("Vážil (meno a podpis)",L,y+4);doc.line(Rx-62,y,Rx,y);doc.text("Vodič (podpis)",Rx-62,y+4)}
 function wXLS(){const X=wState(),list=wFiltered(X).slice().reverse();if(!window.XLSX){toast("Knižnica na Excel sa nenačítala. Skús stránku obnoviť.");return}
   const a=[["Váženie"],[`Obdobie: ${d2(X.from)} – ${d2(X.to)}${X.mat?" · "+X.mat:""}`],[],["Č. lístka","Dátum","Čas","Druh","Stredisko","EČV","Vozidlo","Materiál","Brutto kg","Tara kg","Netto kg","Netto t"]];
   list.forEach(w=>{const m=wMachine(w.ecv);a.push([String(w.no),d2(w.date),w.time||"",wDirTxt(w),centerOf(w.center)?.name||"",w.ecv||"",m?m.name:"",w.material||"",wKg(w.gross)||"",wKg(w.tare)||"",wDone(w)?wNet(w):"nedokončené",wDone(w)?Math.round(wNet(w))/1000:""])});
@@ -2364,7 +2369,7 @@ function rPDF(l){const doc=newPdf("portrait");if(!doc)return;const days=rDays(l.
   const para=(txt,bold)=>{doc.setFont("DVC",bold?"bold":"normal");const ln=doc.splitTextToSize(txt,182);ln.forEach(t=>{if(y>275){doc.addPage();y=20}doc.text(t,14,y);y+=3.9});y+=1.2};
   if(l.note)para(`Poznámka: ${l.note}`);
   const terms=rentTerms().trim();if(terms){para("Podmienky požičovne",true);terms.split(/\n+/).filter(x=>x.trim()).forEach(p=>para(p.trim()))}
-  doc.setFont("DVC","normal");y+=14;if(y>255){doc.addPage();y=30}doc.line(14,y,84,y);doc.text("Prenajímateľ – vydal (podpis)",14,y+4);doc.line(126,y,196,y);doc.text("Nájomca – prevzal (podpis)",126,y+4);
+  doc.setFont("DVC","normal");y+=14+stampGap();if(y>255){doc.addPage();y=40}pdfStamp(doc,firmStamp(),14,y);doc.line(14,y,84,y);doc.text("Prenajímateľ – vydal (podpis)",14,y+4);doc.line(126,y,196,y);doc.text("Nájomca – prevzal (podpis)",126,y+4);
   y+=22;doc.line(14,y,84,y);doc.text("Vrátené dňa, prevzal (podpis)",14,y+4);doc.line(126,y,196,y);doc.text("Záloha vrátená (podpis)",126,y+4);
   offerFile(`Vypozicny_list_${l.no}.pdf`,doc.output("arraybuffer"))}
 /* --- plánovač --- */
@@ -2615,7 +2620,7 @@ function tripPDF(t){
   let y=kv([["Zamestnanec",fullName(w)],["Osobné číslo / pozícia",[w.persNo,w.profession].filter(Boolean).join(" · ")],["Zamestnávateľ",[F.name,F.ico?`IČO ${F.ico}`:""].filter(Boolean).join(", ")],
     ["Začiatok cesty",fmtDT(I.start)],["Koniec cesty",fmtDT(I.end)],["Krajina",C.l],...(I.country!=="SK"?[["Prechod hranice SR",[I.borderOut&&"tam: "+fmtDT(I.borderOut),I.borderIn&&"späť: "+fmtDT(I.borderIn)].filter(Boolean).join("   ")||"neuvedené"]]:[]),
     ["Miesto rokovania",I.place||""],["Účel cesty",I.purpose||""],["Dopravný prostriedok",vehLabel(I)+(I.veh==="own"&&R.vehKm?`, ${nf1(R.vehKm)} km`:"")],["Preddavok",R.advance?eur(R.advance):"—"]],26);
-  y+=14;doc.setFontSize(8.5);doc.line(14,y,84,y);doc.text("Podpis zamestnanca",14,y+4);doc.line(126,y,196,y);doc.text(`Cestu povolil${F.repName?": "+F.repName:""}`,126,y+4);
+  y+=14+stampGap();if(y>275){doc.addPage();y=40}doc.setFontSize(8.5);pdfStamp(doc,firmStamp(),126,y);doc.line(14,y,84,y);doc.text("Podpis zamestnanca",14,y+4);doc.line(126,y,196,y);doc.text(`Cestu povolil${F.repName?": "+F.repName:""}`,126,y+4);
   y+=12;doc.setFont("DVC","bold");doc.setFontSize(11);doc.text("Vyúčtovanie pracovnej cesty",14,y);doc.setFont("DVC","normal");
   const body=R.days.map(x=>[plain(d2(x.d)),hfmt(x.tot),x.frH?hfmt(x.frH):"—",[x.M.b&&"R",x.M.l&&"O",x.M.d&&"V"].filter(Boolean).join(" ")||"—",x.dom?plain(eur(x.dom)):"—",x.fr?plain(money(x.fr,R.cur)):"—"]);
   doc.autoTable({head:[["Dátum","Trvanie","Z toho v zahraničí","Jedlo","Stravné SR","Stravné zahr."]],body,startY:y+3,margin:{left:14,right:14},theme:"grid",
@@ -2629,7 +2634,7 @@ function tripPDF(t){
   doc.autoTable({body:sum,startY:doc.lastAutoTable.finalY+4,margin:{left:90,right:14},theme:"grid",styles:{font:"DVC",fontSize:9,cellPadding:1.4,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},
     columnStyles:{1:{halign:"right",fontStyle:"bold",cellWidth:38}},didParseCell:c=>{if(/^Spolu|Doplatok|Preplatok/.test(c.row.raw[0]))c.cell.styles.fillColor=[226,240,231]}});
   y=doc.lastAutoTable.finalY+6;doc.setFontSize(7.5);doc.setTextColor(90);const note=doc.splitTextToSize(`Vyúčtovanie podľa zákona č. 283/2002 Z. z. o cestovných náhradách; ${TRAVEL.source}. R/O/V = bezplatne poskytnuté raňajky/obed/večera.`,182);doc.text(note,14,y);doc.setTextColor(0);
-  y+=note.length*3.5+14;if(y>275){doc.addPage();y=30}doc.setFontSize(8.5);doc.line(14,y,84,y);doc.text("Vyúčtoval (zamestnanec), dátum",14,y+4);doc.line(126,y,196,y);doc.text("Schválil, dátum",126,y+4);
+  y+=note.length*3.5+14+stampGap();if(y>275){doc.addPage();y=40}doc.setFontSize(8.5);pdfStamp(doc,firmStamp(),126,y);doc.line(14,y,84,y);doc.text("Vyúčtoval (zamestnanec), dátum",14,y+4);doc.line(126,y,196,y);doc.text("Schválil, dátum",126,y+4);
   offerFile(`Cestovny_prikaz_${fullName(w)}_${t.from}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_")+".pdf",doc.output("arraybuffer"))}
 
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
@@ -3330,7 +3335,7 @@ function invPill(inv){const [l,c]=INV_ST[inv.status]||INV_ST.open;return `<span 
 const ACT={submitted:"Vystavil súpis a poslal na odsúhlasenie",approved:"Odsúhlasil súpis",approvedDirect:"Vystavil súpis (stavba nemá stavebný dozor)",returned:"Vrátil na prepracovanie",unlocked:"Odomkol súpis",invoiceNo:"Doplnil číslo faktúry"};
 function dt(iso){if(!iso)return "";const [d,t]=iso.split("T");return d2(d)+(t?" "+t.slice(0,5):"")}
 const nowIso=()=>{const d=new Date(),z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`};
-function logInv(inv,action,note){(inv.history=inv.history||[]).push({at:nowIso(),by:me.id,action,note:note||""})}
+function logInv(inv,action,note){const h={at:nowIso(),by:me.id,action,note:note||""};if(action==="approved"){h.byName=me.name||me.email;if(me.stamp)h.stamp=me.stamp}(inv.history=inv.history||[]).push(h)}
 function approvalOf(inv){return (inv.history||[]).slice().reverse().find(h=>h.action==="approved"||h.action==="approvedDirect")}
 /* upozornenia pre prihláseného používateľa */
 function myNotices(){const out=[];visibleProjects().forEach(p=>(p.invoices||[]).forEach(inv=>{
@@ -3498,12 +3503,13 @@ function exportPDF(p,inv){
   doc.setFontSize(9);doc.setFont("DVC","bold");doc.text(`Aktuálne obdobie spolu bez DPH: ${E(T.cu)}`,mL,y);
   doc.setFont("DVC","normal");doc.setFontSize(8);
   doc.text(`Vyčerpané vrátane aktuálneho obdobia: ${E(T.pr+T.cu)} (${pct(T.pr+T.cu,T.b)} % z rozpočtu)`,mL,y+5);
-  const ST=S.firm&&S.firm.stamp;if(ST){const sh=22,sw=Math.min(60,sh*ST.w/ST.h);try{doc.addImage(ST.data,"PNG",mL+5,y+33-sw*ST.h/ST.w,sw,sw*ST.h/ST.w)}catch(e){}}
+  pdfStamp(doc,firmStamp(),mL,y+34);
   doc.line(mL,y+34,mL+70,y+34);doc.text(`Vypracoval za zhotoviteľa${S.firm.repName?": "+S.firm.repName:""}, dátum, podpis`,mL,y+38);
   doc.line(W-mL-70,y+34,W-mL,y+34);doc.text("Odsúhlasil stavebný dozor, dátum, podpis",W-mL-70,y+38);
-  const ap=approvalOf(inv);if(ap&&ap.action==="approved"){const au=user(ap.by);
-    if(au&&au.stamp){const st=au.stamp,sw=Math.min(60,22*st.w/st.h);try{doc.addImage(st.data,"PNG",W-mL-65,y+33-sw*st.h/st.w,sw,sw*st.h/st.w)}catch(e){}}
-    doc.setFont("DVC","bold");doc.text(`Odsúhlasené v aplikácii: ${au?.name||""}, ${dt(ap.at)}`,W-mL-70,y+43);doc.setFont("DVC","normal")}
+  const ap=approvalOf(inv);if(ap&&ap.action==="approved"){const au=user(ap.by),nm=ap.byName||(au&&au.name)||"",st=ap.stamp||(au&&au.stamp);
+    pdfStamp(doc,st,W-mL-70,y+34,60,20);
+    const [ad,at]=String(ap.at||"").split("T");doc.setFont("DVC","bold");doc.setFontSize(8.5);
+    doc.text(`Odsúhlasené: ${nm}${ad?` dňa ${plain(d2(ad))}`:""}${at?` o ${at.slice(0,5)}`:""}`,W-mL-70,y+11);doc.setFont("DVC","normal");doc.setFontSize(8)}
   const n=doc.internal.getNumberOfPages();
   for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(`${p.name} · súpis č. ${inv.no} · ${plain(periodLabel(inv))}`,mL,205);doc.text(`Strana ${k} / ${n}`,W-mL,205,{align:"right"});doc.setTextColor(0)}
   offerFile(fileBase(p,inv)+".pdf",doc.output("arraybuffer"));

@@ -53,6 +53,8 @@ function userFromMember(m){const name=[m.first_name,m.last_name].filter(Boolean)
 async function loadPeople(){
   const {data:ppl,error}=await SB.rpc("tenant_people",{t:TID});if(error)throw error;
   S.users=(ppl||[]).map(userFromMember);
+  /* pečiatky ľudí z firmy (dozor na súpise a pozvánke na kontrolný deň) */
+  const ids=S.users.map(u=>u.id);if(ids.length){const {data:st}=await SB.from("profiles").select("id,stamp").in("id",ids);(st||[]).forEach(r=>{const u=S.users.find(x=>x.id===r.id);if(u&&r.stamp)u.stamp=r.stamp})}
   const {data:inv}=await SB.from("invites").select("id,email,name,role,rights,projects,accepted_at,accepted_by").eq("tenant_id",TID);
   S._inv=inv||[];
   (inv||[]).filter(i=>!i.accepted_at).forEach(i=>S.users.push({id:"inv:"+i.id,email:i.email,name:i.name||i.email.split("@")[0],companyRole:"clen",rights:i.role==="spravca"?Object.fromEntries(Object.keys(MODS_ALL).map(k=>[k,"edit"])):(i.rights||{}),dbRole:i.role,pending:true}));
