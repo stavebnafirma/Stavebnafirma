@@ -15,6 +15,11 @@ function blankState(){return {company:"",firm:{setupDone:false},users:[],project
 const newInvId=()=>"inv:"+(crypto.randomUUID?crypto.randomUUID():"10000000-1000-4000-8000-100000000000".replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)));
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 
+/* --- súbory stavby (výkresy) v Supabase Storage: priečinok firma/stavba, prístup podľa pravidiel v databáze --- */
+const FILESTORE={bucket:"dokumentacia",
+  async put(path,file){const {error}=await SB.storage.from(this.bucket).upload(path,file,{upsert:false,contentType:file.type||"application/octet-stream",cacheControl:"3600"});if(error)throw error},
+  async url(path,name,download){const {data,error}=await SB.storage.from(this.bucket).createSignedUrl(path,600,download?{download:name||true}:undefined);if(error)throw error;return data.signedUrl},
+  async del(path){const {error}=await SB.storage.from(this.bucket).remove([path]);if(error)throw error}};
 /* --- údaje firmy ↔ riadky tabuľky docs --- */
 function docRows(){const out=new Map();
   for(const [k,v] of Object.entries(S)){

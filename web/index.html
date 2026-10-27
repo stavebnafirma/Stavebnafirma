@@ -113,6 +113,15 @@ td.r,th.r{text-align:right}
 .filebtn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
 table.budget td.desc{white-space:normal;min-width:220px;max-width:420px}
 table.budget td.code{font-size:12px;color:var(--muted)}
+.docdrop{display:flex;align-items:center;justify-content:center;min-height:84px;border:2px dashed var(--line);border-radius:12px;background:var(--bg);cursor:pointer;text-align:center;padding:12px;color:var(--muted);position:relative}
+.docdrop.over,.docdrop:hover{border-color:var(--accent);color:var(--ink);background:var(--tint)}.docdrop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.doclist{list-style:none;margin:0;padding:0}.doclist li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}.doclist li:first-child{border-top:0}
+.docext{min-width:46px;text-align:center;font:600 11px/1 var(--mono);text-transform:uppercase;background:var(--tint);color:var(--ink);border-radius:6px;padding:8px 6px}
+.docmain{display:flex;flex-direction:column;min-width:0}.docmain b{overflow-wrap:anywhere}.docmain .muted{font-size:12.5px}
+.docbtn{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:620px){.doclist li{grid-template-columns:auto minmax(0,1fr)}.docbtn{grid-column:1/-1;justify-content:flex-start}}
+.bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
+table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
 table.budget tr.sec td{background:var(--bg);font-weight:700;font-size:13px;color:var(--ink);padding-top:10px}
 tr.bad td{background:var(--warn-bg)}
 .okt{color:var(--ok);font-weight:600}
@@ -535,8 +544,8 @@ form[data-ro] button[type=submit],form[data-ro] [data-a="addOopp"],form[data-ro]
 .paytab{font-size:13px}.paytab td,.paytab th{white-space:nowrap;padding:7px 7px}
 .payday{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}.payday input{width:58px;padding:4px 6px;min-height:0}.paytab td.r,.paytab th.r{text-align:right;font-variant-numeric:tabular-nums}.paytab tbody tr:hover{background:var(--bg)}.paytab tr.sel{background:var(--tint)}.paytab tfoot th{border-top:2px solid var(--line)}
 .paygrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:760px){.paygrid{grid-template-columns:1fr}}
-.kv{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)}.kv b{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}.kv.tot{border-bottom:2px solid var(--line);font-size:14.5px}.kv.tot span{font-weight:700}
-.cashplan .kv{display:grid;grid-template-columns:1fr auto 120px;text-align:left}.cashplan .kv b{text-align:right}
+.pkv{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)}.pkv b{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}.pkv.tot{border-bottom:2px solid var(--line);font-size:14.5px}.pkv.tot span{font-weight:700}
+.cashplan .pkv{display:grid;grid-template-columns:1fr auto 120px;text-align:left}.cashplan .pkv b{text-align:right}
 .warnbox{background:#fdf0e6;color:#7a3a0f;border-radius:8px;padding:7px 10px;font-size:13px}
 .paltools{display:flex;flex-wrap:wrap;gap:6px}
 .ptool{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600;cursor:pointer;color:var(--fg)}
@@ -813,6 +822,11 @@ function blankState(){return {company:"",firm:{setupDone:false},users:[],project
 const newInvId=()=>"inv:"+(crypto.randomUUID?crypto.randomUUID():"10000000-1000-4000-8000-100000000000".replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)));
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 
+/* --- súbory stavby (výkresy) v Supabase Storage: priečinok firma/stavba, prístup podľa pravidiel v databáze --- */
+const FILESTORE={bucket:"dokumentacia",
+  async put(path,file){const {error}=await SB.storage.from(this.bucket).upload(path,file,{upsert:false,contentType:file.type||"application/octet-stream",cacheControl:"3600"});if(error)throw error},
+  async url(path,name,download){const {data,error}=await SB.storage.from(this.bucket).createSignedUrl(path,600,download?{download:name||true}:undefined);if(error)throw error;return data.signedUrl},
+  async del(path){const {error}=await SB.storage.from(this.bucket).remove([path]);if(error)throw error}};
 /* --- údaje firmy ↔ riadky tabuľky docs --- */
 function docRows(){const out=new Map();
   for(const [k,v] of Object.entries(S)){
@@ -1131,7 +1145,8 @@ function can(p,act,entry){
     case"team.invite":return["admin","stavbyveduci"].includes(r);
     case"team.remove":return r==="admin";
     case"econ.view":return r==="admin"||r==="sledovanie";
-    case"budget.import":return["admin","stavbyveduci"].includes(r)&&!(p.invoices&&p.invoices.length);
+    case"budget.import":return["admin","stavbyveduci"].includes(r);
+    case"docs.upload":return["admin","stavbyveduci"].includes(r);
     case"budget.upload":return["admin","stavbyveduci"].includes(r);
     case"inv.view":return["admin","sledovanie","stavbyveduci","dozor","citanie"].includes(r);
     case"inv.edit":return["admin","stavbyveduci"].includes(r);
@@ -2019,7 +2034,7 @@ function payHTML(){
     <div class="muted" style="font-size:12px">${esc(PAY.source)}</div></div>`}
 
 function payDetailHTML(w,ym,c,ed){const A=c.A,Y=+ym.slice(0,4),end=monthDays(ym).pop(),v=vacation(w,Y,end),pr=priepustky(w,Y,end),M=c.M,dis=ed?"":"disabled";
-  const kv=(l,v,cls)=>`<div class="kv ${cls||""}"><span>${l}</span><b>${v}</b></div>`;
+  const kv=(l,v,cls)=>`<div class="pkv ${cls||""}"><span>${l}</span><b>${v}</b></div>`;
   const att=[["Fond pracovného času",`${nf1(A.fondH)} h (${A.fondDays} d)`],["Odpracované v pracovné dni",`${nf1(A.hWork)} h`],["Nadčas v pracovné dni",`${nf1(A.hOver)} h`],["Práca v sobotu",`${nf1(A.hSat)} h`],["Práca v nedeľu",`${nf1(A.hSun)} h`],["Práca vo sviatok",`${nf1(A.hHol)} h`],
     ["Služobné cesty",`${A.sc} d`],["Dovolenka",`${nf1(A.dD)} d`],["PN (kalendárne dni)",`${A.pnCal} d${A.pn.length?` · ${ranges(A.pn)}`:""}`],["OČR",`${A.dOCR} d${A.ocr.length?` · ${ranges(A.ocr)}`:""}`],
     ["Lekár – vlastné vyšetrenie",`${nf1(A.hP)} h`],["Sprevádzanie člena rodiny",`${nf1(A.hPS)} h`],["Iné prekážky v práci",`${nf1(A.hPI)} h`],["Náhradné voľno",`${nf1(A.dNV)} d`],["Neplatené voľno",`${A.dNPV} d`],["Absencia",`${A.dA} d`]];
@@ -2060,7 +2075,7 @@ function payCash(ym,ws,C){const R={payout:0,advance:0,deduct:0,sp:0,zp:{},tax:0,
   R.payDate=iso(pd);R.zpDate=iso(Math.min(pd,8));R.taxDate=isoShift(R.payDate,5);R.payDay=pd;
   R.total=r2(R.payout+R.deduct+R.sp+Object.values(R.zp).reduce((s,x)=>s+x,0)+Math.max(0,R.tax));return R}
 function payCashHTML(ym,ws,C,ed){if(!ws.length)return "";const R=payCash(ym,ws,C);
-  const line=(l,when,v,sub)=>`<div class="kv"><span>${l}${sub?` <small class="muted">${sub}</small>`:""}</span><span class="muted" style="font-size:12px;white-space:nowrap">${when}</span><b>${eur(r2(v))}</b></div>`;
+  const line=(l,when,v,sub)=>`<div class="pkv"><span>${l}${sub?` <small class="muted">${sub}</small>`:""}</span><span class="muted" style="font-size:12px;white-space:nowrap">${when}</span><b>${eur(r2(v))}</b></div>`;
   return `<div class="card stack cashplan"><div class="entry-head"><b>Peniaze na výplatu za ${esc(ymName(ym))}</b>
       <div class="payday">Výplatný termín <input type="number" id="payDay" aria-label="Výplatný termín – deň" min="1" max="31" value="${R.payDay}" ${ed?"":"disabled"}> . deň nasledujúceho mesiaca</div></div>
     ${line("Čisté mzdy zamestnancom",d2(R.payDate),R.payout,R.advance?`(po odpočítaní záloh ${eur(r2(R.advance))})`:"")}
@@ -2068,7 +2083,7 @@ function payCashHTML(ym,ws,C,ed){if(!ws.length)return "";const R=payCash(ym,ws,C
     ${line("Sociálna poisťovňa (zamestnanci + zamestnávateľ)",`v lehote výplaty · ${d2(R.payDate)}`,R.sp)}
     ${Object.entries(R.zp).map(([k,v])=>line(`Zdravotné poistenie – ${esc(k)}`,`najneskôr ${d2(R.zpDate)}`,v)).join("")}
     ${line("Daňový úrad – preddavky na daň mínus daňový bonus",`do ${d2(R.taxDate)}`,R.tax,R.tax<0?"(bonus prevyšuje daň – rozdiel sa započíta)":"")}
-    <div class="kv tot"><span>Spolu treba pripraviť</span><span></span><b>${eur(R.total)}</b></div>
+    <div class="pkv tot"><span>Spolu treba pripraviť</span><span></span><b>${eur(R.total)}</b></div>
     <span class="hint">Odhad z orientačného výpočtu ${R.n} zamestnancov. Termíny: mzda do výplatného termínu (najneskôr do konca nasledujúceho mesiaca), poistné do Sociálnej poisťovne v lehote na výplatu mzdy, zdravotné v deň výplaty, najneskôr do 8. dňa nasledujúceho mesiaca, preddavok dane do 5 dní od výplaty. Presné sumy a termíny potvrdí účtovníčka.</span></div>`}
 
 /* mzdové údaje v karte zamestnanca */
@@ -3717,6 +3732,7 @@ function projectTabs(p){
   if(can(p,"inv.view"))tabs.push(["faktury","Fakturácia",myNotices().filter(x=>x.p===p).length]);
   if(can(p,"econ.view"))tabs.push(["ekonomika","Ekonomika",0,"čoskoro"]);
   if(can(p,"settings"))tabs.push(["nastavenia","Nastavenia"]);
+  tabs.push(["dokumentacia","Dokumentácia",0]);
   return tabs}
 /* druhý rad menu: podkarty aktuálnej sekcie */
 function subnavRows(){
@@ -3741,6 +3757,7 @@ function projectHTML(){
   else if(view.tab==="ekonomika")body=econHTML(p);
   else if(view.tab==="rozpocet")body=budgetHTML(p);
   else if(view.tab==="nastavenia")body=settingsHTML(p);
+  else if(view.tab==="dokumentacia")body=docsHTML(p);
   else if(view.tab==="kd")body=kdHTML(p);
   else body=invoicesHTML(p);
   return `<div class="stack">
@@ -4195,25 +4212,41 @@ function teamHTML(p){
 const qf=n=>n.toLocaleString("sk-SK",{maximumFractionDigits:3});
 const colName=c=>(window.XLSX?XLSX.utils.encode_col(c):String(c+1));
 function importState(){const I=view.imp;const sh=I.sheets[I.sheet];const ex=extractBudget(sh.rows,I.header,I.map);return {sh,ex}}
+/* časti stavby (bloky, objekty): každá má vlastný rozpočet; položky nesú partId */
+const bParts=p=>!p.budget?[]:(p.budget.parts&&p.budget.parts.length?p.budget.parts:[{id:"",name:"",fileName:p.budget.fileName,sheetName:p.budget.sheetName,importedAt:p.budget.importedAt,importedBy:p.budget.importedBy}]);
+const multiPart=p=>!!(p.budget&&p.budget.parts&&p.budget.parts.length>1);
+const secKey=i=>(i.partId||"")+"\u0001"+(i.section||"");
+const partOf=(p,id)=>bParts(p).find(x=>x.id===(id||""))||{id:"",name:""};
+const partSum=(p,id)=>p.budget.items.filter(i=>(i.partId||"")===(id||"")).reduce((s,i)=>s+i.total,0);
+function partUsed(p,id){const ids=new Set(p.budget.items.filter(i=>(i.partId||"")===(id||"")).map(i=>i.id));return (p.invoices||[]).some(inv=>Object.entries(inv.qty||{}).some(([k,v])=>ids.has(k)&&+v))}
 function budgetHTML(p){
   const canImp=can(p,"budget.import");
   if(view.imp) return importHTML(p);
-  const blocked=!canImp&&can(p,"budget.upload")&&p.budget;
-  const upload=canImp?`<label class="btn ${p.budget?"":"primary"} filebtn" style="align-self:flex-start">${p.budget?"Nahrať nový rozpočet":"Nahrať rozpočet z Excelu"}<input type="file" id="budgetFile" accept=".xls,.xlsx,.xlsm,.csv,.ods"></label>`:"";
+  const upload=(label,target,cls)=>`<label class="btn ${cls||""} filebtn" style="align-self:flex-start">${label}<input type="file" class="budgetFile" data-target="${target}" accept=".xls,.xlsx,.xlsm,.csv,.ods"></label>`;
   if(!p.budget) return `<div class="stack"><div class="card stack"><h3>Rozpočet stavby</h3>
-    <div class="muted">${canImp?"Nahraj rozpočet v .xls alebo .xlsx. Aplikácia sama nájde hlavičku tabuľky a vytiahne poradové číslo, kód, názov, MJ, množstvo, jednotkovú cenu a cenu spolu. Pred uložením stĺpce skontroluješ.":"Rozpočet zatiaľ nie je nahraný. Nahráva ho stavbyvedúci alebo administrátor."}</div>${upload}</div></div>`;
-  const b=p.budget; const q=normText(view.bq||"");
-  const items=q?b.items.filter(i=>normText(i.code+" "+i.desc+" "+i.por).includes(q)):b.items;
-  let sec=null,rows="";
-  items.forEach(i=>{if(i.section!==sec){sec=i.section;if(sec)rows+=`<tr class="sec"><td colspan="7">${esc(sec)}</td></tr>`}
+    <div class="muted">${canImp?"Nahraj rozpočet v .xls alebo .xlsx. Aplikácia sama nájde hlavičku tabuľky a vytiahne poradové číslo, kód, názov, MJ, množstvo, jednotkovú cenu a cenu spolu. Pred uložením stĺpce skontroluješ. Ak má stavba viac častí (bloky, objekty, celky), nahraj každú ako samostatnú časť.":"Rozpočet zatiaľ nie je nahraný. Nahráva ho stavbyvedúci alebo administrátor."}</div>${canImp?upload("Nahrať rozpočet z Excelu","__new","primary"):""}</div></div>`;
+  const b=p.budget,parts=bParts(p),multi=multiPart(p),q=normText(view.bq||""),fp=multi&&view.bPart&&parts.some(x=>"p:"+x.id===view.bPart)?view.bPart.slice(2):null;
+  const items=b.items.filter(i=>(fp===null||(i.partId||"")===fp)&&(!q||normText(i.code+" "+i.desc+" "+i.por).includes(q)));
+  let part=null,sec=null,rows="";
+  items.forEach(i=>{if(multi&&(i.partId||"")!==part){part=i.partId||"";sec=null;rows+=`<tr class="part"><td colspan="6">${esc(partOf(p,part).name||"Časť stavby")}</td><td class="num r">${eur(partSum(p,part))}</td></tr>`}
+    const sk=secKey(i);if(sk!==sec){sec=sk;if(i.section)rows+=`<tr class="sec"><td colspan="7">${esc(i.section)}</td></tr>`}
     rows+=`<tr><td class="num">${esc(i.por)}</td><td class="num code">${esc(i.code)}</td><td class="desc">${esc(i.desc)}</td><td>${esc(i.mj)}</td><td class="num r">${qf(i.qty)}</td><td class="num r">${eur(i.price)}</td><td class="num r">${eur(i.total)}</td></tr>`});
+  const L=view.lastImp,more=L&&L.pid===p.id?L.sheets.map((sh,k)=>({sh,k})).filter(({sh,k})=>!L.done.includes(k)&&detectHeader(sh.rows)):[];
+  const partRows=parts.map(x=>{const used=partUsed(p,x.id),ed=view.bpEdit===x.id,del=view.bpDel===x.id,n=b.items.filter(i=>(i.partId||"")===x.id).length;
+    return `<tr><td>${ed?`<form class="row" id="bpRenameForm" data-id="${x.id}" style="gap:6px;flex-wrap:nowrap"><input id="bpName" value="${esc(x.name)}" required style="min-width:180px"><button class="btn small primary" type="submit">Uložiť</button><button type="button" class="btn small ghost" data-a="bpEditNo">Zrušiť</button></form>`:`<b>${esc(x.name||"Rozpočet stavby")}</b>`}
+      <div class="muted" style="font-size:12px">${n} položiek · ${esc(x.fileName||"")}${x.sheetName?`, hárok ${esc(x.sheetName)}`:""} · ${esc(user(x.importedBy)?.name||"")} ${x.importedAt?fmtDate(x.importedAt):""}</div></td>
+      <td class="num r">${eur(partSum(p,x.id))}</td>
+      <td class="r"><div class="bpact">${canImp&&!ed?(del?`<span class="muted" style="font-size:13px">Odstrániť časť?</span> <button class="btn small" data-a="bpDelYes" data-id="${x.id}" style="color:var(--bad)">Odstrániť</button> <button class="btn small ghost" data-a="bpDelNo">Späť</button>`
+        :`${parts.length>1||x.name?`<button class="btn small ghost" data-a="bpEdit" data-id="${x.id}">Premenovať</button>`:""}${used?`<span class="muted" style="font-size:12px;margin-left:6px" title="Z tejto časti sú už položky v súpisoch prác">čerpá sa v súpisoch</span>`:`${upload("Nahradiť",x.id,"small ghost")}${parts.length>1?`<button class="btn small ghost" data-a="bpDel" data-id="${x.id}">Odstrániť</button>`:""}`}`):""}</div></td></tr>`}).join("");
   return `<div class="stack">
-    <div class="card stack"><div class="entry-head"><div><div class="eyebrow">Rozpočet stavby bez DPH</div><div class="total num">${eur(b.sum)}</div></div>${upload}</div>
-      ${blocked?`<div class="muted" style="font-size:13px">Rozpočet sa už nedá nahradiť, lebo z neho existujú súpisy prác.</div>`:""}<div class="muted" style="font-size:13px">${b.items.length} položiek · ${esc(b.fileName)}, hárok ${esc(b.sheetName)} · nahral ${esc(user(b.importedBy)?.name||"")} ${fmtDate(b.importedAt)}</div></div>
-    <label>Hľadať položku<input id="budgetSearch" type="search" value="${esc(view.bq||"")}" placeholder="kód alebo názov"></label>
+    <div class="card stack"><div class="entry-head"><div><div class="eyebrow">Rozpočet stavby bez DPH${multi?` · ${parts.length} časti`:""}</div><div class="total num">${eur(b.sum)}</div></div>${canImp?upload("+ Pridať časť stavby","__new"):""}</div>
+      <div class="tablewrap"><table class="list bparts"><thead><tr><th>${multi?"Časť stavby":"Rozpočet"}</th><th class="r">Spolu bez DPH</th><th></th></tr></thead><tbody>${partRows}</tbody></table></div>
+      ${canImp&&!multi?`<div class="muted" style="font-size:13px">Ak má stavba viac blokov, objektov alebo celkov, pridaj každý ako samostatnú časť. Rovnaké členenie sa prenesie do súpisov prác a fakturácie.</div>`:""}</div>
+    ${more.length&&canImp?`<div class="card stack"><b>V súbore ${esc(L.fileName)} sú ďalšie hárky s rozpočtom</b><div class="row">${more.map(({sh,k})=>`<button class="btn small" data-a="impNextSheet" data-i="${k}">+ ${esc(sh.name)} ako ďalšia časť</button>`).join("")}<button class="btn small ghost" data-a="impNextNo">Nie, ďakujem</button></div></div>`:""}
+    <div class="grid2">${multi?`<label>Časť stavby<select id="bPartSel"><option value="">Všetky časti</option>${parts.map(x=>`<option value="p:${x.id}" ${fp===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select></label>`:""}<label>Hľadať položku<input id="budgetSearch" type="search" value="${esc(view.bq||"")}" placeholder="kód alebo názov"></label></div>
     <div class="card tablewrap" style="padding:6px 8px"><table class="budget"><thead><tr><th>Č.</th><th>Kód</th><th>Názov položky</th><th>MJ</th><th class="r">Množstvo</th><th class="r">J. cena</th><th class="r">Spolu</th></tr></thead>
       <tbody>${rows||`<tr><td colspan="7" class="muted">Žiadna položka nezodpovedá hľadaniu.</td></tr>`}</tbody>
-      ${q?"":`<tfoot><tr><td colspan="6"><b>Spolu</b></td><td class="num r"><b>${eur(b.sum)}</b></td></tr></tfoot>`}</table></div></div>`;
+      ${q||fp!==null?"":`<tfoot><tr><td colspan="6"><b>Spolu</b></td><td class="num r"><b>${eur(b.sum)}</b></td></tr></tfoot>`}</table></div></div>`;
 }
 function importHTML(p){
   const I=view.imp,{sh,ex}=importState();
@@ -4225,6 +4258,8 @@ function importHTML(p){
   const prev=ex.items.slice(0,8).map(i=>`<tr${i.check?' class="bad"':""}><td class="num">${esc(i.por)}</td><td class="num code">${esc(i.code)}</td><td class="desc">${esc(i.desc)}</td><td>${esc(i.mj)}</td><td class="num r">${qf(i.qty)}</td><td class="num r">${eur(i.price)}</td><td class="num r">${eur(i.total)}</td></tr>`).join("");
   return `<div class="stack"><div class="card stack">
     <div><div class="eyebrow">Kontrola importu</div><h2 style="overflow-wrap:anywhere">${esc(I.fileName)}</h2></div>
+    ${I.target&&I.target!=="__new"?`<div class="note">Nahrádzaš rozpočet časti ${esc(partOf(p,I.target).name||"Rozpočet stavby")}.</div>`:""}
+    <label>Názov časti stavby<input id="impPartName" value="${esc(I.name||"")}" placeholder="${p.budget||I.sheets.length>1?"napr. SO 01 Komunikácia":"nepovinné, ak má stavba jeden rozpočet"}" ${p.budget&&I.target==="__new"?"required":""}></label>
     <div class="grid2">${sheetSel}<label>Riadok hlavičky<input type="number" min="1" id="impHeader" value="${I.header+1+sh.r0}"></label></div>
     <div class="eyebrow">Priradenie stĺpcov</div>
     <div class="grid2">${maps}</div>
@@ -4235,21 +4270,75 @@ function importHTML(p){
   </div>
   ${prev?`<div class="eyebrow">Ukážka prvých položiek</div><div class="card tablewrap" style="padding:6px 8px"><table class="budget"><thead><tr><th>Č.</th><th>Kód</th><th>Názov</th><th>MJ</th><th class="r">Množstvo</th><th class="r">J. cena</th><th class="r">Spolu</th></tr></thead><tbody>${prev}</tbody></table></div>`:""}
   <div class="row"><button class="btn primary" data-a="impSave" ${ex.items.length?"":"disabled"}>Uložiť rozpočet do stavby</button><button class="btn ghost" data-a="impCancel">Zrušiť</button></div>
-  ${p.budget?`<div class="muted" style="font-size:13px">Uložením nahradíš súčasný rozpočet (${p.budget.items.length} položiek).</div>`:""}</div>`;
+  ${p.budget&&I.target==="__new"?`<div class="muted" style="font-size:13px">Rozpočet sa pridá ako ďalšia časť stavby. Doterajšie časti a súpisy ostanú bez zmeny.</div>`:""}</div>`;
 }
-async function readBudgetFile(file){
+async function readBudgetFile(file,target){
   if(!window.XLSX){toast("Knižnica na čítanie Excelu sa nenačítala. Skús stránku obnoviť.");return}
   try{
     const wb=XLSX.read(await file.arrayBuffer(),{type:"array"});
     const sheets=wb.SheetNames.map(n=>{const ws=wb.Sheets[n];const rg=ws["!ref"]?XLSX.utils.decode_range(ws["!ref"]):{s:{r:0,c:0}};
       return {name:n,r0:rg.s.r,c0:rg.s.c,rows:XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:"",blankrows:true})}});
     const d=detectWorkbook(sheets);
-    view.imp={fileName:file.name,sheets,sheet:d?d.sheet:0,header:d?d.header:0,map:d?{...d.map}:{}};
+    const sh0=d?d.sheet:0,tg=target==null?"__new":target,cur=tg!=="__new"&&view.projectId?partOf(S.projects.find(x=>x.id===view.projectId),tg).name:"";
+    view.imp={fileName:file.name,sheets,sheet:sh0,header:d?d.header:0,map:d?{...d.map}:{},target:tg,name:cur||(sheets.length>1?sheets[sh0].name:""),autoName:!cur&&sheets.length>1};
     if(!d)toast("Hlavičku som nenašiel automaticky. Nastav riadok hlavičky a stĺpce ručne.");
     render();
   }catch(e){toast("Súbor sa nepodarilo prečítať. Ulož ho v Exceli ako .xlsx a skús znova.")}
 }
 function remapFromHeader(){const I=view.imp,row=I.sheets[I.sheet].rows[I.header]||[];const m={};row.forEach((v,c)=>{const f=classifyHeader(v);if(f&&m[f]==null)m[f]=c});I.map=m}
+
+/* ---------- Stavba: dokumentácia (výkresy) ---------- */
+/* FILESTORE: pozri OSTRÁ VERZIA vyššie */
+const DOC_GROUPS=["Projekt stavby","Architektúra","Statika","Zdravotechnika","Elektroinštalácia","Vykurovanie","Vzduchotechnika","Komunikácie a spevnené plochy","Prípojky","Požiarna ochrana","Iné"];
+const DOC_MAX=50*1024*1024;
+const fsize=n=>n>=1048576?`${(n/1048576).toLocaleString("sk-SK",{maximumFractionDigits:1})} MB`:`${Math.max(1,Math.round(n/1024))} kB`;
+const docExt=n=>(String(n).match(/\.([a-z0-9]{1,5})$/i)||[])[1]?.toLowerCase()||"";
+const docTenant=()=>(typeof TID!=="undefined"&&TID)?TID:"demo";
+const safeKey=n=>String(n).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_").replace(/_+/g,"_").slice(-120);
+function docsHTML(p){const up=can(p,"docs.upload"),list=(p.docs||[]).slice(),q=normText(view.dq||"");
+  const groups=[...new Set([...DOC_GROUPS,...list.map(d=>d.group).filter(Boolean)])];
+  const shown=list.filter(d=>!q||normText(d.name+" "+(d.group||"")+" "+(d.note||"")).includes(q));
+  const by={};shown.forEach(d=>(by[d.group||"Iné"]=by[d.group||"Iné"]||[]).push(d));
+  const order=Object.keys(by).sort((a,b)=>(groups.indexOf(a)+1||99)-(groups.indexOf(b)+1||99)||a.localeCompare(b,"sk"));
+  const busy=view.docBusy;
+  const form=up?`<form class="card stack" id="docForm"><div class="entry-head"><h3>Nahrať výkresy a dokumenty</h3><span class="muted" style="font-size:13px">PDF, obrázky, DWG a iné · najviac 50 MB na súbor</span></div>
+      <div class="grid2"><label>Skupina<input id="docGroup" list="docGroups" value="${esc(view.docGroup||"")}" placeholder="napr. Statika"></label><label>Poznámka<input id="docNote" placeholder="napr. revízia B, platné od 10/2026"></label></div>
+      <datalist id="docGroups">${groups.map(g=>`<option value="${esc(g)}">`).join("")}</datalist>
+      <label class="docdrop"><input type="file" id="docFiles" multiple><span>${busy?esc(busy):"Vyber súbory alebo ich sem pretiahni"}</span></label>
+      <div class="row"><button class="btn primary" type="submit" ${busy?"disabled":""}>Nahrať</button></div></form>`:"";
+  const rows=order.map(g=>`<div class="card stack docgrp"><div class="entry-head"><h3>${esc(g)}</h3><span class="muted" style="font-size:13px">${by[g].length} ${by[g].length===1?"súbor":by[g].length<5?"súbory":"súborov"}</span></div>
+    <ul class="doclist">${by[g].sort((a,b)=>a.name.localeCompare(b.name,"sk",{numeric:true})).map(d=>`<li><span class="docext">${esc(docExt(d.name)||"súbor")}</span>
+      <div class="docmain"><b>${esc(d.name)}</b><span class="muted">${fsize(d.size||0)} · ${esc(user(d.by)?.name||"")} ${d.at?fmtDate(d.at.slice(0,10)):""}${d.note?` · ${esc(d.note)}`:""}</span></div>
+      <div class="docbtn"><button class="btn small" data-a="docOpen" data-id="${d.id}">Otvoriť</button><button class="btn small ghost" data-a="docGet" data-id="${d.id}">Stiahnuť</button>
+      ${up?(view.docDel===d.id?`<button class="btn small" data-a="docDelYes" data-id="${d.id}" style="color:var(--bad)">Naozaj odstrániť</button><button class="btn small ghost" data-a="docDelNo">Späť</button>`:`<button class="btn small ghost" data-a="docDel" data-id="${d.id}" aria-label="Odstrániť ${esc(d.name)}">Odstrániť</button>`):""}</div></li>`).join("")}</ul></div>`).join("");
+  return `<div class="stack"><div class="muted">Výkresy a projektová dokumentácia stavby. Otvoriť a stiahnuť ich môžu všetci členovia stavby vrátane stavebného dozoru.${up?"":" Nahráva ich stavbyvedúci alebo administrátor."}</div>
+    ${form}${list.length>6?`<label>Hľadať v dokumentácii<input id="docSearch" type="search" value="${esc(view.dq||"")}" placeholder="názov súboru, skupina alebo poznámka"></label>`:""}
+    ${rows||`<div class="card muted">${list.length?"Nič nezodpovedá hľadaniu.":"Zatiaľ tu nie sú žiadne výkresy."}</div>`}</div>`}
+async function docUpload(p,files){const group=($("#docGroup")?.value||"").trim()||"Iné",note=($("#docNote")?.value||"").trim();
+  files=[...files];const big=files.filter(f=>f.size>DOC_MAX);if(big.length){toast(`Súbor ${big[0].name} má viac ako 50 MB`);return}
+  if(!files.length){toast("Vyber súbory na nahratie");return}
+  p.docs=p.docs||[];let ok=0;
+  for(const [k,f] of files.entries()){view.docBusy=`Nahrávam ${k+1} / ${files.length}: ${f.name}`;render();
+    const id=uid("dk"),path=`${docTenant()}/${p.id}/${id}-${safeKey(f.name)}`;
+    try{await FILESTORE.put(path,f);p.docs.push({id,name:f.name,size:f.size,type:f.type||"",group,note,path,by:me.id,at:new Date().toISOString()});ok++}
+    catch(e){console.error(e);toast(`${f.name} sa nepodarilo nahrať: ${e.message||e}`)}}
+  view.docBusy=null;view.docGroup=group;if(ok){save();toast(ok===1?"Súbor nahraný":`Nahraných ${ok} súborov`)}render()}
+async function docOpen(d,download){const w=download?null:window.open("","_blank");
+  try{const url=await FILESTORE.url(d.path,d.name,download);
+    if(w&&!w.closed){w.location.href=url;return}
+    const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";if(download)a.download=d.name;document.body.appendChild(a);a.click();a.remove()}
+  catch(e){if(w)w.close();toast("Súbor sa nepodarilo otvoriť: "+(e.message||e))}}
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me||view.screen!=="project")return;const a=b.dataset.a;if(!/^doc/.test(a))return;
+  const p=S.projects.find(x=>x.id===view.projectId);if(!p)return;const d=(p.docs||[]).find(x=>x.id===b.dataset.id);
+  if(a==="docOpen"&&d)docOpen(d,false);else if(a==="docGet"&&d)docOpen(d,true);
+  else if(a==="docDel"){view.docDel=b.dataset.id;render()}else if(a==="docDelNo"){view.docDel=null;render()}
+  else if(a==="docDelYes"&&d&&can(p,"docs.upload")){(async()=>{try{await FILESTORE.del(d.path)}catch(e){console.warn(e)}p.docs=p.docs.filter(x=>x.id!==d.id);view.docDel=null;save();toast("Súbor odstránený");render()})()}});
+document.addEventListener("submit",ev=>{if(ev.target.id!=="docForm"||!me)return;ev.preventDefault();const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"docs.upload")||view.docBusy)return;docUpload(p,$("#docFiles").files)});
+document.addEventListener("input",ev=>{if(ev.target.id==="docSearch"){view.dq=ev.target.value;const pos=ev.target.selectionStart;render();const el=$("#docSearch");if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}}}});
+document.addEventListener("dragover",ev=>{if(ev.target.closest&&ev.target.closest(".docdrop")){ev.preventDefault();ev.target.closest(".docdrop").classList.add("over")}});
+document.addEventListener("dragleave",ev=>{const z=ev.target.closest&&ev.target.closest(".docdrop");if(z)z.classList.remove("over")});
+document.addEventListener("drop",ev=>{const z=ev.target.closest&&ev.target.closest(".docdrop");if(!z)return;ev.preventDefault();z.classList.remove("over");const inp=$("#docFiles");if(inp&&ev.dataTransfer.files.length){inp.files=ev.dataTransfer.files;z.querySelector("span").textContent=[...inp.files].map(f=>f.name).join(", ")}});
+document.addEventListener("change",ev=>{if(ev.target.id==="docFiles"){const z=ev.target.closest(".docdrop");if(z)z.querySelector("span").textContent=[...ev.target.files].map(f=>f.name).join(", ")||"Vyber súbory alebo ich sem pretiahni"}});
 
 /* ---------- fakturácia / súpisy prác ---------- */
 const PRESETS={week:"Týždeň",two:"2 týždne",month:"Mesiac",custom:"Vlastné obdobie"};
@@ -4264,16 +4353,24 @@ function periodLabel(inv){const f=new Date(inv.from+"T12:00"),t=new Date(inv.to+
 const invList=p=>(p.invoices||[]).slice().sort((a,b)=>a.no-b.no);
 function invModel(p,inv){
   const earlier=invList(p).filter(x=>x.no<inv.no);
-  const rows=[],secs={};const T={b:0,pr:0,cu:0,zo:0};
+  const rows=[],secs={},parts={};const T={b:0,pr:0,cu:0,zo:0};
   p.budget.items.forEach(i=>{
     const pq=earlier.reduce((s,x)=>s+(+x.qty[i.id]||0),0), cq=+inv.qty[i.id]||0, zq=i.qty-pq-cq;
     const r={i,pq,cq,zq,bs:i.qty*i.price,ps:pq*i.price,cs:cq*i.price,zs:zq*i.price};
     rows.push(r);T.b+=r.bs;T.pr+=r.ps;T.cu+=r.cs;T.zo+=r.zs;
-    const k=i.section||"";(secs[k]=secs[k]||{b:0,pr:0,cu:0,zo:0});secs[k].b+=r.bs;secs[k].pr+=r.ps;secs[k].cu+=r.cs;secs[k].zo+=r.zs;
+    [[secs,secKey(i)],[parts,i.partId||""]].forEach(([G,k])=>{const g=G[k]=G[k]||{b:0,pr:0,cu:0,zo:0};g.b+=r.bs;g.pr+=r.ps;g.cu+=r.cs;g.zo+=r.zs});
   });
-  return {rows,secs,T,earlierOpen:earlier.some(x=>!frozen(x))}
+  return {rows,secs,parts,T,multi:multiPart(p),earlierOpen:earlier.some(x=>!frozen(x))}
 }
 const pct=(a,b)=>b?Math.round(a/b*1000)/10:0;
+document.addEventListener("input",ev=>{if(ev.target.id==="impPartName"&&view.imp){view.imp.name=ev.target.value;view.imp.autoName=false}});
+document.addEventListener("submit",ev=>{if(ev.target.id!=="bpRenameForm"||!me)return;ev.preventDefault();const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"budget.import"))return;
+  const id=ev.target.dataset.id,nm=$("#bpName").value.trim();if(!nm)return;const B=p.budget;
+  if(!B.parts||!B.parts.length)B.parts=[{id:"",name:nm,fileName:B.fileName,sheetName:B.sheetName,importedAt:B.importedAt,importedBy:B.importedBy}];else{const P=B.parts.find(x=>x.id===id);if(P)P.name=nm}
+  view.bpEdit=null;save();toast("Názov časti uložený");render()});
+function partDrawHTML(p){const by={};invList(p).forEach(inv=>p.budget.items.forEach(i=>{const v=(+inv.qty[i.id]||0)*i.price;if(!v)return;const g=by[i.partId||""]=by[i.partId||""]||{l:0,o:0};inv.status==="approved"?g.l+=v:g.o+=v}));
+  return `<div class="tablewrap" style="margin-top:6px"><table class="list"><thead><tr><th>Časť stavby</th><th class="r">Rozpočet</th><th class="r">Odsúhlasené</th><th class="r">Rozpracované</th><th class="r">Zostatok</th><th class="r">Čerpanie</th></tr></thead><tbody>
+    ${bParts(p).map(x=>{const B=partSum(p,x.id),g=by[x.id]||{l:0,o:0};return `<tr><td><b>${esc(x.name||"Časť stavby")}</b></td><td class="num r">${eur(B)}</td><td class="num r">${eur(g.l)}</td><td class="num r">${eur(g.o)}</td><td class="num r">${eur(B-g.l-g.o)}</td><td class="num r">${pct(g.l+g.o,B)} %</td></tr>`}).join("")}</tbody></table></div>`}
 function invTotals(p){let lock=0,open=0;invList(p).forEach(inv=>{const s=p.budget.items.reduce((a,i)=>a+(+inv.qty[i.id]||0)*i.price,0);inv.status==="approved"?lock+=s:open+=s});return {lock,open}}
 
 const INV_ST={open:["Rozpracované","s-open"],returned:["Vrátené na prepracovanie","s-ret"],submitted:["Čaká na odsúhlasenie dozorom","s-wait"],approved:["Odsúhlasené","s-ok"]};
@@ -4317,7 +4414,7 @@ function invoicesHTML(p){
         <div><div class="muted"><i class="dot b-lock"></i>Odsúhlasené</div><div class="kv num">${eur(lock)}</div><div class="muted num">${pl} %</div></div>
         <div><div class="muted"><i class="dot b-open"></i>Rozpracované a na schválenie</div><div class="kv num">${eur(open)}</div><div class="muted num">${po} %</div></div>
         <div><div class="muted"><i class="dot b-rest"></i>Zostatok</div><div class="kv num">${eur(zo)}</div><div class="muted num">z ${eur(B)}</div></div>
-      </div></div>
+      </div>${multiPart(p)?partDrawHTML(p):""}</div>
     ${form}
     ${cards||`<div class="card muted">Zatiaľ nie je žiadny súpis. Založ prvý a zvoľ obdobie: týždeň, 2 týždne, mesiac alebo vlastné dátumy.</div>`}
   </div>`;
@@ -4331,10 +4428,11 @@ function invDetailHTML(p,inv){
   const appr=needsApproval(p);
   const isLast=list[list.length-1]===inv;
   const only=!!view.invOnly;
-  let sec=null,rows="";
+  let part=null,sec=null,rows="";
   M.rows.forEach(r=>{const i=r.i;
     if(only&&!r.pq&&!r.cq)return;
-    if(i.section!==sec){sec=i.section;if(sec){const S2=M.secs[sec];rows+=`<tr class="sec"><td colspan="5">${esc(sec)}</td><td class="num r">${eur(S2.b)}</td><td></td><td class="num r">${eur(S2.pr)}</td><td></td><td class="num r" data-sec="${esc(sec)}">${eur(S2.cu)}</td><td></td><td class="num r" data-secz="${esc(sec)}">${eur(S2.zo)}</td></tr>`}}
+    if(M.multi&&(i.partId||"")!==part){part=i.partId||"";sec=null;const P2=M.parts[part];rows+=`<tr class="part"><td colspan="5">${esc(partOf(p,part).name||"Časť stavby")}</td><td class="num r">${eur(P2.b)}</td><td></td><td class="num r">${eur(P2.pr)}</td><td></td><td class="num r" data-part="${esc(part)}">${eur(P2.cu)}</td><td></td><td class="num r" data-partz="${esc(part)}">${eur(P2.zo)}</td></tr>`}
+    const sk=secKey(i);if(sk!==sec){sec=sk;if(i.section){const S2=M.secs[sk];rows+=`<tr class="sec"><td colspan="5">${esc(i.section)}</td><td class="num r">${eur(S2.b)}</td><td></td><td class="num r">${eur(S2.pr)}</td><td></td><td class="num r" data-sec="${esc(sk)}">${eur(S2.cu)}</td><td></td><td class="num r" data-secz="${esc(sk)}">${eur(S2.zo)}</td></tr>`}}
     const over=r.zq<-1e-9;
     rows+=`<tr${over?' class="bad"':""} id="r_${i.id}"><td class="num">${esc(i.por)}</td><td class="desc"><span class="code">${esc(i.code)}</span><br>${esc(i.desc)}</td><td>${esc(i.mj)}</td><td class="num r">${eur(i.price)}</td>
       <td class="num r g1">${qf(i.qty)}</td><td class="num r g1">${eur(r.bs)}</td>
@@ -4398,6 +4496,7 @@ function refreshInvNumbers(p,inv){
     set(`[data-cs="${id}"]`,eur(r.cs));set(`[data-zq="${id}"]`,qf(r.zq));set(`[data-zs="${id}"]`,eur(r.zs));
     const tr=document.getElementById("r_"+id);if(tr)tr.classList.toggle("bad",r.zq<-1e-9)});
   Object.entries(M.secs).forEach(([k,v])=>{document.querySelectorAll("[data-sec]").forEach(el=>{if(el.dataset.sec===k)el.textContent=eur(v.cu)});document.querySelectorAll("[data-secz]").forEach(el=>{if(el.dataset.secz===k)el.textContent=eur(v.zo)})});
+  Object.entries(M.parts).forEach(([k,v])=>{document.querySelectorAll("[data-part]").forEach(el=>{if(el.dataset.part===k)el.textContent=eur(v.cu)});document.querySelectorAll("[data-partz]").forEach(el=>{if(el.dataset.partz===k)el.textContent=eur(v.zo)})});
   ["kCur","tCur"].forEach(id=>{const el=$("#"+id);if(el)el.textContent=eur(M.T.cu)});["kZo","tZo"].forEach(id=>{const el=$("#"+id);if(el)el.textContent=eur(M.T.zo)});
 }
 
@@ -4420,10 +4519,11 @@ function exportPDF(p,inv){
   const L=[["Stavba:",p.name],["Investor:",p.investor||""],["Objednávateľ:",p.client],["Miesto:",placeText(p)]],R=[["Zhotoviteľ:",S.company],["IČO / DIČ:",[S.firm.ico,S.firm.dic].filter(Boolean).join(" / ")],["Obdobie od – do:",`${d2(inv.from)} – ${d2(inv.to)}`],["Stav:",(INV_ST[inv.status]||INV_ST.open)[0]+(inv.invoiceNo?` · faktúra ${inv.invoiceNo}`:"")]];
   L.forEach((r,k)=>{doc.setFont("DVC","bold");doc.text(r[0],mL,18+k*4);doc.setFont("DVC","normal");doc.text(String(r[1]),mL+22,18+k*4)});
   R.forEach((r,k)=>{doc.setFont("DVC","bold");doc.text(r[0],170,18+k*4);doc.setFont("DVC","normal");doc.text(String(r[1]),196,18+k*4)});
-  const body=[];let sec=null;
+  const body=[];let part=null,sec=null;
+  const grp=(label,g,fill,fs)=>body.push([{content:label,colSpan:5,styles:{fontStyle:"bold",fillColor:fill,fontSize:fs}},...["",E(g.b),"",E(g.pr),"",E(g.cu),"",E(g.zo)].map((v,k)=>({content:k===0?"":v,styles:{fontStyle:"bold",fillColor:fill,halign:"right",fontSize:fs}}))]);
   M.rows.forEach(r=>{const i=r.i;if(only&&!r.pq&&!r.cq)return;
-    if(i.section!==sec){sec=i.section;if(sec){const s2=M.secs[sec];body.push([{content:sec,colSpan:5,styles:{fontStyle:"bold",fillColor:[238,240,242]}},
-      ...["",E(s2.b),"",E(s2.pr),"",E(s2.cu),"",E(s2.zo)].map((v,k)=>({content:k===0?"":v,styles:{fontStyle:"bold",fillColor:[238,240,242],halign:"right"}}))])}}
+    if(M.multi&&(i.partId||"")!==part){part=i.partId||"";sec=null;grp(partOf(p,part).name||"Časť stavby",M.parts[part],[253,236,222],7.4)}
+    const sk=secKey(i);if(sk!==sec){sec=sk;if(i.section)grp(i.section,M.secs[sk],[238,240,242])}
     body.push([i.por,i.code,i.desc,i.mj,E(i.price),Q(i.qty),E(r.bs),Q(r.pq),E(r.ps),Q(r.cq),E(r.cs),Q(r.zq),E(r.zs)]);
   });
   const T=M.T;
@@ -4442,7 +4542,16 @@ function exportPDF(p,inv){
     showHead:"everyPage",showFoot:"lastPage",rowPageBreak:"avoid",
     didParseCell:d=>{if(d.section==="foot"&&d.column.index===0)d.cell.styles.halign="left"}
   });
-  let y=doc.lastAutoTable.finalY+8;if(y>160){doc.addPage();y=20}
+  let y=doc.lastAutoTable.finalY+8;
+  if(M.multi){if(y>150){doc.addPage();y=20}
+    doc.autoTable({head:[["Rekapitulácia podľa častí stavby","Rozpočet","Predošlé obdobie","Aktuálne obdobie","Zostatok","Čerpanie"]],
+      body:bParts(p).map(x=>{const g=M.parts[x.id]||{b:0,pr:0,cu:0,zo:0};return [x.name||"Časť stavby",E(g.b),E(g.pr),E(g.cu),E(g.zo),`${pct(g.pr+g.cu,g.b)} %`]}),
+      foot:[["Spolu bez DPH",E(T.b),E(T.pr),E(T.cu),E(T.zo),`${pct(T.pr+T.cu,T.b)} %`]],startY:y,margin:{left:mL,right:mL},tableWidth:200,theme:"grid",
+      styles:{font:"DVC",fontSize:7.4,cellPadding:1,lineColor:[190,198,206],lineWidth:0.1,textColor:[20,28,36]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255},
+      footStyles:{font:"DVC",fontStyle:"bold",fillColor:[253,236,222],textColor:[20,28,36]},columnStyles:{1:{halign:"right"},2:{halign:"right"},3:{halign:"right",fontStyle:"bold"},4:{halign:"right"},5:{halign:"right"}},
+      didParseCell:d=>{if(d.section!=="body"&&d.column.index>0)d.cell.styles.halign="right"}});
+    y=doc.lastAutoTable.finalY+8}
+  if(y>160){doc.addPage();y=20}
   doc.setFontSize(9);doc.setFont("DVC","bold");doc.text(`Aktuálne obdobie spolu bez DPH: ${E(T.cu)}`,mL,y);
   doc.setFont("DVC","normal");doc.setFontSize(8);
   doc.text(`Vyčerpané vrátane aktuálneho obdobia: ${E(T.pr+T.cu)} (${pct(T.pr+T.cu,T.b)} % z rozpočtu)`,mL,y+5);
@@ -4463,11 +4572,14 @@ function exportXLSX(p,inv){
   const aoa=[[`Súpis vykonaných prác č. ${inv.no}`],[`Stavba: ${p.name}`],[`Investor: ${p.investor||""}`],[`Objednávateľ: ${p.client}`],[`Miesto: ${placeText(p)}`],[`Zhotoviteľ: ${S.company}${S.firm.ico?`, IČO ${S.firm.ico}`:""}`],[`Obdobie: ${d2(inv.from)} – ${d2(inv.to)}`+(inv.invoiceNo?`   Faktúra č. ${inv.invoiceNo}`:"")],[],
     ["Č.","Kód","Popis","MJ","J. cena","Rozpočet","","Predošlé obdobie","","Aktuálne obdobie","","Zostatok",""],
     ["","","","","","Množstvo","Suma","Množstvo","Suma","Množstvo","Suma","Množstvo","Suma"]];
-  let sec=null;const r2=v=>Math.round(v*100)/100,r3=v=>Math.round(v*1000)/1000;
+  let part=null,sec=null;const r2=v=>Math.round(v*100)/100,r3=v=>Math.round(v*1000)/1000;
   M.rows.forEach(r=>{const i=r.i;if(only&&!r.pq&&!r.cq)return;
-    if(i.section!==sec){sec=i.section;if(sec){const s=M.secs[sec];aoa.push(["","",sec,"","","",r2(s.b),"",r2(s.pr),"",r2(s.cu),"",r2(s.zo)])}}
+    if(M.multi&&(i.partId||"")!==part){part=i.partId||"";sec=null;const g=M.parts[part];aoa.push(["","",(partOf(p,part).name||"Časť stavby").toUpperCase(),"","","",r2(g.b),"",r2(g.pr),"",r2(g.cu),"",r2(g.zo)])}
+    const sk=secKey(i);if(sk!==sec){sec=sk;if(i.section){const s=M.secs[sk];aoa.push(["","",i.section,"","","",r2(s.b),"",r2(s.pr),"",r2(s.cu),"",r2(s.zo)])}}
     aoa.push([i.por,i.code,i.desc,i.mj,i.price,r3(i.qty),r2(r.bs),r3(r.pq),r2(r.ps),r3(r.cq),r2(r.cs),r3(r.zq),r2(r.zs)])});
   const T=M.T;aoa.push(["","","Spolu bez DPH","","","",r2(T.b),"",r2(T.pr),"",r2(T.cu),"",r2(T.zo)]);
+  if(M.multi){aoa.push([],["","","Rekapitulácia podľa častí stavby","","","","Rozpočet","","Predošlé obdobie","","Aktuálne obdobie","","Zostatok"]);
+    bParts(p).forEach(x=>{const g=M.parts[x.id]||{b:0,pr:0,cu:0,zo:0};aoa.push(["","",x.name||"Časť stavby","","","",r2(g.b),"",r2(g.pr),"",r2(g.cu),"",r2(g.zo)])})}
   const ws=XLSX.utils.aoa_to_sheet(aoa);
   ws["!cols"]=[{wch:5},{wch:15},{wch:50},{wch:5},{wch:9},{wch:10},{wch:12},{wch:10},{wch:12},{wch:10},{wch:12},{wch:10},{wch:12}];
   ws["!merges"]=[5,7,9,11].map(c=>({s:{r:8,c},e:{r:8,c:c+1}}));
@@ -4605,9 +4717,26 @@ document.addEventListener("click",ev=>{
   else if(a==="xlsxOut"){exportXLSX(p,p.invoices.find(x=>x.id===view.invId))}
   else if(a==="impCancel"){view.imp=null;render()}
   else if(a==="impSave"){const {sh,ex}=importState();if(!ex.items.length||!can(p,"budget.import"))return;
-    p.budget={fileName:view.imp.fileName,sheetName:sh.name,importedAt:new Date().toISOString().slice(0,10),importedBy:me.id,
-      items:ex.items.map((i,n)=>({id:"i"+(n+1),...i})),sum:+ex.sum.toFixed(2),declaredTotal:ex.declaredTotal};
-    view.imp=null;view.bq="";save();toast(`Rozpočet uložený: ${p.budget.items.length} položiek`);render()}
+    const I=view.imp,name=($("#impPartName")?.value||I.name||"").trim(),tg=I.target||"__new";
+    if(p.budget&&tg==="__new"&&!name){toast("Zadaj názov časti stavby");$("#impPartName")?.focus();return}
+    if(p.budget&&tg!=="__new"&&partUsed(p,tg)){toast("Z tejto časti sú už položky v súpisoch prác, rozpočet sa nedá nahradiť");return}
+    const meta={fileName:I.fileName,sheetName:sh.name,importedAt:new Date().toISOString().slice(0,10),importedBy:me.id};
+    const mk=pid=>ex.items.map((i,n)=>({...i,id:pid+"_"+Date.now().toString(36)+"_"+(n+1),partId:pid}));
+    if(!p.budget||tg===""&&!(p.budget.parts&&p.budget.parts.length)){const pid=uid("bp");p.budget={...meta,parts:[{id:pid,name,...meta}],items:mk(pid)}}
+    else{const B=p.budget;if(!B.parts||!B.parts.length){B.parts=[{id:"",name:String(B.fileName||"Pôvodný rozpočet").replace(/\.[^.]+$/,""),fileName:B.fileName,sheetName:B.sheetName,importedAt:B.importedAt,importedBy:B.importedBy}]}
+      if(tg==="__new"){const pid=uid("bp");B.parts.push({id:pid,name,...meta});B.items=B.items.concat(mk(pid))}
+      else{const P=B.parts.find(x=>x.id===tg);if(!P)return;Object.assign(P,meta,name?{name}:{});B.items=B.items.filter(i=>(i.partId||"")!==tg).concat(mk(tg))}}
+    p.budget.sum=+p.budget.items.reduce((s,i)=>s+i.total,0).toFixed(2);p.budget.declaredTotal=null;
+    view.lastImp=I.sheets.length>1?{pid:p.id,fileName:I.fileName,sheets:I.sheets,done:[...new Set([...(view.lastImp&&view.lastImp.fileName===I.fileName&&view.lastImp.pid===p.id?view.lastImp.done:[]),I.sheet])]}:null;
+    view.imp=null;view.bq="";view.bPart="";save();toast(`Rozpočet uložený: ${ex.items.length} položiek${multiPart(p)?` · stavba má ${p.budget.parts.length} časti`:""}`);render()}
+  else if(a==="impNextSheet"){const L=view.lastImp;if(!L)return;const k=+b.dataset.i,d=detectHeader(L.sheets[k].rows);view.imp={fileName:L.fileName,sheets:L.sheets,sheet:k,header:d?d.row:0,map:d?{...d.map}:{},target:"__new",name:L.sheets[k].name,autoName:true};render()}
+  else if(a==="impNextNo"){view.lastImp=null;render()}
+  else if(a==="bpEdit"){view.bpEdit=b.dataset.id;view.bpDel=null;render();$("#bpName")?.focus()}
+  else if(a==="bpEditNo"){view.bpEdit=null;render()}
+  else if(a==="bpDel"){view.bpDel=b.dataset.id;view.bpEdit=null;render()}
+  else if(a==="bpDelNo"){view.bpDel=null;render()}
+  else if(a==="bpDelYes"){const id=b.dataset.id;if(!can(p,"budget.import")||partUsed(p,id))return;const B=p.budget;B.parts=B.parts.filter(x=>x.id!==id);B.items=B.items.filter(i=>(i.partId||"")!==id);
+    B.sum=+B.items.reduce((s,i)=>s+i.total,0).toFixed(2);view.bpDel=null;view.bPart="";save();toast("Časť stavby odstránená");render()}
   else if(a==="removeMember"){const id=b.dataset.id;p.members=p.members.filter(m=>m.userId!==id);save();toast("Člen odobratý zo stavby");render()}
 });
 document.addEventListener("change",ev=>{
@@ -4620,8 +4749,9 @@ document.addEventListener("change",ev=>{
   if(t.id==="stampWhite"){view.stampWhite=t.checked;return}
   if(t.id==="fVat"){const l=document.querySelector("[data-vat]");if(l)l.hidden=!t.checked;return}
   if(t.id==="phFile"&&t.files.length){addPhotos([...t.files]);t.value="";return}
-  if(t.id==="budgetFile"&&t.files[0])readBudgetFile(t.files[0]);
-  else if(t.id==="impSheet"){const I=view.imp;I.sheet=+t.value;const d=detectHeader(I.sheets[I.sheet].rows);I.header=d?d.row:0;I.map=d?{...d.map}:{};render()}
+  if(t.classList&&t.classList.contains("budgetFile")&&t.files[0])readBudgetFile(t.files[0],t.dataset.target);
+  else if(t.id==="bPartSel"){view.bPart=t.value;render()}
+  else if(t.id==="impSheet"){const I=view.imp;I.sheet=+t.value;if(I.autoName)I.name=I.sheets[I.sheet].name;const d=detectHeader(I.sheets[I.sheet].rows);I.header=d?d.row:0;I.map=d?{...d.map}:{};render()}
   else if(t.id==="impHeader"){const I=view.imp;I.header=Math.max(0,(+t.value||1)-1-I.sheets[I.sheet].r0);remapFromHeader();render()}
   else if(t.id==="niPreset"||t.id==="niFrom"){const n=view.newInv;if(t.id==="niPreset")n.preset=t.value;else n.from=t.value;if(n.preset!=="custom"||t.id==="niFrom"&&n.to<n.from)n.to=presetTo(n.from,n.preset==="custom"?"week":n.preset);render()}
   else if(t.id==="niTo"){view.newInv.to=t.value;view.newInv.preset="custom";render()}

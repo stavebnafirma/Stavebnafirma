@@ -60,6 +60,9 @@ rep('me.pw=await hashPw(a);save();toast("Heslo zmenené");', 'const {error}=awai
 rep('let sample=null;try{sample=await window.claude?.use?.("sample")}catch(e){}', 'let sample=null;')
 rep('"Automatické vyčítanie tu nie je dostupné. Fotky sú uložené, údaje doplň ručne."', '"Automatické vyčítanie z fotky pripravujeme. Fotky sú uložené, údaje zatiaľ doplň ručne."')
 
+# 5b) súbory: úložisko prototypu (IndexedDB) → Supabase Storage (FILESTORE v live.js)
+cut("/* FILESTORE-START */", "/* FILESTORE-END */", "/* FILESTORE: pozri OSTRÁ VERZIA vyššie */", keep_end=False)
+
 # 6) koniec skriptu: bez ukážkových dát, štart cez Supabase
 i = s.index('if(!ROOT.tenants.demo.trainings)'); j = s.index('render();\n</script>', i)
 s = s[:i] + 'boot();\n</script>' + s[j + len('render();\n</script>'):]
