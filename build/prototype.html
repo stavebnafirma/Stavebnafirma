@@ -243,6 +243,8 @@ tr.sel-row td{background:var(--tint)}
 @media (min-width:920px){.authwrap{grid-template-columns:minmax(0,1fr) 420px;align-items:start}.intro{order:0;padding-top:12px}.hero{font-size:44px}}
 .dash{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:14px;align-items:start}
 .bubble{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px -4px rgba(20,24,28,.18)}
+.nbdash{grid-auto-rows:350px;align-items:stretch}.nbdash>.bubble{height:100%;min-height:0;overflow:hidden}.nbdash .bub-list{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin}.nbdash .bubble>.muted{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 12px}
+@media(max-width:560px){.nbdash{grid-auto-rows:auto}.nbdash .bub-list{max-height:300px}}
 .halves{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch}@media(max-width:820px){.halves{grid-template-columns:1fr}}
 .nbgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:520px){.nbgrid{grid-template-columns:1fr}}
 .nbmod{border:1px solid var(--line);border-radius:10px;padding:6px 10px 10px;margin:0;display:flex;flex-direction:column;gap:4px}.nbmod legend{font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;padding:0 4px}.nbmod.off{opacity:.6}
@@ -3249,7 +3251,7 @@ function dashFleetHTML(){
 function nastenkaHTML(){
   const bubbles=nbBubbles();
   return `<div class="stack"><div class="muted">Prehľad z modulov: posledné upozornenia a najakútnejšie veci na riešenie.</div>
-    <div class="dash">${bubbles.join("")||`<div class="card muted">Pre tvoju rolu tu zatiaľ nie sú žiadne prehľady.</div>`}</div></div>`}
+    <div class="dash nbdash">${bubbles.join("")||`<div class="card muted">Pre tvoju rolu tu zatiaľ nie sú žiadne prehľady.</div>`}</div></div>`}
 function firmaHTML(){
   const t=firmTabCur(),tabs="";
   const body=t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML());
