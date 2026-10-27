@@ -29,9 +29,22 @@ Deno.serve(async (req) => {
 
     const tid = String(body.tenant_id || "");
     const { data: mem } = await admin.from("members").select("role").eq("tenant_id", tid).eq("user_id", user.id).maybeSingle();
-    if (!mem || mem.role !== "admin") return json({ error: "Predplatné spravuje administrátor firmy." }, 403);
+    if (!mem) return json({ error: "Do tejto firmy nemáš prístup." }, 403);
     const { data: ten } = await admin.from("tenants").select("id,name,stripe_customer_id,billing").eq("id", tid).single();
     if (!ten) return json({ error: "Firma neexistuje." }, 404);
+
+    // zosúladenie so Stripe (ak by potvrdenie cez webhook neprišlo): najnovšie predplatné zákazníka
+    if (action === "sync") {
+      if (!ten.stripe_customer_id) return json({ synced: false });
+      const list = await stripe("GET", "subscriptions", { customer: ten.stripe_customer_id, status: "all", limit: 10 });
+      const subs = (list.data || []).sort((a: any, b: any) => b.created - a.created);
+      const sub = subs.find((x: any) => ["active", "trialing", "past_due"].includes(x.status)) || subs[0];
+      if (!sub) return json({ synced: false });
+      const { paid, billing } = paidFromSubscription(sub);
+      await admin.from("tenants").update({ paid_modules: paid, billing }).eq("id", tid);
+      return json({ synced: true, paid });
+    }
+    if (mem.role !== "admin") return json({ error: "Predplatné spravuje administrátor firmy." }, 403);
 
     const ensureCustomer = async () => {
       if (ten.stripe_customer_id) return ten.stripe_customer_id as string;
@@ -56,7 +69,12 @@ Deno.serve(async (req) => {
       if (missing.length) return json({ error: `V Stripe chýba cena pre: ${missing.map((m: string) => lookupKey(m, interval)).join(", ")}` }, 400);
 
       // existujúce aktívne predplatné → len upraviť moduly (s doplatkom/dobropisom za zvyšok obdobia)
-      const subId = ten.billing?.subscription_id;
+      // aktívne predplatné (aj keby ešte nebolo zapísané) → upraviť ho, nezakladať druhé
+      let subId = ten.billing?.subscription_id;
+      if (!subId && ten.stripe_customer_id) {
+        const list = await stripe("GET", "subscriptions", { customer: ten.stripe_customer_id, status: "active", limit: 1 }).catch(() => ({ data: [] }));
+        subId = list.data?.[0]?.id;
+      }
       if (subId) {
         const sub = await stripe("GET", `subscriptions/${subId}`).catch(() => null);
         if (sub && ["active", "trialing", "past_due"].includes(sub.status)) {

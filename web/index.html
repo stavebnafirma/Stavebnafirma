@@ -802,7 +802,7 @@ async function openTenant(tid){view={screen:"home",auth:"loading"};render();
   if(!me){view={screen:"home",auth:"login",loginErr:"Do tejto firmy už nemáš prístup."};render();return}
   if(JSON.stringify(profState())!==PSNAP)save();
   view=needsSetup()?{screen:"setup"}:needsProfile()?{screen:"profile"}:isExternal(me)?externalStart():{screen:startScreen(),tab:"dennik"};render();window.scrollTo(0,0);
-  if(/[?&]platba=/.test(location.search))afterPaymentReturn()}
+  if(/[?&]platba=/.test(location.search))afterPaymentReturn();else syncBilling()}
 async function createFirm(name){
   const mods=S.modules||MODS_ALL;const {data:tid,error}=await SB.rpc("create_tenant",{p_name:name,p_modules:mods});if(error)throw error;
   const {data:ms}=await SB.from("members").select("tenant_id,role,tenants(name)").eq("user_id",authUser.id);myTenants=ms||[];
@@ -889,6 +889,9 @@ async function offerFile(filename,data){
    ===================================================================== */
 let BILL=null,PRICES=null,billBusy=false;
 async function loadBilling(){if(!TID)return;const {data,error}=await SB.rpc("billing_status",{t:TID});if(!error&&data)BILL=data}
+/* zosúladenie so Stripe – pri otvorení firmy a po návrate z platby (ak by potvrdenie zo Stripe meškalo) */
+async function syncBilling(){if(!TID||!BILL||!BILL.has_customer)return false;try{const {data,error}=await SB.functions.invoke("billing",{body:{action:"sync",tenant_id:TID}});
+  if(error||!data||!data.synced)return false;const before=JSON.stringify(BILL.active);await loadBilling();if(JSON.stringify(BILL.active)!==before){await loadTenant(TID);render()}return true}catch(e){return false}}
 let STRIPE_PRICES=[];
 async function loadPrices(){if(PRICES)return;PRICES={};try{const {data,error}=await SB.functions.invoke("billing",{body:{action:"prices"}});if(!error&&data&&data.prices){PRICES=data.prices;STRIPE_PRICES=data.stripePrices||[]}}catch(e){}render()}
 const pricesMissing=()=>{if(!PRICES||!Object.keys(PRICES).length)return null;const miss=[];MODULES.forEach(([k])=>["month","year"].forEach(i=>{if(!(PRICES[k]&&PRICES[k][i]))miss.push(k+"_"+i)}));return miss};
@@ -928,7 +931,7 @@ function modulesHTML(){
       <div class="row"><b>Spolu: ${sum.toLocaleString("sk-SK",{minimumFractionDigits:2,maximumFractionDigits:2})} € / ${D.interval==="year"?"rok":"mesiac"}</b><span class="muted" style="font-size:13px">${PRICES&&Object.keys(PRICES).length?"bez DPH":""}</span></div>
       ${view.payUrl?`<div class="note">Otváram platobnú stránku Stripe… Ak sa neotvorila sama, <a href="${esc(view.payUrl)}" rel="noopener"><b>klikni sem</b></a>.</div>`:""}
       <div class="row"><button class="btn primary" data-a="billPay" ${billBusy||!D.mods.length?"disabled":""}>${billBusy?"Pripravujem…":hasSub?"Uložiť zmenu predplatného":"Prejsť na platbu"}</button>
-        ${B.has_customer?`<button class="btn" data-a="billPortal" ${billBusy?"disabled":""}>Platobná karta, faktúry a zrušenie</button>`:""}</div>
+        ${B.has_customer?`<button class="btn" data-a="billPortal" ${billBusy?"disabled":""}>Platobná karta, faktúry a zrušenie</button><button class="btn ghost" data-a="billSync" ${billBusy?"disabled":""}>Obnoviť stav platby</button>`:""}</div>
       <div class="muted" style="font-size:13px">${hasSub?"Pri pridaní modulu sa doplatí len pomerná časť do konca obdobia, pri odobratí sa zvyšok odpočíta z ďalšej platby.":"Platbu spracúva Stripe – údaje o karte sa v aplikácii neukladajú. Predplatné sa obnovuje automaticky a dá sa kedykoľvek zrušiť."} Vypnutím modulu sa údaje nezmažú.</div>`
       :!admin?`<div class="muted" style="font-size:13px">Predplatné spravuje administrátor firmy.</div>`:""}
   </div></div>`}
@@ -941,6 +944,7 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
   if(a==="billPay"){ev.stopImmediatePropagation();const D=view.billDraft;
     billCall({action:"checkout",modules:D.mods,interval:D.interval}).then(async d=>{if(d.url){view.payUrl=d.url;render();location.assign(d.url);return}
       if(d.updated){await loadBilling();view.billDraft=null;toast("Predplatné upravené");render()}}).catch(e=>{toast("Platbu sa nepodarilo pripraviť: "+e.message);render()})}
+  else if(a==="billSync"){ev.stopImmediatePropagation();billBusy=true;render();syncBilling().then(ok=>{billBusy=false;view.billDraft=null;toast(ok?"Stav predplatného obnovený zo Stripe":"Stav sa nepodarilo obnoviť");render()})}
   else if(a==="billPortal"){ev.stopImmediatePropagation();billCall({action:"portal"}).then(d=>{if(d.url){view.payUrl=d.url;render();location.assign(d.url)}}).catch(e=>{toast("Správu predplatného sa nepodarilo otvoriť: "+e.message);render()})}},true);
 document.addEventListener("change",ev=>{const t=ev.target;if(!me||!view.billDraft)return;
   if(t.dataset&&t.dataset.bmod){const D=view.billDraft;D.mods=t.checked?[...new Set([...D.mods,t.dataset.bmod])]:D.mods.filter(x=>x!==t.dataset.bmod);render()}
@@ -949,9 +953,9 @@ document.addEventListener("change",ev=>{const t=ev.target;if(!me||!view.billDraf
 async function afterPaymentReturn(){const q=new URLSearchParams(location.search),r=q.get("platba");if(!r)return;history.replaceState(null,"",location.pathname);
   view={screen:"firma",firmTab:"moduly"};
   if(r==="zrusena"){toast("Platba bola zrušená, nič sa nezaplatilo.");render();return}
-  if(r==="ok"){toast("Ďakujeme, platba prebehla. Zapínam moduly…");for(let i=0;i<10;i++){await loadBilling();render();if(BILL&&Object.keys(BILL.paid_modules||{}).length)break;await new Promise(z=>setTimeout(z,2000))}
+  if(r==="ok"){toast("Ďakujeme, platba prebehla. Zapínam moduly…");for(let i=0;i<10;i++){await loadBilling();if(!(BILL&&Object.keys(BILL.paid_modules||{}).length)&&i>=1)await syncBilling();render();if(BILL&&Object.keys(BILL.paid_modules||{}).length)break;await new Promise(z=>setTimeout(z,2000))}
     view.billDraft=null;await loadTenant(TID);render();return}
-  await loadBilling();render()}
+  await syncBilling();await loadBilling();render()}
 
 let S=blankState();
 let me=null, view={screen:"home",projectId:null,tab:"dennik",editId:null,loginErr:""};
