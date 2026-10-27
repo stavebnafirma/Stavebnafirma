@@ -1867,7 +1867,7 @@ function ostatneHTML(){const ed=canEdit("personal"),vs=vehicles(),today=todayIso
   const vehOpts=all=>`${all?`<option value="__all">Všetky firemné vozidlá (${vs.length})</option>`:`<option value="">— vyber vozidlo —</option>`}${vs.map(m=>`<option value="${m.id}">${esc(vehName(m))}</option>`).join("")}`;
   const mode=id=>`<label>Forma<select id="${id}"><option value="list">Hromadne s podpisovou listinou</option><option value="each">Každý zamestnanec zvlášť</option></select></label>`;
   const hint=`<span class="hint">Text dokumentu je zatiaľ všeobecný. Po dodaní vašich vzorov ho upravíme.</span>`;
-  return `<div class="dash">
+  return `<div class="stack">
     ${ooppBubble()}
     <form class="bubble" id="odGps"><h3>Oboznámenie s GPS vo vozidlách</h3>
       <label>Zamestnanci<select id="gpsWho">${empOpts(true)}</select></label>
