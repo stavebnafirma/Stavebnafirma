@@ -3247,7 +3247,7 @@ function subnavRows(){
   if(!me||view.screen==="setup"||view.screen==="profile")return null;const sc=view.screen;
   if(sc==="firma")return [firmTabs().map(([k,l])=>({a:"firmTab",tab:k,l,sel:(firmTabCur()===k)}))];
   if(sc==="personal"){const t=view.pTab||"emp";return [P_TABS.map(([k,l])=>({a:"pTab",tab:k,l,sel:t===k}))]}
-  if(sc==="doprava"){const al=fleetAlerts().length,t=view.dTab||"park";const r=[[{a:"dTab",tab:"park",l:"Stroje a vozidlá",sel:t==="park"},{a:"dTab",tab:"terminy",l:"Údržba a servis",sel:t==="terminy",n:al},{a:"dTab",tab:"logi",l:"Logistika",sel:t==="logi"},{a:"dTab",tab:"pers",l:"Personál",sel:t==="pers"},{a:"dTab",tab:"export",l:"Export",sel:t==="export"},{a:"dTab",tab:"vazenie",l:"Váženie",sel:t==="vazenie"},{a:"dTab",tab:"stat",l:"Štatistika",sel:t==="stat"}]];
+  if(sc==="doprava"){const al=fleetAlerts().length,t=view.dTab||"park";const r=[[{a:"dTab",tab:"park",l:"Stroje a vozidlá",sel:t==="park"},{a:"dTab",tab:"logi",l:"Logistika",sel:t==="logi"},{a:"dTab",tab:"pers",l:"Personál",sel:t==="pers"},{a:"dTab",tab:"export",l:"Export",sel:t==="export"},{a:"dTab",tab:"vazenie",l:"Váženie",sel:t==="vazenie"},{a:"dTab",tab:"terminy",l:"Údržba a servis",sel:t==="terminy",n:al},{a:"dTab",tab:"stat",l:"Štatistika",sel:t==="stat"}]];
     const m=view.vehId&&(S.machines||[]).find(x=>x.id===view.vehId);if(m){r[0][0].sel=true;r[0][1].sel=false;r.push([{a:"vehOpen",id:m.id,l:m.name,sel:true}])}return r}
   if(sc==="pozicovna"){const t=rTabCur();return [R_TABS.map(([k,l])=>({a:"rTab",tab:k,l,sel:t===k}))]}
   if(sc==="home")return null;
