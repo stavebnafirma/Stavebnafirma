@@ -248,6 +248,10 @@ tr.sel-row td{background:var(--tint)}
 @media (min-width:920px){.authwrap{grid-template-columns:minmax(0,1fr) 420px;align-items:start}.intro{order:0;padding-top:12px}.hero{font-size:44px}}
 .dash{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:14px;align-items:start}
 .bubble{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px -4px rgba(20,40,28,.18)}
+.halves{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch}@media(max-width:820px){.halves{grid-template-columns:1fr}}
+.nbgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:520px){.nbgrid{grid-template-columns:1fr}}
+.nbmod{border:1px solid var(--line);border-radius:10px;padding:6px 10px 10px;margin:0;display:flex;flex-direction:column;gap:4px}.nbmod legend{font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;padding:0 4px}.nbmod.off{opacity:.6}
+.nb-ic{width:18px;height:18px;color:var(--accent)}.nbmod .chk{font-size:13.5px}
 .bub-head{display:flex;align-items:flex-start;gap:10px}
 .bub-ic{width:34px;height:34px;padding:6px;border-radius:10px;background:var(--tint);color:var(--accent);flex:none}
 .bub-head>div:nth-child(2){flex:1;min-width:0}
@@ -2198,6 +2202,74 @@ document.addEventListener("change",ev=>{if(ev.target.id==="vhVeh"&&me){const m=m
 document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||!["odGps","odCam","odVeh","odTool"].includes(id))return;ev.preventDefault();
   if(id==="odGps")gpsPDF();else if(id==="odCam")camPDF();else if(id==="odVeh")vehPDF();else toolPDF()});
 
+/* ---------- Nástenka: nastavenie a bubliny z modulov ---------- */
+const NB_MODS=[["personal","Personalistika"],["doprava","Doprava a logistika"],["pozicovna","Požičovňa"],["stavba","Stavba"]];
+const NB_ITEMS={
+  personal:[["skol","Končiace platnosti školení"],["att","Nevyplnená dochádzka"],["cash","Peniaze na výplatu za minulý mesiac"]],
+  doprava:[["fleet","Termíny údržby a servisu"],["jobs","Zákazky na dnes a zajtra"],["weigh","Dnešné váženie"]],
+  pozicovna:[["rentOver","Výpožičky po termíne vrátenia"],["rentToday","Dnešné vydania a vrátenia"]],
+  stavba:[["inv","Súpisy prác na odsúhlasenie"],["diary","Stavby bez denného záznamu"]]};
+const nbOn=k=>{const D=(S.firm||{}).dash;return !D||D[k]!==false};
+const nbModOk=m=>hasMod(m)&&canSee(m);
+function nbSettingsHTML(){const ed=me.companyRole==="admin";
+  return `<div class="card stack nbset"><div><h3>Nastavenie nástenky</h3><div class="muted" style="font-size:13px">Čo sa zobrazí na nástenke firmy. Každý používateľ vidí len moduly, ku ktorým má prístup.</div></div>
+    <div class="nbgrid">${NB_MODS.map(([m,l])=>`<fieldset class="nbmod${hasMod(m)?"":" off"}"><legend>${icon(m==="stavba"?"home":m,"nb-ic")}${l}${hasMod(m)?"":` <span class="muted" style="font-weight:400">· nepredplatený</span>`}</legend>
+      ${NB_ITEMS[m].map(([k,t])=>`<label class="chk"><input type="checkbox" data-nb="${k}" ${nbOn(k)?"checked":""} ${ed?"":"disabled"}> ${t}</label>`).join("")}</fieldset>`).join("")}</div>
+    ${ed?"":`<span class="hint">Nástenku nastavuje administrátor firmy.</span>`}</div>`}
+function firmStartRowHTML(){const st=startChecklist();
+  const left=st||(me.companyRole==="admin"?`<div class="card stack start"><div class="entry-head"><h3>Začíname</h3><span class="pill s-ok">Hotovo</span></div><div class="muted" style="font-size:13px">Firma je nastavená: údaje, logo, pečiatka, zamestnanci, vozový park${hasMod("stavba")?" aj prvá stavba":""}.</div></div>`:"");
+  return left?`<div class="halves">${left}${nbSettingsHTML()}</div>`:nbSettingsHTML()}
+
+/* spoločná kostra bubliny */
+function nbBubble(mod,title,count,rows,empty,go){
+  return `<section class="bubble"><div class="bub-head">${icon(mod==="stavba"?"home":mod,"bub-ic")}<div><div class="eyebrow">${NB_MODS.find(x=>x[0]===mod)[1]}</div><h3>${title}</h3></div><div class="bub-count">${count||""}</div></div>
+    ${rows.length?`<ul class="bub-list">${rows.slice(0,6).map(r=>`<li><button class="bub-row" data-a="nbGo" ${Object.entries(r.go||go).map(([k,v])=>`data-${k}="${esc(v)}"`).join(" ")}><span class="dot2 ${r.st?"st-"+r.st:""}" aria-hidden="true"></span>
+      <span class="bub-main"><span><b>${esc(r.main)}</b></span>${r.sub?`<span class="muted">${esc(r.sub)}</span>`:""}</span><span class="bub-when ${r.st==="bad"?"bad":""}" style="${r.st?"":"color:var(--muted)"}">${esc(r.when||"")}</span></button></li>`).join("")}</ul>
+      ${rows.length>6?`<button class="btn small ghost" data-a="nbGo" ${Object.entries(go).map(([k,v])=>`data-${k}="${esc(v)}"`).join(" ")} style="align-self:flex-start">Zobraziť všetko (${rows.length}) →</button>`:""}`
+    :`<div class="muted" style="font-size:14px">${empty}</div>`}</section>`}
+const pill=(n,cls,t)=>n?`<span class="pill ${cls}">${n} ${t}</span>`:"";
+const dleft=d=>{const n=daysTo(d);return n<0?`${-n} d po termíne`:n===0?"dnes":n===1?"zajtra":`o ${n} d`};
+
+function nbSkol(){const rows=[];activeWorkers().forEach(w=>Object.entries(empValid(w.id)).forEach(([type,v])=>{const st=validSt(v.until);if(st!=="ok")rows.push({st,main:fullName(w),sub:type,when:dleft(v.until),sort:v.until})}));
+  rows.sort((a,b)=>a.sort.localeCompare(b.sort));const bad=rows.filter(r=>r.st==="bad").length;
+  return nbBubble("personal","Končiace platnosti školení",pill(bad,"s-ret","po platnosti")+pill(rows.length-bad,"s-open","do 30 dní")||`<span class="pill s-ok">V poriadku</span>`,rows,"Žiadne školenie nekončí v najbližších 30 dňoch.",{sec:"personal",ptab:"skol"})}
+function nbAtt(){const ym=todayIso().slice(0,7),rows=[];activeWorkers().forEach(w=>{const A=payAtt(w,ym);if(A.empty.length)rows.push({st:A.empty.length>3?"bad":"soon",main:fullName(w),sub:ranges(A.empty),when:`${A.empty.length} d`})});
+  return nbBubble("personal",`Nevyplnená dochádzka – ${ymName(ym)}`,rows.length?pill(rows.length,"s-open","zamestnancov"):`<span class="pill s-ok">Vyplnená</span>`,rows,"Dochádzka je vyplnená do dnešného dňa.",{sec:"personal",ptab:"att"})}
+function nbCash(){const d=new Date(todayIso()+"T12:00");d.setDate(1);d.setMonth(d.getMonth()-1);const ym=d.toISOString().slice(0,7),ws=payWorkers(ym);
+  if(!ws.length)return nbBubble("personal",`Peniaze na výplatu – ${ymName(ym)}`,"",[],"V minulom mesiaci nie sú zamestnanci s dochádzkou.",{sec:"personal",ptab:"mzdy"});
+  const C=Object.fromEntries(ws.map(w=>[w.id,payCalc(w,ym)])),R=payCash(ym,ws,C),go={sec:"personal",ptab:"mzdy",pm:ym};
+  const rows=[{main:"Čisté mzdy",when:eur(r2(R.payout)),sub:`do ${d2(R.payDate)}`},{main:"Sociálna poisťovňa",when:eur(r2(R.sp)),sub:`do ${d2(R.payDate)}`},
+    {main:"Zdravotné poisťovne",when:eur(r2(Object.values(R.zp).reduce((s,x)=>s+x,0))),sub:`najneskôr ${d2(R.zpDate)}`},{main:"Daňový úrad",when:eur(r2(R.tax)),sub:`do ${d2(R.taxDate)}`}];
+  return nbBubble("personal",`Peniaze na výplatu – ${ymName(ym)}`,`<span class="pill s-open">spolu ${eur(R.total)}</span>`,rows,"",go)}
+function nbJobs(){const t=todayIso(),z=isoShift(t,1),rows=[t,z].flatMap(d=>jobsOn(d).map(j=>{const miss=(j.machines||[]).some(x=>!x.driverId&&NEEDS_DRIVER.includes((machine(x.machineId)||{}).cat));
+    return {st:miss?"soon":"",main:[j.client,j.desc].filter(Boolean).join(" – ")||"Zákazka",sub:(j.machines||[]).map(x=>(machine(x.machineId)||{}).name).filter(Boolean).join(", ")+(miss?" · chýba vodič":""),when:`${d===t?"dnes":"zajtra"} ${j.from||""}`,go:{sec:"doprava",dtab:"logi"}}}));
+  return nbBubble("doprava","Zákazky na dnes a zajtra",pill(rows.length,"s-open","zákaziek"),rows,"Na dnes a zajtra nie sú naplánované zákazky.",{sec:"doprava",dtab:"logi"})}
+function nbWeigh(){const t=todayIso(),L=(S.weighs||[]).filter(w=>w.date===t),done=L.filter(wDone),pend=L.length-done.length,net=done.reduce((s,w)=>s+wNet(w),0);
+  const by={};done.forEach(w=>{const k=(w.material||"bez materiálu")+"|"+(w.dir==="out"?"Výdaj":"Príjem");by[k]=(by[k]||0)+wNet(w)});
+  const rows=Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{const [m,dir]=k.split("|");return {main:m,sub:dir,when:`${nf1(v/1000)} t`}});
+  if(pend)rows.unshift({st:"soon",main:"Nekompletné váženia",sub:"chýba tara",when:`${pend}×`});
+  return nbBubble("doprava","Dnešné váženie",L.length?`<span class="pill s-open">${L.length}× · ${nf1(net/1000)} t</span>`:"",rows,"Dnes zatiaľ nebolo žiadne váženie.",{sec:"doprava",dtab:"vazenie"})}
+function nbRentOver(){const rows=rLoans().filter(rOverdue).sort((a,b)=>a.to.localeCompare(b.to)).map(l=>({st:"bad",main:(l.customer&&(l.customer.company||l.customer.name))||"Zákazník",sub:`${(l.items||[]).length} ks${l.customer&&l.customer.phone?" · "+l.customer.phone:""}`,when:dleft(l.to)}));
+  return nbBubble("pozicovna","Výpožičky po termíne",rows.length?pill(rows.length,"s-ret","po termíne"):`<span class="pill s-ok">Nič po termíne</span>`,rows,"Všetko požičané náradie je v termíne.",{sec:"pozicovna",rtab:"nast"})}
+function nbRentToday(){const t=todayIso(),cn=l=>(l.customer&&(l.customer.company||l.customer.name))||"Zákazník";
+  const rows=[...rLoans().filter(l=>l.status==="rez"&&l.from===t).map(l=>({st:"soon",main:cn(l),sub:`vydať ${(l.items||[]).length} ks`,when:"vydanie"})),...rLoans().filter(l=>l.status==="out"&&l.to===t).map(l=>({main:cn(l),sub:`${(l.items||[]).length} ks`,when:"vrátenie"}))];
+  return nbBubble("pozicovna","Dnešné vydania a vrátenia",pill(rows.length,"s-open","dnes"),rows,"Dnes nie je naplánované vydanie ani vrátenie.",{sec:"pozicovna",rtab:"nast"})}
+function nbInv(){const rows=[];visibleProjects().forEach(p=>(p.invoices||[]).forEach(inv=>{if(inv.status==="submitted"||inv.status==="returned")rows.push({st:inv.status==="returned"?"bad":"soon",main:p.name,sub:`Súpis č. ${inv.no} · ${d2(inv.from)} – ${d2(inv.to)}`,when:inv.status==="returned"?"vrátený":"čaká na dozor",go:{sec:"project",proj:p.id,ptab2:"faktury"}})}));
+  return nbBubble("stavba","Súpisy prác na odsúhlasenie",pill(rows.filter(r=>r.st==="soon").length,"s-open","čaká")+pill(rows.filter(r=>r.st==="bad").length,"s-ret","vrátené")||`<span class="pill s-ok">Nič nečaká</span>`,rows,"Žiadny súpis nečaká na odsúhlasenie.",{sec:"home"})}
+function nbDiary(){let d=isoShift(todayIso(),-1);while(!isWorkday(d))d=isoShift(d,-1);
+  const act=visibleProjects().filter(p=>p.status!=="done"&&p.status!=="closed"&&(!p.start||p.start<=d)&&(!p.end||p.end>=d));
+  const rows=act.filter(p=>!S.diary.some(e=>e.projectId===p.id&&e.date===d)).map(p=>{const last=S.diary.filter(e=>e.projectId===p.id).map(e=>e.date).sort().pop();
+    return {st:"soon",main:p.name,sub:last?`posledný záznam ${d2(last)}`:"zatiaľ bez záznamu",when:"",go:{sec:"project",proj:p.id,ptab2:"dennik"}}});
+  return nbBubble("stavba",`Bez denného záznamu za ${d2(d)}`,pill(rows.length,"s-open","stavieb")||`<span class="pill s-ok">Všetko zapísané</span>`,rows,"Všetky aktívne stavby majú denný záznam.",{sec:"home"})}
+const NB_RENDER={skol:nbSkol,att:nbAtt,cash:nbCash,fleet:dashFleetHTML,jobs:nbJobs,weigh:nbWeigh,rentOver:nbRentOver,rentToday:nbRentToday,inv:nbInv,diary:nbDiary};
+function nbBubbles(){const out=[];NB_MODS.forEach(([m])=>{if(!nbModOk(m))return;NB_ITEMS[m].forEach(([k])=>{if(!nbOn(k))return;try{const h=NB_RENDER[k]();if(h)out.push(h)}catch(e){console.error("nástenka",k,e)}})});return out}
+
+document.addEventListener("change",ev=>{const t=ev.target;if(!me||!t.dataset||!t.dataset.nb||me.companyRole!=="admin")return;S.firm.dash={...(S.firm.dash||{}),[t.dataset.nb]:t.checked};save();toast("Nástenka upravená")});
+document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="nbGo"]');if(!b||!me)return;const D=b.dataset;
+  if(D.sec==="project"){view={screen:"project",projectId:D.proj,tab:D.ptab2||"dennik"}}
+  else{view={screen:D.sec,tab:"dennik",newProj:false};if(D.dtab)view.dTab=D.dtab;if(D.ptab)view.pTab=D.ptab;if(D.rtab)view.rTab=D.rtab;if(D.pm)view.payMonth=D.pm}
+  render();window.scrollTo(0,0)});
+
 /* ---------- Personalistika: školenia ---------- */
 const SKOL_TYPES=[["BOZP",24],["Ochrana pred požiarmi",24],["Školenie vodičov",12],["Školenie strojníkov",24],["Prvá pomoc",24],["Práca vo výškach",12],["Iné",0]];
 const skolName=s=>s.type==="Iné"?(s.title||"Školenie"):s.type+(s.title?` – ${s.title}`:"");
@@ -3169,13 +3241,13 @@ function dashFleetHTML(){
     <div class="row"><button class="btn small" data-a="sec" data-sec="doprava" data-dtab="terminy">${items.length>top.length?`Údržba a servis – všetky termíny (${items.length}) →`:"Údržba a servis →"}</button></div>
   </section>`}
 function nastenkaHTML(){
-  const bubbles=[dashFleetHTML()].filter(Boolean);
+  const bubbles=nbBubbles();
   return `<div class="stack"><div class="muted">Prehľad z modulov: posledné upozornenia a najakútnejšie veci na riešenie.</div>
     <div class="dash">${bubbles.join("")||`<div class="card muted">Pre tvoju rolu tu zatiaľ nie sú žiadne prehľady.</div>`}</div></div>`}
 function firmaHTML(){
   const t=firmTabCur(),tabs="";
   const body=t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML());
-  return `<div class="stack"><div><div class="eyebrow">Firma</div><h1>${esc(S.firm.name||"Firma")}</h1></div>${tabs}${t==="udaje"&&!view.firmEditing?startChecklist():""}${body}</div>`}
+  return `<div class="stack"><div><div class="eyebrow">Firma</div><h1>${esc(S.firm.name||"Firma")}</h1></div>${tabs}${t==="udaje"&&!view.firmEditing?firmStartRowHTML():""}${body}</div>`}
 const P_TABS=[["emp","Zamestnanci"],["att","Dochádzka"],["mzdy","Podklady pre mzdy"],["sc","Služobné cesty"],["skol","Školenia"],["ost","Ostatné"]];
 /* služobné cesty sa skladajú z dní "SC" v dochádzke; po sebe idúce dni jedného zamestnanca = jedna cesta */
 /* sadzby: tuzemské stravné od 1. 12. 2025; zahraničné stravné podľa opatrenia MF SR č. 401/2012 Z. z. v znení účinnom od 30. 1. 2026; základná náhrada za 1 km od 1. 1. 2026 */
