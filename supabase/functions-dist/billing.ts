@@ -92,7 +92,8 @@ export function paidFromSubscription(sub: any) {
 
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const admin = createClient(SB_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
-const appUrl = () => (Deno.env.get("APP_URL") || "https://www.stavebnafirma.com").replace(/\/$/, "");
+// adresa aplikácie pre návrat zo Stripe (doplní https://, ak chýba)
+const appUrl = () => { let u = (Deno.env.get("APP_URL") || "https://www.stavebnafirma.com").trim().replace(/\/+$/, ""); if (!/^https?:\/\//i.test(u)) u = "https://" + u; return u; };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -123,6 +124,7 @@ Deno.serve(async (req) => {
       if (ten.stripe_customer_id) return ten.stripe_customer_id as string;
       const c = await stripe("POST", "customers", { email: user.email, name: ten.name, metadata: { tenant_id: tid }, preferred_locales: ["sk"] });
       await admin.from("tenants").update({ stripe_customer_id: c.id }).eq("id", tid);
+      ten.stripe_customer_id = c.id;
       return c.id as string;
     };
 
