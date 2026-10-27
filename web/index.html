@@ -8,26 +8,26 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&family=Barlow+Condensed:wght@600;700&display=swap">
 <style>
-/* Layout: horná lišta s hlavným menu (4 karty), obsah do 1120 px; palety: lesná zelená, šedá, biela */
+/* Layout: horná lišta s hlavným menu (4 karty), obsah do 1120 px; paleta: tmavosivá, oranžová, svetlosivá a biela */
 :root{
-  --bg:#f2f4f2; --surface:#ffffff; --line:#d8dfda; --fg:#18211c; --muted:#5b6861;
-  --brand:#1c4a33; --brand-fg:#ffffff; --brand-hi:#8fdcae;
-  --sub1:#e3efe7; --hdr:124px; --ink:#1f6b45; --accent:#23804e; --accent-ink:#ffffff; --accent-soft:#a9d8bb; --tint:#e7f3eb;
-  --ok:#1d7a4a; --ok-bg:#e0f2e7; --warn:#8a5a00; --warn-bg:#fbf0d9; --lock:#5b6861; --lock-bg:#e8ece9; --bad:#b3261e;
+  --bg:#f3f4f5; --surface:#ffffff; --line:#dcdfe3; --fg:#1f2328; --muted:#5d646d;
+  --brand:#2b2f33; --brand-fg:#ffffff; --brand-hi:#f39a52;
+  --sub1:#e7e9ec; --hdr:124px; --ink:#9a4309; --accent:#b8500d; --accent-ink:#ffffff; --accent-soft:#f3c39c; --tint:#fdf0e6;
+  --ok:#1d7a4a; --ok-bg:#e0f2e7; --warn:#8a5a00; --warn-bg:#fbf0d9; --lock:#5d646d; --lock-bg:#e9ebee; --bad:#b3261e;
   --display:"Barlow Condensed","Arial Narrow",sans-serif;
   --body:"IBM Plex Sans",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#111714; --surface:#19211d; --line:#2c3731; --fg:#e4ebe6; --muted:#9caaa2;
-  --brand:#0d1611; --brand-fg:#e9f2ec; --brand-hi:#7fd3a2; --sub1:#1a2a21;
-  --ink:#86cfa5; --accent:#3ba56d; --accent-ink:#06140c; --accent-soft:#2f6447; --tint:#1b2d23;
-  --ok:#77d3a1; --ok-bg:#16301f; --warn:#f0c46a; --warn-bg:#3a2c12; --lock:#a7b3ac; --lock-bg:#252f2a; --bad:#ff8a80; color-scheme:dark}}
+  --bg:#151719; --surface:#1e2125; --line:#33383e; --fg:#e8eaed; --muted:#a3aab2;
+  --brand:#0f1113; --brand-fg:#eceef0; --brand-hi:#f39a52; --sub1:#24282c;
+  --ink:#f5a465; --accent:#f08a3e; --accent-ink:#1a0d03; --accent-soft:#6b3a17; --tint:#2d2219;
+  --ok:#77d3a1; --ok-bg:#16301f; --warn:#f0c46a; --warn-bg:#3a2c12; --lock:#a9b0b8; --lock-bg:#2a2e33; --bad:#ff8a80; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#111714; --surface:#19211d; --line:#2c3731; --fg:#e4ebe6; --muted:#9caaa2;
-  --brand:#0d1611; --brand-fg:#e9f2ec; --brand-hi:#7fd3a2; --sub1:#1a2a21;
-  --ink:#86cfa5; --accent:#3ba56d; --accent-ink:#06140c; --accent-soft:#2f6447; --tint:#1b2d23;
-  --ok:#77d3a1; --ok-bg:#16301f; --warn:#f0c46a; --warn-bg:#3a2c12; --lock:#a7b3ac; --lock-bg:#252f2a; --bad:#ff8a80; color-scheme:dark}
+  --bg:#151719; --surface:#1e2125; --line:#33383e; --fg:#e8eaed; --muted:#a3aab2;
+  --brand:#0f1113; --brand-fg:#eceef0; --brand-hi:#f39a52; --sub1:#24282c;
+  --ink:#f5a465; --accent:#f08a3e; --accent-ink:#1a0d03; --accent-soft:#6b3a17; --tint:#2d2219;
+  --ok:#77d3a1; --ok-bg:#16301f; --warn:#f0c46a; --warn-bg:#3a2c12; --lock:#a9b0b8; --lock-bg:#2a2e33; --bad:#ff8a80; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body)}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -45,7 +45,7 @@ h3{font-size:18px}
 .muted{color:var(--muted)}
 .stack{display:flex;flex-direction:column;gap:12px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0;box-shadow:0 1px 2px rgba(20,40,28,.04)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0;box-shadow:0 1px 2px rgba(20,24,28,.04)}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 14px;font-weight:600;cursor:pointer}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn.primary:hover{filter:brightness(1.07)}
@@ -247,7 +247,7 @@ tr.sel-row td{background:var(--tint)}
 @media (max-width:520px){.tiles{grid-template-columns:1fr}}
 @media (min-width:920px){.authwrap{grid-template-columns:minmax(0,1fr) 420px;align-items:start}.intro{order:0;padding-top:12px}.hero{font-size:44px}}
 .dash{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:14px;align-items:start}
-.bubble{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px -4px rgba(20,40,28,.18)}
+.bubble{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 8px -4px rgba(20,24,28,.18)}
 .halves{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch}@media(max-width:820px){.halves{grid-template-columns:1fr}}
 .nbgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:520px){.nbgrid{grid-template-columns:1fr}}
 .nbmod{border:1px solid var(--line);border-radius:10px;padding:6px 10px 10px;margin:0;display:flex;flex-direction:column;gap:4px}.nbmod legend{font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;padding:0 4px}.nbmod.off{opacity:.6}
@@ -325,10 +325,10 @@ tr.sel-row td{background:var(--tint)}
 /* ---- úvodná stránka ---- */
 body:has(.ld) header.bar{display:none}
 main.shell:has(.ld){max-width:none;padding:0;display:block}
-.ld{--l-deep:#11301f;--l-green:#1c4a33;--l-sig:#f2c230;--l-sig-ink:#2a2200;--l-paper:#f2f4f2;--l-card:#ffffff;--l-ink:#18211c;--l-mut:#55635b;--l-line:#d6ddd8;
+.ld{--l-deep:#24282c;--l-green:#2b2f33;--l-sig:#e8792f;--l-sig-ink:#1f2328;--l-paper:#f3f4f5;--l-card:#ffffff;--l-ink:#1f2328;--l-mut:#5d646d;--l-line:#dcdfe3;
   background:var(--l-paper);color:var(--l-ink);overflow-x:clip}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ld{--l-paper:#111714;--l-card:#19211d;--l-ink:#e4ebe6;--l-mut:#9caaa2;--l-line:#2c3731}}
-:root[data-theme="dark"] .ld{--l-paper:#111714;--l-card:#19211d;--l-ink:#e4ebe6;--l-mut:#9caaa2;--l-line:#2c3731}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ld{--l-paper:#151719;--l-card:#1e2125;--l-ink:#e8eaed;--l-mut:#a3aab2;--l-line:#33383e}}
+:root[data-theme="dark"] .ld{--l-paper:#151719;--l-card:#1e2125;--l-ink:#e8eaed;--l-mut:#a3aab2;--l-line:#33383e}
 .ld-in{max-width:1160px;margin:0 auto;padding-inline:max(20px,env(safe-area-inset-left,0px))}
 .ld-nav{position:sticky;top:0;z-index:6;background:color-mix(in srgb,var(--l-deep) 92%,transparent);backdrop-filter:blur(8px);color:#fff}
 .ld-nav .ld-in{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px}
@@ -337,29 +337,29 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 .ld-navbtn{display:flex;gap:8px}
 .ld-btn{border:0;border-radius:8px;padding:9px 16px;font-weight:600;font-size:15px;cursor:pointer;white-space:nowrap}
 .ld-btn.big{padding:13px 22px;font-size:16px}
-.ld-btn.sig{background:var(--l-sig);color:var(--l-sig-ink)}.ld-btn.sig:hover{background:#ffd34d}
+.ld-btn.sig{background:var(--l-sig);color:var(--l-sig-ink)}.ld-btn.sig:hover{background:#f08a3e}
 .ld-btn.ghost{background:transparent;color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.45)}.ld-btn.ghost:hover{box-shadow:inset 0 0 0 1.5px #fff}
 .ld-btn.line{background:transparent;color:inherit;box-shadow:inset 0 0 0 1.5px currentColor}
 .ld-btn:focus-visible,.ld-logo:focus-visible{outline:3px solid var(--l-sig);outline-offset:3px}
 @media (max-width:560px){.ld-in{padding-inline:16px}.ld-navbtn{gap:6px}.ld-navbtn .ld-btn{padding:7px 10px;font-size:13px}.ld-logo{font-size:19px;gap:8px}}
 @media (max-width:400px){.ld-logo .ld-lt{display:none}}
 
-.ld-hero{background:var(--l-deep);color:#e9f2ec;padding:56px 0 0;position:relative}
+.ld-hero{background:var(--l-deep);color:#eceef0;padding:56px 0 0;position:relative}
 .ld-herogrid{display:grid;grid-template-columns:1.05fr .95fr;gap:40px;align-items:end}
 .ld-herotext{padding-bottom:72px}
 .ld-hero h1{font:700 clamp(46px,6.4vw,84px)/.95 var(--display);letter-spacing:-.005em;margin:0 0 22px;color:#fff;max-width:13ch}
-.ld-hero p{font-size:18px;line-height:1.55;max-width:34em;margin:0 0 26px;color:#c9dbcf}
+.ld-hero p{font-size:18px;line-height:1.55;max-width:34em;margin:0 0 26px;color:#c9cdd2}
 .ld-cta{display:flex;flex-wrap:wrap;gap:10px}
-.ld-hero .ld-small{font-size:14px;margin:16px 0 0;color:#9fbaa8}
+.ld-hero .ld-small{font-size:14px;margin:16px 0 0;color:#a9b0b8}
 .ld-build{position:relative;height:440px;align-self:end}
 .ld-crane{position:absolute;right:0;bottom:0;width:74%;height:100%;fill:none;stroke:var(--l-sig);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
 .ld-crane path{stroke-dasharray:420;stroke-dashoffset:0}
 .ld-floors{position:absolute;left:0;bottom:16px;width:72%;display:flex;flex-direction:column;align-items:flex-start;gap:4px}
-.ld-floor{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;background:#e9efe9;color:#14281c;border-radius:4px;padding:10px 14px;box-shadow:0 10px 18px -12px rgba(0,0,0,.6)}
+.ld-floor{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;background:#eef0f2;color:#1f2328;border-radius:4px;padding:10px 14px;box-shadow:0 10px 18px -12px rgba(0,0,0,.6)}
 .ld-floor svg{width:24px;height:24px;grid-row:1/3;color:var(--l-green)}
-.ld-floor b{font:700 20px/1.05 var(--display);letter-spacing:.01em}.ld-floor span{font-size:12.5px;color:#4c5c52}
+.ld-floor b{font:700 20px/1.05 var(--display);letter-spacing:.01em}.ld-floor span{font-size:12.5px;color:#5d646d}
 .ld-floor.f0{width:74%;border-top:5px solid var(--l-sig)}.ld-floor.f1{width:82%}.ld-floor.f2{width:90%}.ld-floor.f3{width:96%}
-.ld-floor.base{width:100%;background:var(--l-sig);color:var(--l-sig-ink)}.ld-floor.base svg{color:var(--l-sig-ink)}.ld-floor.base span{color:#5a4a00}
+.ld-floor.base{width:100%;background:var(--l-sig);color:var(--l-sig-ink)}.ld-floor.base svg{color:var(--l-sig-ink)}.ld-floor.base span{color:#3a2412}
 .ld-ground{position:absolute;left:-40px;right:-40px;bottom:0;height:16px;background:repeating-linear-gradient(-45deg,var(--l-sig) 0 14px,#1b1b14 14px 28px)}
 @media (max-width:860px){.ld-herogrid{grid-template-columns:1fr}.ld-herotext{padding-bottom:0}.ld-build{height:380px}.ld-floors{width:86%}}
 
@@ -369,22 +369,22 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 .ld-two.rev .ld-copy{order:2}
 @media (max-width:860px){.ld-two{grid-template-columns:1fr;gap:28px}.ld-two.rev .ld-copy{order:0}.ld-sec{padding:56px 0}}
 .ld-tag{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:15px;color:var(--l-green);margin-bottom:10px}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ld-tag{color:#86cfa5}}
-:root[data-theme="dark"] .ld-tag{color:#86cfa5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ld-tag{color:#f5a465}}
+:root[data-theme="dark"] .ld-tag{color:#f5a465}
 .ld-tag svg{width:22px;height:22px}
 .ld h2{font:700 clamp(32px,4vw,48px)/1 var(--display);margin:0 0 16px;max-width:16ch}
 .ld-copy p{font-size:17px;line-height:1.6;color:var(--l-mut);max-width:32em;margin:0 0 18px}
 .ld-copy ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
 .ld-copy li{padding-left:22px;position:relative}.ld-copy li::before{content:"";position:absolute;left:0;top:.62em;width:11px;height:3px;background:var(--l-sig);border-radius:2px}
 
-.ld-mock{background:var(--l-card);border:1px solid var(--l-line);border-radius:12px;padding:16px;box-shadow:0 24px 40px -28px rgba(10,30,18,.55);font-size:13px;position:relative}
+.ld-mock{background:var(--l-card);border:1px solid var(--l-line);border-radius:12px;padding:16px;box-shadow:0 24px 40px -28px rgba(10,14,18,.55);font-size:13px;position:relative}
 .ld-mod.alt .ld-mock{background:var(--l-paper)}
 .ld-mockbar{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--l-line);padding-bottom:10px;margin-bottom:10px}
 .ld-mockbar b{font-size:14px}.ld-mockbar span{color:var(--l-mut)}
 .ld-arow{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:8px;padding:3px 0}
 .ld-arow>span{font-weight:600;font-size:12.5px;white-space:nowrap}
 .ld-arow div{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
-.ld-arow i{font-style:normal;text-align:center;font-size:11.5px;font-weight:600;border-radius:4px;padding:5px 0;background:#e3efe7;color:#1f6b45}
+.ld-arow i{font-style:normal;text-align:center;font-size:11.5px;font-weight:600;border-radius:4px;padding:5px 0;background:#fbe9da;color:#9a4309}
 .ld-arow i.c-D{background:#dceaf5;color:#2f6f9e}.ld-arow i.c-PN{background:#f8dedb;color:#a1261d}.ld-arow i.c-P{background:#ebe3f6;color:#6b4fa3}
 .ld-asum{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;padding-top:10px;border-top:2px solid var(--l-line)}
 .ld-asum b{font:700 24px/1 var(--display)}
@@ -404,8 +404,8 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 .ld-stot{display:flex;justify-content:space-between;padding-top:10px}.ld-stot b{font:700 24px/1 var(--display)}
 .ld-supis{padding-bottom:84px}.ld-stamp{position:absolute;left:26px;bottom:14px;border:3px solid #2457a6;color:#2457a6;border-radius:8px;padding:6px 12px;display:flex;flex-direction:column;align-items:center;transform:rotate(-8deg);background:rgba(255,255,255,.7)}
 .ld-stamp b{font:700 22px/1 var(--display);text-transform:uppercase;letter-spacing:.06em}.ld-stamp span{font-size:10.5px}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ld-stamp{background:rgba(25,33,29,.8);border-color:#8fb2ec;color:#8fb2ec}}
-:root[data-theme="dark"] .ld-stamp{background:rgba(25,33,29,.8);border-color:#8fb2ec;color:#8fb2ec}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ld-stamp{background:rgba(30,33,37,.8);border-color:#8fb2ec;color:#8fb2ec}}
+:root[data-theme="dark"] .ld-stamp{background:rgba(30,33,37,.8);border-color:#8fb2ec;color:#8fb2ec}
 
 .ld-start{background:var(--l-paper)}
 .ld-steps{list-style:none;counter-reset:st;margin:28px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
@@ -415,8 +415,8 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 @media (max-width:760px){.ld-steps{grid-template-columns:1fr}}
 .ld-final{background:var(--l-green);color:#fff;padding:72px 0;position:relative}
 .ld-final::before{content:"";position:absolute;left:0;right:0;top:0;height:10px;background:repeating-linear-gradient(-45deg,var(--l-sig) 0 14px,#1b1b14 14px 28px)}
-.ld-final p{font-size:18px;color:#cfe1d5;margin:0 0 24px;max-width:36em}
-.ld-foot{background:var(--l-deep);color:#9fbaa8;font-size:13px;padding:18px 0}.ld-foot .ld-in{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ld-final p{font-size:18px;color:#d5d8dc;margin:0 0 24px;max-width:36em}
+.ld-foot{background:var(--l-deep);color:#a9b0b8;font-size:13px;padding:18px 0}.ld-foot .ld-in{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 
 /* pohyb: stavba sa poskladá pri načítaní, ukážky modulov sa rozbehnú pri zobrazení */
 @media (prefers-reduced-motion:no-preference){
@@ -448,7 +448,7 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 
 /* ---- panel Úlohy: pravý stĺpec na tablete a PC, pripnutý pruh dole na mobile ---- */
 .appcol{min-width:0}
-.taskpane{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:14px;box-shadow:0 2px 10px -6px rgba(20,40,28,.25)}
+.taskpane{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:14px;box-shadow:0 2px 10px -6px rgba(20,24,28,.25)}
 .tp-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px}
 .tp-title{display:flex;align-items:center;gap:8px;font-size:17px}.tp-title svg{width:22px;height:22px;color:var(--accent)}
 .tp-title b{font-family:var(--display);font-size:20px;letter-spacing:.02em}
@@ -618,10 +618,10 @@ table.logi td.lcell.off{background:repeating-linear-gradient(45deg,var(--bg) 0 6
 .pill.s-info2{background:#e6eefb;color:#2b5aa8}
 tr.rover td{background:var(--bad-bg,#fbeaea)}.roverbox{border-left:5px solid var(--bad)}.chk.dis{opacity:.55}
 table.rplan td.rcell{height:38px;min-width:46px;padding:0 4px;font-size:11px;white-space:nowrap;overflow:hidden;cursor:pointer;border-right:1px solid var(--line)}
-table.rplan td.rcell.free:hover{background:var(--tint)}table.rplan td.rcell.svc{background:repeating-linear-gradient(45deg,var(--bg),var(--bg) 4px,#e9ece9 4px,#e9ece9 8px);cursor:default}
-table.rplan td.rcell.rez{background:#fdf0d5}table.rplan td.rcell.out{background:#cfe0f7}table.rplan td.rcell.late{background:#f6c9c9}table.rplan td.rcell.back{background:#e3efe7;color:var(--muted)}
+table.rplan td.rcell.free:hover{background:var(--tint)}table.rplan td.rcell.svc{background:repeating-linear-gradient(45deg,var(--bg),var(--bg) 4px,#eceef0 4px,#eceef0 8px);cursor:default}
+table.rplan td.rcell.rez{background:#fdf0d5}table.rplan td.rcell.out{background:#cfe0f7}table.rplan td.rcell.late{background:#f6c9c9}table.rplan td.rcell.back{background:#fbe9da;color:var(--muted)}
 table.rplan td.rcell span{font-weight:600}
-.rlegend{gap:12px;font-size:12.5px}.rlegend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px}.rlegend i.rez{background:#fdf0d5}.rlegend i.out{background:#cfe0f7}.rlegend i.late{background:#f6c9c9}.rlegend i.back{background:#e3efe7}
+.rlegend{gap:12px;font-size:12.5px}.rlegend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px}.rlegend i.rez{background:#fdf0d5}.rlegend i.out{background:#cfe0f7}.rlegend i.late{background:#f6c9c9}.rlegend i.back{background:#fbe9da}
 tr.wpend td{background:var(--warn-bg)}tr.wpend td:first-child{box-shadow:inset 4px 0 0 var(--warn)}.wwait{color:var(--warn);font-weight:600}
 .wpendbox{border-left:5px solid var(--warn);background:var(--warn-bg)}.wpendrow{display:grid;grid-template-columns:90px 130px 100px 1fr 1.3fr auto;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
 @media (max-width:760px){.wpendrow{grid-template-columns:1fr 1fr}.wpendrow button{grid-column:1/-1}}
@@ -1739,7 +1739,7 @@ document.addEventListener("submit",ev=>{if(ev.target.id!=="userNewForm"||!me||!i
 /* ---------- Personalistika: dochádzka ---------- */
 const ATT_TYPES=[
   ["W","Práca","",true,"var(--accent)"],["D","Dovolenka","D",true,"#2f7fb8"],["PN","Práceneschopnosť","PN",false,"#b3261e"],["OCR","OČR","OČR",false,"#c05621"],
-  ["P","Lekár – vlastné vyšetrenie","P",true,"#7a5bb5"],["PS","Sprevádzanie člena rodiny k lekárovi","PS",true,"#9b6fc4"],["PI","Iná prekážka v práci (úrady, svadba, pohreb…)","PI",true,"#6a4f9a"],["SC","Služobná cesta","SC",true,"#0f7a7a"],["NV","Náhradné voľno","NV",true,"#5b6861"],
+  ["P","Lekár – vlastné vyšetrenie","P",true,"#7a5bb5"],["PS","Sprevádzanie člena rodiny k lekárovi","PS",true,"#9b6fc4"],["PI","Iná prekážka v práci (úrady, svadba, pohreb…)","PI",true,"#6a4f9a"],["SC","Služobná cesta","SC",true,"#0f7a7a"],["NV","Náhradné voľno","NV",true,"#5d646d"],
   ["NPV","Neplatené voľno","NPV",false,"#8a8f8c"],["A","Absencia","A",false,"#111"]];
 const ATT={};ATT_TYPES.forEach(([k,l,s,hrs,c])=>ATT[k]={l,s,hrs,c});
 function easter(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;return new Date(Date.UTC(y,mo-1,da))}
@@ -1814,7 +1814,7 @@ function attEmployeePage(doc,w,days,from,to){
   doc.setFontSize(9);doc.text(`Obdobie: ${plain(d2(from))} – ${plain(d2(to))}`,14,26);
   /* kompaktná mriežka: jeden pás na mesiac (dni vedľa seba) */
   const months=[...new Set(days.map(d=>d.slice(0,7)))];let y=29;const P=payProf(w.id),dh=dayHours(P);
-  const COL={W:[20,28,24],D:[47,127,184],PN:[179,38,30],OCR:[192,86,33],P:[122,91,181],PS:[122,91,181],PI:[122,91,181],SC:[15,122,122],NV:[91,104,97],NPV:[120,125,122],A:[17,17,17]};
+  const COL={W:[31,35,40],D:[47,127,184],PN:[179,38,30],OCR:[192,86,33],P:[122,91,181],PS:[122,91,181],PI:[122,91,181],SC:[15,122,122],NV:[93,100,109],NPV:[120,125,122],A:[17,17,17]};
   months.forEach(ym=>{const md=monthDays(ym),inR=d=>d>=from&&d<=to;
     if(y>262){doc.addPage();y=16}
     const head=[{content:ymName(ym),styles:{halign:"left"}},...md.map(d=>`${+d.slice(8)}\n${DOW[dow(d)]}`)];
@@ -1822,14 +1822,14 @@ function attEmployeePage(doc,w,days,from,to){
     const row=["Záznam",...md.map(d=>{if(!inR(d))return "";const a=attOf(w.id,d);if(a){let t=attCellText(a);if(["P","PS","PI","SC"].includes(a.t)&&+a.h)t+="\n"+nf1(a.h);return t}const h=holiday(d);return h&&!isWeekend(d)?"S":""})];
     while(row.length<32)row.push("");
     doc.autoTable({head:[head],body:[row],startY:y,margin:{left:14,right:14},theme:"grid",tableWidth:182,
-      styles:{font:"DVC",fontSize:6.4,cellPadding:{top:0.8,bottom:0.8,left:0.2,right:0.2},halign:"center",valign:"middle",lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24],minCellHeight:5.5},
-      headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255,fontSize:6},columnStyles:{0:{cellWidth:22,halign:"left",fontStyle:"bold"}},
-      didParseCell:c=>{const d=md[c.column.index-1];if(!d)return;if(c.section==="head"&&(isWeekend(d)||holiday(d)))c.cell.styles.fillColor=[70,110,88];
-        if(c.section==="body"){if(isWeekend(d)||holiday(d))c.cell.styles.fillColor=[236,241,238];const a=attOf(w.id,d);if(a&&COL[a.t]){c.cell.styles.textColor=COL[a.t];if(a.t!=="W")c.cell.styles.fontStyle="bold"}}}});
+      styles:{font:"DVC",fontSize:6.4,cellPadding:{top:0.8,bottom:0.8,left:0.2,right:0.2},halign:"center",valign:"middle",lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40],minCellHeight:5.5},
+      headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255,fontSize:6},columnStyles:{0:{cellWidth:22,halign:"left",fontStyle:"bold"}},
+      didParseCell:c=>{const d=md[c.column.index-1];if(!d)return;if(c.section==="head"&&(isWeekend(d)||holiday(d)))c.cell.styles.fillColor=[90,96,104];
+        if(c.section==="body"){if(isWeekend(d)||holiday(d))c.cell.styles.fillColor=[240,242,244];const a=attOf(w.id,d);if(a&&COL[a.t]){c.cell.styles.textColor=COL[a.t];if(a.t!=="W")c.cell.styles.fontStyle="bold"}}}});
     const s=attSummary(w.id,md.filter(inR));y=doc.lastAutoTable.finalY+3.2;doc.setFontSize(7.2);doc.setTextColor(70);
     doc.text(`Fond ${nf1(s.fond)} h · odpracované ${nf1(s.h)} h · dovolenka ${nf1(s.D)} d · PN ${s.PN} d · OČR ${s.OCR} d · priepustky ${nf1(s.P)} h · NV ${s.NV} d · neplatené ${s.NPV} d · absencia ${s.A} d`,14,y);doc.setTextColor(0);y+=3.5});
   const s=attSummary(w.id,days);y+=2;if(y>215){doc.addPage();y=20}
-  const st={font:"DVC",fontSize:8,cellPadding:0.9,lineColor:[210,216,212],lineWidth:0.1,textColor:[20,28,24]},hs={font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255};
+  const st={font:"DVC",fontSize:8,cellPadding:0.9,lineColor:[214,218,222],lineWidth:0.1,textColor:[31,35,40]},hs={font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255};
   const L=[["Fond pracovného času",`${nf1(s.fond)} h`],["Odpracované (vrátane služ. ciest)",`${nf1(s.h)} h`],["Služobné cesty",`${s.SC} d`],["Dovolenka",`${nf1(s.D)} d`],["Práceneschopnosť (PN)",`${s.PN} d`],["OČR",`${s.OCR} d`],["Priepustky a prekážky",`${nf1(s.P)} h`],["Náhradné voľno",`${s.NV} d`],["Neplatené voľno",`${s.NPV} d`],["Absencia",`${s.A} d`]];
   const Y=+to.slice(0,4),v=vacation(w,Y,to),pr=priepustky(w,Y,to);
   const R=[["Nárok na dovolenku",`${nf1(v.ent)} d${v.months<12?` (${v.months}/12)`:""}`],["Prenesená z minulého roka",`${nf1(v.carry)} d`],["Vyčerpaná k "+plain(d2(to)),`${nf1(v.used)} d`],[{content:"Zostatok dovolenky",styles:{fontStyle:"bold"}},{content:`${nf1(v.left)} d`,styles:{fontStyle:"bold"}}],
@@ -1851,8 +1851,8 @@ function attExport(from,to,who){
     const T=ws.reduce((t,w)=>{const s=attSummary(w.id,days);t.h+=s.h;t.D+=s.D;t.PN+=s.PN;t.OCR+=s.OCR;t.P+=s.P;t.A+=s.A;return t},{h:0,D:0,PN:0,OCR:0,P:0,A:0});
     doc.autoTable({head:[["Os. č.","Zamestnanec","Pozícia","Fond h","Odprac. h","Dov. dni","PN dni","OČR dni","Priep. h","Abs. dni"]],body,
       foot:[["","Spolu","","",nf1(T.h),nf1(T.D),T.PN,T.OCR,nf1(T.P),T.A]],startY:26,margin:{left:14,right:14,bottom:16},theme:"grid",
-      styles:{font:"DVC",fontSize:8.5,cellPadding:1.3,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255},
-      footStyles:{font:"DVC",fontStyle:"bold",fillColor:[226,240,231],textColor:[20,28,24]},columnStyles:{3:{halign:"right"},4:{halign:"right"},5:{halign:"right"},6:{halign:"right"},7:{halign:"right"},8:{halign:"right"},9:{halign:"right"}}});
+      styles:{font:"DVC",fontSize:8.5,cellPadding:1.3,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255},
+      footStyles:{font:"DVC",fontStyle:"bold",fillColor:[253,236,222],textColor:[31,35,40]},columnStyles:{3:{halign:"right"},4:{halign:"right"},5:{halign:"right"},6:{halign:"right"},7:{halign:"right"},8:{halign:"right"},9:{halign:"right"}}});
     ws.forEach(w=>{doc.addPage();attEmployeePage(doc,w,days,from,to)})}
   else{const w=S.workers.find(x=>x.id===who);if(!w)return;attEmployeePage(doc,w,days,from,to)}
   const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(`Dochádzka ${plain(d2(from))} – ${plain(d2(to))}`,14,290);doc.text(`Strana ${k} / ${n}`,196,290,{align:"right"});doc.setTextColor(0)}
@@ -2108,7 +2108,7 @@ function payslipBlock(doc,w,ym,c,y0){const A=c.A,Y=+ym.slice(0,4),end=monthDays(
   doc.setFont("DVC","bold");doc.setFontSize(11);doc.text(`Výplatná páska – ${ymName(ym)}`,14,y0+6);
   doc.setFont("DVC","normal");doc.setFontSize(8);doc.text([F.name||S.company||"",[firmAddress(F),F.ico?`IČO ${F.ico}`:""].filter(Boolean).join(" · ")],196,y0+3,{align:"right"});
   doc.setFontSize(9.5);doc.text(`${fullName(w)}${w.persNo?` · os. č. ${w.persNo}`:""}${w.profession?` · ${w.profession}`:""}`,14,y0+11.5);
-  const st={font:"DVC",fontSize:7.6,cellPadding:0.7,lineColor:[210,216,212],lineWidth:0.1,textColor:[20,28,24]},hs={font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255,fontSize:7.8};
+  const st={font:"DVC",fontSize:7.6,cellPadding:0.7,lineColor:[214,218,222],lineWidth:0.1,textColor:[31,35,40]},hs={font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255,fontSize:7.8};
   const left=[["Fond pracovného času",`${nf1(A.fondH)} h`],["Odpracované spolu",`${nf1(A.hTotal)} h`],["z toho nadčas (prac. dni)",`${nf1(A.hOver)} h`],["Sobota / nedeľa / sviatok",`${nf1(A.hSat)} / ${nf1(A.hSun)} / ${nf1(A.hHol)} h`],
     ["Dovolenka",`${nf1(A.dD)} d`],["PN / OČR",`${A.pnCal} / ${A.dOCR} d`],["Lekár / sprevádzanie / iné",`${nf1(A.hP)} / ${nf1(A.hPS)} / ${nf1(A.hPI)} h`],["Náhr. voľno / neplat. voľno / abs.",`${nf1(A.dNV)} / ${A.dNPV} / ${A.dA} d`],
     [{content:`Dovolenka ${Y}`,styles:{fontStyle:"bold"}},""],["Nárok + prenos",`${nf1(v.ent)} + ${nf1(v.carry)} d`],["Vyčerpané",`${nf1(v.used)} d`],[{content:"Zostatok",styles:{fontStyle:"bold"}},{content:`${nf1(v.left)} d`,styles:{fontStyle:"bold"}}],
@@ -2134,8 +2134,8 @@ function payPDF(ym,only){const ws=only?S.workers.filter(w=>w.id===only):payWorke
     const body=ws.map(w=>{const c=C[w.id],A=c.A;return [w.persNo||"",`${w.lastName} ${w.firstName}`,w.wageType==="month"?`${eur(+w.wage||0)}/m`:`${eur(+w.wage||0)}/h`,nf1(A.fondH),nf1(A.hWork+A.hOver),h0(A.hOver),h0(A.hSat),h0(A.hSun),h0(A.hHol),h0(A.dD),A.pnCal||"",A.dOCR||"",h0(A.hP),h0(A.hPS+A.hPI),h0(A.dNV),A.dNPV||"",A.dA||"",
       c.M.bonus?eur(+c.M.bonus):"",c.M.other?eur(+c.M.other):"",c.M.nontax?eur(+c.M.nontax):"",c.M.deduct||c.M.advance?eur((+c.M.deduct||0)+(+c.M.advance||0)):"",payNotes(c)]});
     doc.autoTable({head:[["Os. č.","Zamestnanec","Mzda","Fond h","Prac. dni h","Nadčas h","So h","Ne h","Sv h","Dov. d","PN d","OČR d","Lekár h","Spr./iné h","NV d","NPV d","Abs. d","Prémie","Iné zdan.","Nezdan.","Zrážky/záloha","Poznámka"]],body,startY:26,
-      margin:{left:10,right:10,bottom:14},theme:"grid",styles:{font:"DVC",fontSize:7.3,cellPadding:0.9,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24],valign:"middle"},
-      headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255,fontSize:7},columnStyles:Object.fromEntries([...Array(19).keys()].slice(3).map(i=>[i,{halign:"right"}]).concat([[1,{cellWidth:32}],[21,{cellWidth:46}]]))});
+      margin:{left:10,right:10,bottom:14},theme:"grid",styles:{font:"DVC",fontSize:7.3,cellPadding:0.9,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40],valign:"middle"},
+      headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255,fontSize:7},columnStyles:Object.fromEntries([...Array(19).keys()].slice(3).map(i=>[i,{halign:"right"}]).concat([[1,{cellWidth:32}],[21,{cellWidth:46}]]))});
     let y=doc.lastAutoTable.finalY+5;doc.setFontSize(7.5);doc.setTextColor(90);
     doc.text(`Fond pracovného času: ${fond} prac. dní. PN = kalendárne dni. Nadčas = hodiny nad denný úväzok v pracovné dni; práca v sobotu, nedeľu a vo sviatok je uvedená zvlášť. Dochádzka je potvrdená zamestnávateľom.`,10,y);doc.setTextColor(0);
     y+=14+stampGap();if(y>190){doc.addPage();y=40}pdfStamp(doc,firmStamp(),200,y);doc.setFontSize(8.5);doc.line(200,y,287,y);doc.text(`Vypracoval za zamestnávateľa${S.firm.repName?": "+S.firm.repName:""}`,200,y+4);
@@ -2236,7 +2236,7 @@ function pdfSigns(doc,y,left){y+=16+stampGap();if(y>272){doc.addPage();y=40}doc.
 function pdfSignList(doc,ws,date,title){doc.addPage();pdfFirmHeader(doc,"Podpisová listina",title);
   doc.setFontSize(9);doc.text("Svojím podpisom potvrdzujem, že som bol(a) s uvedeným dokumentom oboznámený(á) a jeho obsahu som porozumel(a).",14,27);
   doc.autoTable({head:[["Por.","Zamestnanec","Os. č.","Dátum","Podpis"]],body:ws.map((w,i)=>[i+1,`${w.lastName} ${w.firstName}`,w.persNo||"",plain(d2(date)),""]),startY:31,margin:{left:14,right:14,bottom:16},theme:"grid",
-    styles:{font:"DVC",fontSize:9,cellPadding:1.5,minCellHeight:9,valign:"middle",lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255,minCellHeight:6},
+    styles:{font:"DVC",fontSize:9,cellPadding:1.5,minCellHeight:9,valign:"middle",lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255,minCellHeight:6},
     columnStyles:{0:{cellWidth:12},2:{cellWidth:18},3:{cellWidth:26},4:{cellWidth:60}}});
   pdfSigns(doc,doc.lastAutoTable.finalY,"Vypracoval")}
 function pdfFooter(doc,label){const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(label,14,290);doc.text(`Strana ${k} / ${n}`,196,290,{align:"right"});doc.setTextColor(0)}}
@@ -2279,7 +2279,7 @@ function vehPDF(){const w=S.workers.find(x=>x.id===$("#vhWho").value),m=machine(
   const date=$("#vhDate").value||todayIso(),km=$("#vhKm").value,keys=$("#vhKeys").value,equip=$("#vhEquip").value.trim(),note=$("#vhNote").value.trim(),priv=$("#vhPriv").value==="yes";
   const doc=newPdf("portrait");if(!doc)return;const title="Prevzatie firemného vozidla a zodpovednosť";
   pdfFirmHeader(doc,title,`Zamestnanec: ${fullName(w)}${w.persNo?` · os. č. ${w.persNo}`:""}${w.profession?` · ${w.profession}`:""}`);
-  const st={font:"DVC",fontSize:9,cellPadding:1.3,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]};
+  const st={font:"DVC",fontSize:9,cellPadding:1.3,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]};
   doc.autoTable({body:[["Vozidlo",m.name||""],["EČV",m.ecv||""],["VIN",m.vin||(m.oev&&m.oev.vin)||""],["Dátum prevzatia",plain(d2(date))],["Stav tachometra",km?`${Number(km).toLocaleString("sk-SK")} km`:""],["Počet kľúčov",keys||""],["Doklady a výbava",equip],["Stav vozidla",note||"bez zjavného poškodenia"]],
     startY:26,margin:{left:14,right:14},theme:"grid",styles:st,columnStyles:{0:{cellWidth:42,fontStyle:"bold"}}});
   let y=pdfFlow(doc,[`Zamestnávateľ ${firmLine()} zveruje zamestnancovi uvedené vozidlo s doplnkami na plnenie pracovných úloh. Zamestnanec svojím podpisom potvrdzuje jeho prevzatie v uvedenom stave.`,
@@ -2304,8 +2304,8 @@ function toolPDF(){const w=S.workers.find(x=>x.id===$("#tlWho").value);if(!w){to
   const sum=rows.reduce((s,o)=>s+(+o.val||0)*(+o.qty||1),0);
   doc.autoTable({head:[["Por.","Náradie","Výr. / inv. číslo","Ks","Hodnota €","Vrátené dňa / podpis"]],body:rows.map((o,i)=>[i+1,o.name,o.no||"",o.qty||"1",o.val?eur(+o.val):"",""]),
     foot:sum?[["","Spolu","","",eur(sum),""]]:undefined,startY:26,margin:{left:14,right:14},theme:"grid",
-    styles:{font:"DVC",fontSize:9,cellPadding:1.4,minCellHeight:7,valign:"middle",lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255},
-    footStyles:{font:"DVC",fontStyle:"bold",fillColor:[226,240,231],textColor:[20,28,24]},columnStyles:{0:{cellWidth:11},3:{cellWidth:11,halign:"right"},4:{cellWidth:24,halign:"right"},5:{cellWidth:40}}});
+    styles:{font:"DVC",fontSize:9,cellPadding:1.4,minCellHeight:7,valign:"middle",lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255},
+    footStyles:{font:"DVC",fontStyle:"bold",fillColor:[253,236,222],textColor:[31,35,40]},columnStyles:{0:{cellWidth:11},3:{cellWidth:11,halign:"right"},4:{cellWidth:24,halign:"right"},5:{cellWidth:40}}});
   let y=pdfFlow(doc,[`Zamestnanec svojím podpisom potvrdzuje, že od zamestnávateľa ${firmLine()} prevzal uvedené náradie v stave spôsobilom na používanie.`,
     {h:"Povinnosti zamestnanca"},{li:["používať náradie len na plnenie pracovných úloh a v súlade s návodom na použitie a predpismi BOZP","starať sa oň, chrániť ho pred poškodením, stratou a odcudzením","bez zbytočného odkladu hlásiť poruchu, poškodenie alebo stratu","vrátiť náradie na výzvu zamestnávateľa a pri skončení pracovného pomeru"]},
     {h:"Zodpovednosť za stratu zverených predmetov"},
@@ -2315,7 +2315,7 @@ function toolPDF(){const w=S.workers.find(x=>x.id===$("#tlWho").value);if(!w){to
 
 function ooppPDF(){const R=ooppSummary();const doc=newPdf("portrait");if(!doc)return;pdfFirmHeader(doc,"Sumár OOPP a pracovných odevov",`Stav k ${plain(d2(todayIso()))} · ${R.ws} aktívnych zamestnancov`);
   doc.autoTable({head:[["Položka","Veľkosť","Počet"]],body:R.rows.map(r=>[r.item,r.size,r.n]),startY:26,margin:{left:14,right:14,bottom:16},theme:"grid",
-    styles:{font:"DVC",fontSize:9,cellPadding:1.2,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255},columnStyles:{1:{cellWidth:30},2:{cellWidth:20,halign:"right"}}});
+    styles:{font:"DVC",fontSize:9,cellPadding:1.2,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255},columnStyles:{1:{cellWidth:30},2:{cellWidth:20,halign:"right"}}});
   pdfFooter(doc,"Sumár OOPP");offerFile(`Sumar_OOPP_${todayIso()}.pdf`,doc.output("arraybuffer"))}
 
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
@@ -2534,14 +2534,14 @@ function skolPDF(s){
   pdfFirmHeader(doc,"PREZENČNÁ LISTINA",skolName(s));
   doc.autoTable({body:[["Školenie",skolName(s)],["Termín",`${plain(fmtDate(s.date))}${s.time?` o ${s.time} h`:""}`],["Miesto konania",s.place||""],["Školiteľ",s.lector||""],
       ["Zamestnávateľ",[F.name,F.ico?`IČO ${F.ico}`:"",firmAddress(F)].filter(Boolean).join(", ")],["Platnosť školenia",s.months?`${s.months} mesiacov (do ${plain(d2(skolValidity(s)))})`:"bez obmedzenia"],...(s.note?[["Poznámka",s.note]]:[])],
-    startY:26,margin:{left:14,right:14},theme:"grid",styles:{font:"DVC",fontSize:9.5,cellPadding:1.8,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},
-    columnStyles:{0:{cellWidth:45,fillColor:[236,246,239],fontStyle:"bold"}}});
+    startY:26,margin:{left:14,right:14},theme:"grid",styles:{font:"DVC",fontSize:9.5,cellPadding:1.8,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},
+    columnStyles:{0:{cellWidth:45,fillColor:[253,240,230],fontStyle:"bold"}}});
   let y=doc.lastAutoTable.finalY+8;doc.setFont("DVC","bold");doc.setFontSize(11);doc.text(`Zoznam účastníkov (${s.participants.length})`,14,y);doc.setFont("DVC","normal");
   const ppl=s.participants.map(wid=>worker(wid)).filter(Boolean).sort((a,b)=>(a.lastName||"").localeCompare(b.lastName||"","sk"));
   doc.autoTable({head:[["P. č.","Priezvisko a meno","Os. č.","Pracovná pozícia","Podpis"]],body:ppl.map((w,i)=>[String(i+1),`${w.lastName} ${w.firstName}`,w.persNo||"",w.profession||"",""]),
     startY:y+3,margin:{left:14,right:14,bottom:20},theme:"grid",rowPageBreak:"avoid",showHead:"everyPage",
-    styles:{font:"DVC",fontSize:10,cellPadding:{top:4.2,bottom:4.2,left:2,right:2},lineColor:[150,160,154],lineWidth:0.2,textColor:[20,28,24],valign:"middle"},
-    headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255,cellPadding:2},
+    styles:{font:"DVC",fontSize:10,cellPadding:{top:4.2,bottom:4.2,left:2,right:2},lineColor:[150,156,162],lineWidth:0.2,textColor:[31,35,40],valign:"middle"},
+    headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255,cellPadding:2},
     columnStyles:{0:{cellWidth:13,halign:"center"},1:{cellWidth:58},2:{cellWidth:18,halign:"center"},3:{cellWidth:40},4:{cellWidth:"auto"}}});
   y=doc.lastAutoTable.finalY+8;if(y>235){doc.addPage();y=30}
   doc.setFontSize(8.5);doc.setTextColor(70);const t=doc.splitTextToSize("Svojím podpisom účastník potvrdzuje, že sa školenia zúčastnil, obsahu porozumel a bude sa ním riadiť.",182);doc.text(t,14,y);doc.setTextColor(0);
@@ -2754,8 +2754,8 @@ function logPDF(m,from,to){const rows=logRowsFor(m,from,to);if(!rows.length){toa
   const body=rows.map(({j,r,dr},i)=>[String(i+1),plain(d2(j.date)),r.from||"",r.to||"",[j.client,j.desc].filter(Boolean).join(" – "),dr?fullName(dr):"",num(r.km),num(r.h),r.note||""]);
   const tk=rows.reduce((s,{r})=>s+(+String(r.km).replace(",",".")||0),0),th=rows.reduce((s,{r})=>s+(+String(r.h).replace(",",".")||0),0);
   doc.autoTable({head:[["#","Dátum","Odkiaľ","Kam","Účel jazdy / objednávateľ",m.cat==="machine"?"Strojník":"Vodič","Km","Hodiny","Poznámka"]],body,foot:[["","","","","Spolu","",nf1(tk),nf1(th),""]],startY:30,margin:{left:10,right:10,bottom:16},theme:"grid",
-    styles:{font:"DVC",fontSize:8.5,cellPadding:1.3,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255},
-    footStyles:{font:"DVC",fontStyle:"bold",fillColor:[226,240,231],textColor:[20,28,24]},showFoot:"lastPage",showHead:"everyPage",
+    styles:{font:"DVC",fontSize:8.5,cellPadding:1.3,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255},
+    footStyles:{font:"DVC",fontStyle:"bold",fillColor:[253,236,222],textColor:[31,35,40]},showFoot:"lastPage",showHead:"everyPage",
     columnStyles:{0:{cellWidth:8},1:{cellWidth:20},2:{cellWidth:36},3:{cellWidth:36},5:{cellWidth:34},6:{cellWidth:16,halign:"right"},7:{cellWidth:16,halign:"right"},8:{cellWidth:44}}});
   let y=doc.lastAutoTable.finalY+16+stampGap();if(y>190){doc.addPage();y=40}doc.setFontSize(8.5);pdfStamp(doc,firmStamp(),217,y);doc.line(10,y,80,y);doc.text("Podpis vodiča",10,y+4);doc.line(217,y,287,y);doc.text("Skontroloval, dátum",217,y+4);
   const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(`Kniha jázd · ${m.name}`,10,205);doc.text(`Strana ${k} / ${n}`,287,205,{align:"right"});doc.setTextColor(0)}
@@ -2838,14 +2838,14 @@ function dxPDF(mode){const X=dxState(),rows=dxRows(X);if(!rows.length){toast("Ž
   const doc=newPdf("landscape");if(!doc)return;const T=dxSum(rows),showCl=!X.client,pre=rows.some(r=>r.pre),M=v=>plain(eur(v));
   pdfFirmHeader(doc,mode==="days"?"SÚPIS VÝKONOV STROJOV – PO DŇOCH":"SÚPIS VÝKONOV STROJOV – SUMÁR",X.client?`Objednávateľ: ${X.client}`:"Všetci objednávatelia");
   doc.setFontSize(9);doc.text(plain(dxSubtitle(X)).replace(/ · Objednávateľ: [^·]+/,""),14,26,{maxWidth:270});
-  const st={font:"DVC",fontSize:8.5,cellPadding:1.3,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]};
-  const base={startY:31,margin:{left:10,right:10,bottom:16},theme:"grid",styles:st,headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255},
-    footStyles:{font:"DVC",fontStyle:"bold",fillColor:[226,240,231],textColor:[20,28,24]},showFoot:"lastPage",showHead:"everyPage"};
+  const st={font:"DVC",fontSize:8.5,cellPadding:1.3,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]};
+  const base={startY:31,margin:{left:10,right:10,bottom:16},theme:"grid",styles:st,headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255},
+    footStyles:{font:"DVC",fontStyle:"bold",fillColor:[253,236,222],textColor:[31,35,40]},showFoot:"lastPage",showHead:"everyPage"};
   const R={halign:"right"};
   if(mode==="days"){const body=[];[...new Set(rows.map(r=>r.j.date))].forEach(d=>{const Rs=rows.filter(r=>r.j.date===d);
       Rs.forEach((r,k)=>body.push([k===0?plain(d2(d)):"",dxMName(r.m),...(showCl?[r.j.client||""]:[]),[r.j.place,r.j.desc].filter(Boolean).join(" – "),r.dr?fullName(r.dr):"",
         dxNum(r.h)+(r.pre?"*":""),r.km?dxNum(r.km)+(r.pre?"*":""):"",r.own?(r.ownAmt?"dohodnutá":""):M(r.ph),r.own?"":M(r.pk),M(r.sum)]));
-      if(Rs.length>1){const s=dxSum(Rs);body.push([{content:`Spolu ${plain(d2(d))}`,colSpan:showCl?5:4,styles:{fontStyle:"bold"}},dxNum(s.h),dxNum(s.km),M(s.ph),M(s.pk),M(s.sum)].map(c=>typeof c==="string"?{content:c,styles:{fontStyle:"bold",fillColor:[244,247,245]}}:{...c,styles:{...c.styles,fillColor:[244,247,245]}}))}});
+      if(Rs.length>1){const s=dxSum(Rs);body.push([{content:`Spolu ${plain(d2(d))}`,colSpan:showCl?5:4,styles:{fontStyle:"bold"}},dxNum(s.h),dxNum(s.km),M(s.ph),M(s.pk),M(s.sum)].map(c=>typeof c==="string"?{content:c,styles:{fontStyle:"bold",fillColor:[245,246,247]}}:{...c,styles:{...c.styles,fillColor:[245,246,247]}}))}});
     const n0=showCl?5:4;
     doc.autoTable({...base,head:[["Dátum","Stroj / vozidlo",...(showCl?["Objednávateľ"]:[]),"Miesto / práca","Vodič / strojník","Hodiny","Km","Za hodiny","Za km","Spolu"]],body,
       foot:[[{content:"Spolu za obdobie",colSpan:n0},dxNum(T.h),dxNum(T.km),M(T.ph),M(T.pk),M(T.sum)]],
@@ -2977,15 +2977,15 @@ function wTicket(doc,w,y0,label){const F=S.firm||{},L=12,Rx=198;let x=L;
   doc.setFont("DVC","bold");doc.setFontSize(8);doc.setTextColor(28,74,51);doc.text(label,Rx,y0+26,{align:"right"});doc.setTextColor(0);
   if(w.dir){doc.setFontSize(11);const tx=w.dir==="in"?"PRÍJEM":"VÝDAJ",tw=doc.getTextWidth?doc.getTextWidth(tx)+6:22;doc.setDrawColor(28,74,51);doc.setLineWidth(0.4);doc.rect(x+52,y0+18.5,tw,6.5);doc.setLineWidth(0.1);doc.text(tx,x+55,y0+23.3)}
   doc.setFont("DVC","normal");
-  const st={font:"DVC",fontSize:11,cellPadding:{top:3.2,bottom:3.2,left:2.5,right:2.5},lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]};
-  const lab={fontStyle:"bold",fillColor:[244,247,245]};
+  const st={font:"DVC",fontSize:11,cellPadding:{top:3.2,bottom:3.2,left:2.5,right:2.5},lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]};
+  const lab={fontStyle:"bold",fillColor:[245,246,247]};
   doc.autoTable({startY:y0+30,margin:{left:L,right:210-Rx},theme:"grid",styles:st,tableWidth:Rx-L,
     columnStyles:{0:{cellWidth:38,...lab},1:{cellWidth:57},2:{cellWidth:38,...lab},3:{cellWidth:Rx-L-133}},
     body:[["Stredisko",{content:(()=>{const c=centerOf(w.center);return c?`${c.name}${centerAddr(c)?", "+centerAddr(c):""}`:""})(),colSpan:3}],
       ["Vozidlo (EČV)",wVeh(w),"1. váženie",`${plain(d2(w.date))} ${w.time||""}`],
       ["Materiál",w.material||"","2. váženie",w.time2?`${plain(d2(w.date2||w.date))} ${w.time2}`:""],
       ["Hmotnosť brutto",{content:kgNum(wKg(w.gross))+" kg",styles:{halign:"right"}},"Hmotnosť tara",{content:kgNum(wKg(w.tare))+" kg",styles:{halign:"right"}}],
-      [{content:"HMOTNOSŤ NETTO",colSpan:2,styles:{fontStyle:"bold",fontSize:12,fillColor:[226,240,231]}},{content:`${kgNum(wNet(w))} kg  (${tNum(wNet(w))} t)`,colSpan:2,styles:{fontStyle:"bold",fontSize:13,halign:"right",fillColor:[226,240,231]}}]]});
+      [{content:"HMOTNOSŤ NETTO",colSpan:2,styles:{fontStyle:"bold",fontSize:12,fillColor:[253,236,222]}},{content:`${kgNum(wNet(w))} kg  (${tNum(wNet(w))} t)`,colSpan:2,styles:{fontStyle:"bold",fontSize:13,halign:"right",fillColor:[253,236,222]}}]]});
   const y=y0+124;doc.setFontSize(8.5);doc.setDrawColor(120);pdfStamp(doc,firmStamp(),L,y,58,20);doc.line(L,y,L+62,y);doc.text("Vážil (meno a podpis)",L,y+4);doc.line(Rx-62,y,Rx,y);doc.text("Vodič (podpis)",Rx-62,y+4)}
 function wXLS(){const X=wState(),list=wFiltered(X).slice().reverse();if(!window.XLSX){toast("Knižnica na Excel sa nenačítala. Skús stránku obnoviť.");return}
   const a=[["Váženie"],[`Obdobie: ${d2(X.from)} – ${d2(X.to)}${X.mat?" · "+X.mat:""}`],[],["Č. lístka","Dátum","Čas","Druh","Stredisko","EČV","Vozidlo","Materiál","Brutto kg","Tara kg","Netto kg","Netto t"]];
@@ -3096,7 +3096,7 @@ document.addEventListener("change",ev=>{const t=ev.target;if(!me||!["stFrom","st
 
 
 /* ---------- Doprava: Personál – tímy a plánovanie úloh pre celý tím ---------- */
-const TEAM_COLORS=["#2f7d4f","#2b6cb0","#b7791f","#c05621","#6b46c1","#2c7a7b","#9b2c2c"];
+const TEAM_COLORS=["#b8500d","#2b6cb0","#b7791f","#c05621","#6b46c1","#2c7a7b","#9b2c2c"];
 const teamOf=id=>(S.teams||[]).find(t=>t.id===id);
 const TOOL_CATS=["small","other"];
 function teamApply(D,t){D.teamId=t.id;
@@ -3169,7 +3169,7 @@ document.addEventListener("submit",ev=>{if(ev.target.id!=="teamForm"||!me)return
   const id=ev.target.dataset.id;S.teams=S.teams||[];if(id)Object.assign(teamOf(id),D);else S.teams.push({id:uid("tm"),...D});
   view.teamEdit=null;view.teamDraft=null;save();toast(id?"Tím upravený":"Tím vytvorený");render()});
 function SEED_TEAMS(){return [
-  {id:"tm1",name:"Murári – Fekete",color:"#2f7d4f",leaderId:"w1",members:["w1","w2","w3"],vehicles:[{machineId:"m5",driverId:"w1"}],tools:["m6"],note:"Murárske a betonárske práce"},
+  {id:"tm1",name:"Murári – Fekete",color:"#b8500d",leaderId:"w1",members:["w1","w2","w3"],vehicles:[{machineId:"m5",driverId:"w1"}],tools:["m6"],note:"Murárske a betonárske práce"},
   {id:"tm2",name:"Zemné práce – Lukáč",color:"#b7791f",leaderId:"w4",members:["w4","w5"],vehicles:[{machineId:"m1",driverId:"w4"},{machineId:"m4",driverId:"w5"}],tools:[],note:"Výkopy, odvoz zeminy"}]}
 
 /* ---------- modul Požičovňa: náradie v požičovni, výpožičky, plánovač ---------- */
@@ -3302,13 +3302,13 @@ function rLoanDetail(l,ed){const days=rDays(l.from,rEnd(l));
       ${ed?`<button class="btn small" data-a="rlEdit" data-id="${l.id}">Upraviť</button><button class="btn small ghost" data-a="rlDel" data-id="${l.id}" style="margin-left:auto;color:var(--bad)">Zmazať</button>`:""}</div></div>`}
 function rPDF(l){const doc=newPdf("portrait");if(!doc)return;const days=rDays(l.from,rEnd(l)),M=v=>plain(eur(v));
   pdfFirmHeader(doc,"VÝPOŽIČNÝ LIST",`č. ${l.no}`);
-  const st={font:"DVC",fontSize:10,cellPadding:2,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},lab={fontStyle:"bold",fillColor:[244,247,245],cellWidth:48};
+  const st={font:"DVC",fontSize:10,cellPadding:2,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},lab={fontStyle:"bold",fillColor:[245,246,247],cellWidth:48};
   const c=l.customer||{};
   doc.autoTable({startY:28,margin:{left:14,right:14},theme:"grid",styles:st,columnStyles:{0:lab},body:[["Nájomca",[c.name,c.company].filter(Boolean).join(" · ")],...(c.ico?[["IČO",c.ico]]:[]),["Telefón / e-mail",[c.phone,c.email].filter(Boolean).join(" · ")],...(c.address?[["Adresa",c.address]]:[]),
     ["Doba nájmu",`${plain(d2(l.from))} – ${plain(d2(l.to))} (${days} ${pl(days,"deň","dni","dní")})`],...(l.returned?[["Vrátené",plain(d2(l.returned))]]:[])]});
-  doc.autoTable({startY:doc.lastAutoTable.finalY+5,margin:{left:14,right:14},theme:"grid",styles:st,headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255},
+  doc.autoTable({startY:doc.lastAutoTable.finalY+5,margin:{left:14,right:14},theme:"grid",styles:st,headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255},
     head:[["Náradie","Inv. č.","Cena / deň","Záloha","Za obdobie"]],body:(l.items||[]).map(id=>{const i=rItem(id)||{};return [i.name||"",i.invNo||"",M(rNum(i.dayRate)),M(rNum(i.deposit)),l.priceOwn?"":M(rItemPrice(i,days))]}),
-    foot:[[{content:l.priceOwn?"Dohodnutá cena spolu bez DPH":"Cena spolu bez DPH",colSpan:3},M(rDeposit(l)),M(rLoanPrice(l))]],footStyles:{font:"DVC",fontStyle:"bold",fillColor:[226,240,231],textColor:[20,28,24]},showFoot:"lastPage",
+    foot:[[{content:l.priceOwn?"Dohodnutá cena spolu bez DPH":"Cena spolu bez DPH",colSpan:3},M(rDeposit(l)),M(rLoanPrice(l))]],footStyles:{font:"DVC",fontStyle:"bold",fillColor:[253,236,222],textColor:[31,35,40]},showFoot:"lastPage",
     columnStyles:{2:{halign:"right"},3:{halign:"right"},4:{halign:"right"}},didParseCell:h=>{if(h.section==="foot"&&h.column.index>=3)h.cell.styles.halign="right"}});
   let y=doc.lastAutoTable.finalY+8;doc.setFontSize(8.5);
   const para=(txt,bold)=>{doc.setFont("DVC",bold?"bold":"normal");const ln=doc.splitTextToSize(txt,182);ln.forEach(t=>{if(y>275){doc.addPage();y=20}doc.text(t,14,y);y+=3.9});y+=1.2};
@@ -3560,8 +3560,8 @@ function tripPDF(t){
   const I={...tripDefaults(t),...t.info},R=tripCalc(I);if(R.err){toast(R.err);return}
   const doc=newPdf("portrait");if(!doc)return;const F=S.firm||{},w=t.w,C=CTRY[I.country]||CTRY.SK;
   pdfFirmHeader(doc,"CESTOVNÝ PRÍKAZ",`${I.country==="SK"?"Tuzemská":"Zahraničná"} pracovná cesta`);
-  const kv=(rows,startY)=>{doc.autoTable({body:rows,startY,margin:{left:14,right:14},theme:"grid",styles:{font:"DVC",fontSize:9,cellPadding:1.6,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},
-    columnStyles:{0:{cellWidth:58,fillColor:[236,246,239],fontStyle:"bold"}}});return doc.lastAutoTable.finalY};
+  const kv=(rows,startY)=>{doc.autoTable({body:rows,startY,margin:{left:14,right:14},theme:"grid",styles:{font:"DVC",fontSize:9,cellPadding:1.6,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},
+    columnStyles:{0:{cellWidth:58,fillColor:[253,240,230],fontStyle:"bold"}}});return doc.lastAutoTable.finalY};
   let y=kv([["Zamestnanec",fullName(w)],["Osobné číslo / pozícia",[w.persNo,w.profession].filter(Boolean).join(" · ")],["Zamestnávateľ",[F.name,F.ico?`IČO ${F.ico}`:""].filter(Boolean).join(", ")],
     ["Začiatok cesty",fmtDT(I.start)],["Koniec cesty",fmtDT(I.end)],["Krajina",C.l],...(I.country!=="SK"?[["Prechod hranice SR",[I.borderOut&&"tam: "+fmtDT(I.borderOut),I.borderIn&&"späť: "+fmtDT(I.borderIn)].filter(Boolean).join("   ")||"neuvedené"]]:[]),
     ["Miesto rokovania",I.place||""],["Účel cesty",I.purpose||""],["Dopravný prostriedok",vehLabel(I)+(I.veh==="own"&&R.vehKm?`, ${nf1(R.vehKm)} km`:"")],["Preddavok",R.advance?eur(R.advance):"—"]],26);
@@ -3569,15 +3569,15 @@ function tripPDF(t){
   y+=12;doc.setFont("DVC","bold");doc.setFontSize(11);doc.text("Vyúčtovanie pracovnej cesty",14,y);doc.setFont("DVC","normal");
   const body=R.days.map(x=>[plain(d2(x.d)),hfmt(x.tot),x.frH?hfmt(x.frH):"—",[x.M.b&&"R",x.M.l&&"O",x.M.d&&"V"].filter(Boolean).join(" ")||"—",x.dom?plain(eur(x.dom)):"—",x.fr?plain(money(x.fr,R.cur)):"—"]);
   doc.autoTable({head:[["Dátum","Trvanie","Z toho v zahraničí","Jedlo","Stravné SR","Stravné zahr."]],body,startY:y+3,margin:{left:14,right:14},theme:"grid",
-    styles:{font:"DVC",fontSize:8.5,cellPadding:1.3,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255},
+    styles:{font:"DVC",fontSize:8.5,cellPadding:1.3,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255},
     columnStyles:{4:{halign:"right"},5:{halign:"right"}}});
   const sum=[["Stravné na území SR",plain(eur(R.dom))],R.fr?["Stravné v zahraničí",plain(money(R.fr,R.cur))]:null,R.pocket?["Vreckové",plain(money(R.pocket,R.cur))]:null,
     R.veh?[`Náhrada za vlastné vozidlo (${nf1(R.vehKm)} km × ${(TRAVEL.kmBase+R.phmKm).toFixed(3).replace(".",",")} €/km)`,plain(eur(R.veh))]:null,R.tickets?["Cestovné lístky",plain(eur(R.tickets))]:null,
     R.lodging?["Ubytovanie",plain(eur(R.lodging))]:null,R.other?["Nutné vedľajšie výdavky",plain(eur(R.other))]:null,["Spolu v EUR",plain(eur(R.eur))],
     R.frCur?[`Spolu v ${R.cur}`,plain(money(R.frCur,R.cur))+(R.frEur?` (${plain(eur(R.frEur))})`:"")]:null,R.advance?["Preddavok",`− ${plain(eur(R.advance))}`]:null,
     R.advance?[R.balance>=0?"Doplatok zamestnancovi":"Preplatok – vráti zamestnanec",plain(eur(Math.abs(R.balance)))]:null].filter(Boolean);
-  doc.autoTable({body:sum,startY:doc.lastAutoTable.finalY+4,margin:{left:90,right:14},theme:"grid",styles:{font:"DVC",fontSize:9,cellPadding:1.4,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},
-    columnStyles:{1:{halign:"right",fontStyle:"bold",cellWidth:38}},didParseCell:c=>{if(/^Spolu|Doplatok|Preplatok/.test(c.row.raw[0]))c.cell.styles.fillColor=[226,240,231]}});
+  doc.autoTable({body:sum,startY:doc.lastAutoTable.finalY+4,margin:{left:90,right:14},theme:"grid",styles:{font:"DVC",fontSize:9,cellPadding:1.4,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},
+    columnStyles:{1:{halign:"right",fontStyle:"bold",cellWidth:38}},didParseCell:c=>{if(/^Spolu|Doplatok|Preplatok/.test(c.row.raw[0]))c.cell.styles.fillColor=[253,236,222]}});
   y=doc.lastAutoTable.finalY+6;doc.setFontSize(7.5);doc.setTextColor(90);const note=doc.splitTextToSize(`Vyúčtovanie podľa zákona č. 283/2002 Z. z. o cestovných náhradách; ${TRAVEL.source}. R/O/V = bezplatne poskytnuté raňajky/obed/večera.`,182);doc.text(note,14,y);doc.setTextColor(0);
   y+=note.length*3.5+14+stampGap();if(y>275){doc.addPage();y=40}doc.setFontSize(8.5);pdfStamp(doc,firmStamp(),126,y);doc.line(14,y,84,y);doc.text("Vyúčtoval (zamestnanec), dátum",14,y+4);doc.line(126,y,196,y);doc.text("Schválil, dátum",126,y+4);
   offerFile(`Cestovny_prikaz_${fullName(w)}_${t.from}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_")+".pdf",doc.output("arraybuffer"))}
@@ -4420,8 +4420,8 @@ function exportPDF(p,inv){
   R.forEach((r,k)=>{doc.setFont("DVC","bold");doc.text(r[0],170,18+k*4);doc.setFont("DVC","normal");doc.text(String(r[1]),196,18+k*4)});
   const body=[];let sec=null;
   M.rows.forEach(r=>{const i=r.i;if(only&&!r.pq&&!r.cq)return;
-    if(i.section!==sec){sec=i.section;if(sec){const s2=M.secs[sec];body.push([{content:sec,colSpan:5,styles:{fontStyle:"bold",fillColor:[236,240,237]}},
-      ...["",E(s2.b),"",E(s2.pr),"",E(s2.cu),"",E(s2.zo)].map((v,k)=>({content:k===0?"":v,styles:{fontStyle:"bold",fillColor:[236,240,237],halign:"right"}}))])}}
+    if(i.section!==sec){sec=i.section;if(sec){const s2=M.secs[sec];body.push([{content:sec,colSpan:5,styles:{fontStyle:"bold",fillColor:[238,240,242]}},
+      ...["",E(s2.b),"",E(s2.pr),"",E(s2.cu),"",E(s2.zo)].map((v,k)=>({content:k===0?"":v,styles:{fontStyle:"bold",fillColor:[238,240,242],halign:"right"}}))])}}
     body.push([i.por,i.code,i.desc,i.mj,E(i.price),Q(i.qty),E(r.bs),Q(r.pq),E(r.ps),Q(r.cq),E(r.cs),Q(r.zq),E(r.zs)]);
   });
   const T=M.T;
@@ -4432,11 +4432,11 @@ function exportPDF(p,inv){
   const num={halign:"right"};
   doc.autoTable({head,body,foot,startY:35,margin:{left:mL,right:mL,top:12,bottom:14},theme:"grid",
     styles:{font:"DVC",fontSize:6.6,cellPadding:0.9,lineColor:[190,198,206],lineWidth:0.1,textColor:[20,28,36],overflow:"linebreak",valign:"middle"},
-    headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255,halign:"center"},
-    footStyles:{font:"DVC",fontStyle:"bold",fillColor:[226,240,231],textColor:[20,28,36],halign:"right"},
+    headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255,halign:"center"},
+    footStyles:{font:"DVC",fontStyle:"bold",fillColor:[253,236,222],textColor:[20,28,36],halign:"right"},
     columnStyles:{0:{cellWidth:8},1:{cellWidth:20},2:{cellWidth:"auto"},3:{cellWidth:8,halign:"center"},4:{cellWidth:14,...num},
       5:{cellWidth:14,...num},6:{cellWidth:18,...num},7:{cellWidth:14,...num},8:{cellWidth:18,...num},
-      9:{cellWidth:14,...num,fillColor:[236,246,239]},10:{cellWidth:18,...num,fillColor:[236,246,239],fontStyle:"bold"},11:{cellWidth:14,...num},12:{cellWidth:18,...num}},
+      9:{cellWidth:14,...num,fillColor:[253,240,230]},10:{cellWidth:18,...num,fillColor:[253,240,230],fontStyle:"bold"},11:{cellWidth:14,...num},12:{cellWidth:18,...num}},
     showHead:"everyPage",showFoot:"lastPage",rowPageBreak:"avoid",
     didParseCell:d=>{if(d.section==="foot"&&d.column.index===0)d.cell.styles.halign="left"}
   });
