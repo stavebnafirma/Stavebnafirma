@@ -266,6 +266,7 @@ function modulesHTML(){
           ${STRIPE_PRICES.length?`<div style="margin-top:6px">Ceny, ktoré v Stripe sú:</div><ul style="margin:4px 0 0 18px">${STRIPE_PRICES.map(p=>`<li>${esc(p.product||"?")} – ${p.amount.toLocaleString("sk-SK",{minimumFractionDigits:2})} € / ${p.interval==="year"?"rok":p.interval==="month"?"mesiac":esc(p.interval)} – lookup key: <b>${p.lookup_key?esc(p.lookup_key):"nevyplnený"}</b></li>`).join("")}</ul>`:`<div style="margin-top:6px">V Stripe (v režime, ktorého kľúč je v Supabase) sa nenašla žiadna opakovaná cena.</div>`}
           <div style="margin-top:6px">Doplň kľúč pri každej cene v Stripe: produkt → cena → ⋯ Edit price → Lookup key.</div></div>`})()}
       <div class="row"><b>Spolu: ${sum.toLocaleString("sk-SK",{minimumFractionDigits:2,maximumFractionDigits:2})} € / ${D.interval==="year"?"rok":"mesiac"}</b><span class="muted" style="font-size:13px">${PRICES&&Object.keys(PRICES).length?"bez DPH":""}</span></div>
+      ${view.payUrl?`<div class="note">Otváram platobnú stránku Stripe… Ak sa neotvorila sama, <a href="${esc(view.payUrl)}" rel="noopener"><b>klikni sem</b></a>.</div>`:""}
       <div class="row"><button class="btn primary" data-a="billPay" ${billBusy||!D.mods.length?"disabled":""}>${billBusy?"Pripravujem…":hasSub?"Uložiť zmenu predplatného":"Prejsť na platbu"}</button>
         ${B.has_customer?`<button class="btn" data-a="billPortal" ${billBusy?"disabled":""}>Platobná karta, faktúry a zrušenie</button>`:""}</div>
       <div class="muted" style="font-size:13px">${hasSub?"Pri pridaní modulu sa doplatí len pomerná časť do konca obdobia, pri odobratí sa zvyšok odpočíta z ďalšej platby.":"Platbu spracúva Stripe – údaje o karte sa v aplikácii neukladajú. Predplatné sa obnovuje automaticky a dá sa kedykoľvek zrušiť."} Vypnutím modulu sa údaje nezmažú.</div>`
@@ -278,9 +279,9 @@ async function billCall(body){billBusy=true;render();
   finally{billBusy=false}}
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
   if(a==="billPay"){ev.stopImmediatePropagation();const D=view.billDraft;
-    billCall({action:"checkout",modules:D.mods,interval:D.interval}).then(async d=>{if(d.url){location.href=d.url;return}
+    billCall({action:"checkout",modules:D.mods,interval:D.interval}).then(async d=>{if(d.url){view.payUrl=d.url;render();location.assign(d.url);return}
       if(d.updated){await loadBilling();view.billDraft=null;toast("Predplatné upravené");render()}}).catch(e=>{toast("Platbu sa nepodarilo pripraviť: "+e.message);render()})}
-  else if(a==="billPortal"){ev.stopImmediatePropagation();billCall({action:"portal"}).then(d=>{if(d.url)location.href=d.url}).catch(e=>{toast("Správu predplatného sa nepodarilo otvoriť: "+e.message);render()})}},true);
+  else if(a==="billPortal"){ev.stopImmediatePropagation();billCall({action:"portal"}).then(d=>{if(d.url){view.payUrl=d.url;render();location.assign(d.url)}}).catch(e=>{toast("Správu predplatného sa nepodarilo otvoriť: "+e.message);render()})}},true);
 document.addEventListener("change",ev=>{const t=ev.target;if(!me||!view.billDraft)return;
   if(t.dataset&&t.dataset.bmod){const D=view.billDraft;D.mods=t.checked?[...new Set([...D.mods,t.dataset.bmod])]:D.mods.filter(x=>x!==t.dataset.bmod);render()}
   else if(t.name==="bInt"){view.billDraft.interval=t.value;render()}});
