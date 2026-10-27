@@ -64,6 +64,12 @@ rep('"Automatické vyčítanie tu nie je dostupné. Fotky sú uložené, údaje 
 i = s.index('if(!ROOT.tenants.demo.trainings)'); j = s.index('render();\n</script>', i)
 s = s[:i] + 'boot();\n</script>' + s[j + len('render();\n</script>'):]
 
+# 6b) predplatné: dostupné moduly určuje server (billing_status), karta Moduly je z live.js
+rep('const hasMod=k=>!!(S.modules||ALL_MODS)[k];','const hasMod=k=>!!((typeof BILL!=="undefined"&&BILL&&BILL.active)||S.modules||ALL_MODS)[k];')
+rep('function modulesHTML(){\n  const M=S.modules||ALL_MODS','function modulesHTML_prototyp(){\n  const M=S.modules||ALL_MODS')
+rep('nie je v predplatnom. Zapnúť ho môžeš tu.','nie je predplatený. Predplatiť ho môžeš tu.')
+rep('</style>', '.modcard.bill{display:flex;gap:12px;align-items:flex-start}.modcard.bill.on{border-color:var(--accent);background:var(--tint)}.bprice{white-space:nowrap;font-weight:600;font-size:14px}\n</style>')
+
 # 7) lišta: prepnutie firmy a indikátor ukladania
 rep('<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");',
     '<span class="saveind" id="saveInd" hidden>Ukladám…</span>${myTenants.length>1?`<button class="logout" data-a="switchTenant" title="Prepnúť firmu">Firmy</button>`:""}<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");')

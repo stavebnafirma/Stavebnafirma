@@ -41,7 +41,7 @@ async function loadTenant(tid){
   /* poradie stavieb a záznamov podľa času založenia, ak ho majú */
   S=T;TID=tid;lsSet("sf-tenant",tid);
   SNAP=new Map();docRows().forEach((r,k)=>SNAP.set(k,rowSig(r)));
-  await loadPeople();remapInvites();
+  await loadPeople();remapInvites();await loadBilling();
   if(!S.firm||typeof S.firm!=="object")S.firm={setupDone:false};
   S.company=S.firm.name||S.company||((myTenants.find(t=>t.tenant_id===tid)||{}).tenants||{}).name||"";
 }
@@ -141,7 +141,8 @@ async function openTenant(tid){view={screen:"home",auth:"loading"};render();
   await loadTenant(tid);subscribeLive();
   if(!me){view={screen:"home",auth:"login",loginErr:"Do tejto firmy už nemáš prístup."};render();return}
   if(JSON.stringify(profState())!==PSNAP)save();
-  view=needsSetup()?{screen:"setup"}:needsProfile()?{screen:"profile"}:isExternal(me)?externalStart():{screen:startScreen(),tab:"dennik"};render();window.scrollTo(0,0)}
+  view=needsSetup()?{screen:"setup"}:needsProfile()?{screen:"profile"}:isExternal(me)?externalStart():{screen:startScreen(),tab:"dennik"};render();window.scrollTo(0,0);
+  if(/[?&]platba=/.test(location.search))afterPaymentReturn()}
 async function createFirm(name){
   const mods=S.modules||MODS_ALL;const {data:tid,error}=await SB.rpc("create_tenant",{p_name:name,p_modules:mods});if(error)throw error;
   const {data:ms}=await SB.from("members").select("tenant_id,role,tenants(name)").eq("user_id",authUser.id);myTenants=ms||[];
@@ -222,3 +223,65 @@ async function offerFile(filename,data){
   try{const blob=data instanceof Blob?data:new Blob([data],{type:/\.pdf$/i.test(filename)?"application/pdf":/\.xlsx$/i.test(filename)?"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":"application/octet-stream"});
     const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);toast("Súbor sa sťahuje")}
   catch(e){toast("Súbor sa nepodarilo stiahnuť.")}}
+
+/* =====================================================================
+   PREDPLATNÉ MODULOV (Stripe) – stav načítaný zo servera, moduly zapína len server
+   ===================================================================== */
+let BILL=null,PRICES=null,billBusy=false;
+async function loadBilling(){if(!TID)return;const {data,error}=await SB.rpc("billing_status",{t:TID});if(!error&&data)BILL=data}
+async function loadPrices(){if(PRICES)return;try{const {data,error}=await SB.functions.invoke("billing",{body:{action:"prices"}});if(!error&&data&&data.prices)PRICES=data.prices;else PRICES={}}catch(e){PRICES={}}render()}
+const daysLeft=iso=>Math.ceil((new Date(iso)-new Date())/864e5);
+const dmy=iso=>{const d=new Date(iso);return `${d.getDate()}. ${d.getMonth()+1}. ${d.getFullYear()}`};
+function modStatus(k){if(!BILL)return {t:"",cls:""};const pm=(BILL.paid_modules||{})[k];
+  if(BILL.complimentary)return {t:"Bezplatný prístup",cls:"s-ok"};
+  if(pm&&new Date(pm.until)>new Date())return {t:`Zaplatené · ${pm.interval==="year"?"ročne":"mesačne"}`,cls:"s-ok",paid:true};
+  if(BILL.trial_ends_at&&new Date(BILL.trial_ends_at)>new Date())return {t:"Skúšobné obdobie",cls:"s-wait"};
+  return {t:"Nezaplatené – zamknuté",cls:"s-lock"}}
+function priceTxt(k,i){const p=PRICES&&PRICES[k]&&PRICES[k][i];return p?`${p.amount.toLocaleString("sk-SK",{minimumFractionDigits:2,maximumFractionDigits:2})} € / ${i==="year"?"rok":"mesiac"}`:""}
+function modulesHTML(){
+  const admin=me.companyRole==="admin";if(!BILL)return `<div class="card muted">Načítavam predplatné…</div>`;
+  if(PRICES===null)loadPrices();
+  const B=BILL,trial=B.trial_ends_at&&new Date(B.trial_ends_at)>new Date(),hasSub=B.billing&&B.billing.subscription_id&&["active","trialing","past_due"].includes(B.billing.status);
+  const D=view.billDraft||(view.billDraft={interval:(B.billing&&B.billing.interval)||"month",mods:MODULES.map(m=>m[0]).filter(k=>((B.paid_modules||{})[k])||(!hasSub&&(S.modules||{})[k]))});
+  const sum=D.mods.reduce((s,k)=>s+((PRICES&&PRICES[k]&&PRICES[k][D.interval]&&PRICES[k][D.interval].amount)||0),0);
+  const yearSave=(()=>{let m=0,y=0;MODULES.forEach(([k])=>{const pm=PRICES&&PRICES[k];if(pm&&pm.month&&pm.year){m+=pm.month.amount*12;y+=pm.year.amount}});return m&&y<m?Math.round((1-y/m)*100):0})();
+  const banner=B.complimentary?`<div class="note">Firma má <b>bezplatný prístup</b> ku všetkým modulom.</div>`
+    :trial?`<div class="note"><b>Skúšobné obdobie do ${dmy(B.trial_ends_at)}</b> – zostáva ${daysLeft(B.trial_ends_at)} ${pl(daysLeft(B.trial_ends_at),"deň","dni","dní")}. Všetky moduly sú dovtedy dostupné. ${admin?"Moduly, ktoré chceš používať aj potom, si predplať nižšie.":""}</div>`
+    :hasSub?(B.billing.status==="past_due"?`<div class="note cnote hard"><b>Platba za predplatné neprešla.</b> Skontroluj platobnú kartu v správe predplatného, inak sa moduly o pár dní zamknú.</div>`:B.billing.cancel_at_period_end?`<div class="note cnote">Predplatné je zrušené ku koncu obdobia. Moduly fungujú do dátumu uvedeného pri module.</div>`:"")
+    :`<div class="note cnote hard"><b>Skúšobné obdobie skončilo.</b> ${admin?"Vyber moduly a predplať si ich – údaje ostali uložené a po zaplatení budú znova k dispozícii.":"Administrátor firmy môže moduly predplatiť v tejto karte."}</div>`;
+  const cards=MODULES.map(([k,l,d])=>{const st=modStatus(k),pm=(B.paid_modules||{})[k],on=D.mods.includes(k);
+    return `<label class="modcard bill ${on?"on":""}">${admin&&!B.complimentary?`<input type="checkbox" data-bmod="${k}" ${on?"checked":""}>`:""}<span style="flex:1;min-width:0"><b>${l}</b> <span class="pill ${st.cls}">${esc(st.t)}</span><br><span class="muted">${esc(d)}</span>
+      ${pm&&st.paid?`<br><span class="muted" style="font-size:12.5px">Predplatené do ${dmy(new Date(new Date(pm.until)-3*864e5).toISOString())}</span>`:""}</span>
+      <span class="bprice">${priceTxt(k,D.interval)}</span></label>`}).join("");
+  return `<div class="stack"><div class="card stack"><h2>Moduly a predplatné</h2>
+    <div class="muted">Karta Firma (údaje o firme, zamestnanci, strojový a vozový park, používatelia) je zadarmo. Ostatné moduly si firma predplatí podľa potreby – jeden, viac alebo všetky.</div>
+    ${banner}
+    ${admin&&!B.complimentary?`<div class="seg" role="radiogroup" style="align-self:flex-start"><label><input type="radio" name="bInt" value="month" ${D.interval==="month"?"checked":""}><span>Mesačne</span></label><label><input type="radio" name="bInt" value="year" ${D.interval==="year"?"checked":""}><span>Ročne${yearSave?` (−${yearSave} %)`:""}</span></label></div>`:""}
+    <div class="mods">${cards}</div>
+    ${admin&&!B.complimentary?`${PRICES&&!Object.keys(PRICES).length?`<div class="note cnote">Ceny sa nepodarilo načítať zo Stripe. Platbu zatiaľ nie je možné spustiť.</div>`:""}
+      <div class="row"><b>Spolu: ${sum.toLocaleString("sk-SK",{minimumFractionDigits:2,maximumFractionDigits:2})} € / ${D.interval==="year"?"rok":"mesiac"}</b><span class="muted" style="font-size:13px">${PRICES&&Object.keys(PRICES).length?"bez DPH":""}</span></div>
+      <div class="row"><button class="btn primary" data-a="billPay" ${billBusy||!D.mods.length?"disabled":""}>${billBusy?"Pripravujem…":hasSub?"Uložiť zmenu predplatného":"Prejsť na platbu"}</button>
+        ${B.has_customer?`<button class="btn" data-a="billPortal" ${billBusy?"disabled":""}>Platobná karta, faktúry a zrušenie</button>`:""}</div>
+      <div class="muted" style="font-size:13px">${hasSub?"Pri pridaní modulu sa doplatí len pomerná časť do konca obdobia, pri odobratí sa zvyšok odpočíta z ďalšej platby.":"Platbu spracúva Stripe – údaje o karte sa v aplikácii neukladajú. Predplatné sa obnovuje automaticky a dá sa kedykoľvek zrušiť."} Vypnutím modulu sa údaje nezmažú.</div>`
+      :!admin?`<div class="muted" style="font-size:13px">Predplatné spravuje administrátor firmy.</div>`:""}
+  </div></div>`}
+async function billCall(body){billBusy=true;render();
+  try{const {data,error}=await SB.functions.invoke("billing",{body:{...body,tenant_id:TID}});
+    if(error){let msg=error.message;try{const j=await error.context.json();if(j&&j.error)msg=j.error}catch(e){}throw new Error(msg)}
+    if(data&&data.error)throw new Error(data.error);return data}
+  finally{billBusy=false}}
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(a==="billPay"){ev.stopImmediatePropagation();const D=view.billDraft;
+    billCall({action:"checkout",modules:D.mods,interval:D.interval}).then(async d=>{if(d.url){location.href=d.url;return}
+      if(d.updated){await loadBilling();view.billDraft=null;toast("Predplatné upravené");render()}}).catch(e=>{toast("Platbu sa nepodarilo pripraviť: "+e.message);render()})}
+  else if(a==="billPortal"){ev.stopImmediatePropagation();billCall({action:"portal"}).then(d=>{if(d.url)location.href=d.url}).catch(e=>{toast("Správu predplatného sa nepodarilo otvoriť: "+e.message);render()})}},true);
+document.addEventListener("change",ev=>{const t=ev.target;if(!me||!view.billDraft)return;
+  if(t.dataset&&t.dataset.bmod){const D=view.billDraft;D.mods=t.checked?[...new Set([...D.mods,t.dataset.bmod])]:D.mods.filter(x=>x!==t.dataset.bmod);render()}
+  else if(t.name==="bInt"){view.billDraft.interval=t.value;render()}});
+/* návrat zo Stripe */
+async function afterPaymentReturn(){const q=new URLSearchParams(location.search),r=q.get("platba");if(!r)return;history.replaceState(null,"",location.pathname);
+  view={screen:"firma",firmTab:"moduly"};
+  if(r==="zrusena"){toast("Platba bola zrušená, nič sa nezaplatilo.");render();return}
+  if(r==="ok"){toast("Ďakujeme, platba prebehla. Zapínam moduly…");for(let i=0;i<10;i++){await loadBilling();render();if(BILL&&Object.keys(BILL.paid_modules||{}).length)break;await new Promise(z=>setTimeout(z,2000))}
+    view.billDraft=null;await loadTenant(TID);render();return}
+  await loadBilling();render()}
