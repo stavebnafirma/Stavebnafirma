@@ -3608,6 +3608,7 @@ function employeeForm(w){
       <div class="costbox" id="eCost">${costText(w)||"Po zadaní mzdy sa tu zobrazí superhrubá mzda a náklad na hodinu."}</div>
       <span class="hint">Náklad pre stavbu = superhrubá mzda (hrubá mzda + odvody zamestnávateľa ${String(contribPct()).replace(".",",")} % podľa sadzieb ${EMPLOYER_CONTRIB.year}) prepočítaná na hodinu: ÷ ${String(HOURS_PER_MONTH).replace(".",",")} h mesačne.</span>
     </fieldset>
+    ${payFormHTML(w)}
     <fieldset class="modes"><legend>Veľkosti pracovného odevu</legend>
       <div class="sizes">
         <label>Nohavice<input id="szPants" value="${esc(sz.pants)}" list="sizeList" placeholder="napr. 52"></label>
@@ -3619,7 +3620,6 @@ function employeeForm(w){
       <div class="stack" id="ooppBox">${(w.oopp||[]).map(ooppRow).join("")}</div>
       <button type="button" class="btn small" data-a="addOopp" style="align-self:flex-start">+ Pridať pomôcku</button>
     </fieldset>
-    ${payFormHTML(w)}
     ${!isNew?`<label class="chk"><input type="checkbox" id="eActive" ${w.active!==false?"checked":""}> Aktívny zamestnanec (zobrazuje sa pri výbere v dennom zázname)</label>`:""}
     <datalist id="ooppList">${OOPP_ITEMS.map(x=>`<option value="${x}">`).join("")}</datalist>
     <datalist id="sizeList">${SIZE_SUGG.map(x=>`<option value="${x}">`).join("")}</datalist>
