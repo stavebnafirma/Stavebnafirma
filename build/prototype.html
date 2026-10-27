@@ -151,6 +151,8 @@ details.info[open]{display:flex;flex-direction:column;gap:8px}
 .dl dt{color:var(--muted)}.dl dd{margin:0;min-width:0;overflow-wrap:anywhere}
 .ct{padding:6px 0;border-top:1px solid var(--line);font-size:14px}
 .ctl{display:flex;gap:4px 14px;flex-wrap:wrap}.sel{user-select:all;overflow-wrap:anywhere}
+.toolrow{display:grid;grid-template-columns:2fr 1.2fr .6fr .9fr auto;gap:6px;align-items:end}@media (max-width:520px){.toolrow{grid-template-columns:1fr 1fr auto}.toolrow label:first-child{grid-column:1/-1}}
+table.oopsum td,table.oopsum th{padding:5px 8px}table.oopsum tr.grp td{border-top:1px solid var(--line)}
 .oprow{display:grid;grid-template-columns:2fr 1fr 1.3fr auto;gap:6px;align-items:end}
 @media (max-width:520px){.oprow{grid-template-columns:1fr 1fr auto}.oprow label:first-child{grid-column:1/-1}}
 .sizes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
@@ -1841,6 +1843,163 @@ document.addEventListener("submit",ev=>{if(ev.target.id!=="payMonForm"||!me)retu
   Object.keys(d).forEach(x=>{if(!d[x])delete d[x]});S.payMon=S.payMon||{};if(Object.keys(d).length)S.payMon[k]=d;else delete S.payMon[k];save();toast("Uložené");render()});
 document.addEventListener("change",ev=>{if(ev.target.id!=="payDay"||!me||!canEdit("personal"))return;const d=Math.max(1,Math.min(31,Math.round(+ev.target.value||15)));S.payMon=S.payMon||{};S.payMon.cfg={...payCfg(),payDay:d};save();render()});
 
+/* ---------- Personalistika: Ostatné (OOPP, oboznámenia, zverené vozidlo a náradie) ---------- */
+const activeWorkers=()=>S.workers.filter(w=>w.active!==false).sort((a,b)=>(a.lastName||"").localeCompare(b.lastName||"","sk"));
+const vehicles=()=>(S.machines||[]).filter(m=>m.cat==="car"||m.cat==="truck");
+const vehName=m=>[m.name,m.ecv].filter(Boolean).join(" · ");
+const empOpts=(all,sel)=>`${all?`<option value="__all">Všetci aktívni zamestnanci</option>`:`<option value="">— vyber zamestnanca —</option>`}${activeWorkers().map(w=>`<option value="${w.id}" ${sel===w.id?"selected":""}>${esc(w.lastName)} ${esc(w.firstName)}${w.persNo?" · "+esc(w.persNo):""}</option>`).join("")}`;
+const firmLine=()=>{const F=S.firm||{};return `${F.name||S.company||""}${firmAddress(F)?", so sídlom "+firmAddress(F):""}${F.ico?", IČO "+F.ico:""}`};
+const firmContact=()=>{const F=S.firm||{};return [F.email,F.phone].filter(Boolean).join(", ")};
+
+/* sumár OOPP zo všetkých kariet zamestnancov */
+function ooppSummary(){const M=new Map(),add=(item,size)=>{item=String(item||"").trim();if(!item)return;size=String(size||"").trim()||"—";const k=item+"\u0001"+size;M.set(k,(M.get(k)||0)+1)};
+  const ws=activeWorkers();ws.forEach(w=>{const z=w.sizes||{};[["Pracovné nohavice",z.pants],["Tričko",z.shirt],["Pracovná blúza",z.jacket],["Pracovná obuv",z.shoes]].forEach(([i,v])=>{if(String(v||"").trim())add(i,v)});(w.oopp||[]).forEach(o=>add(o.item,o.size))});
+  const rows=[...M.entries()].map(([k,n])=>{const [item,size]=k.split("\u0001");return {item,size,n}})
+    .sort((a,b)=>a.item.localeCompare(b.item,"sk")||a.size.localeCompare(b.size,"sk",{numeric:true}));
+  return {rows,noSize:ws.filter(w=>!Object.values(w.sizes||{}).some(Boolean)).length,ws:ws.length}}
+function ooppBubble(){const R=ooppSummary();let last="";
+  const body=R.rows.map(r=>{const first=r.item!==last;last=r.item;return `<tr${first?' class="grp"':""}><td>${first?`<b>${esc(r.item)}</b>`:""}</td><td>${esc(r.size)}</td><td class="r num">${r.n}</td></tr>`}).join("");
+  return `<div class="bubble"><div class="entry-head"><h3>Sumár OOPP a odevov</h3>${R.rows.length?`<button class="btn small" data-a="ooppPdf">PDF</button>`:""}</div>
+    <div class="muted" style="font-size:13px">Spočítané z kariet ${R.ws} aktívnych zamestnancov${R.noSize?` · ${R.noSize} bez zadaných veľkostí`:""}.</div>
+    ${R.rows.length?`<div class="tablewrap" style="max-height:360px;overflow:auto"><table class="oopsum"><thead><tr><th>Položka</th><th>Veľkosť</th><th class="r">Počet</th></tr></thead><tbody>${body}</tbody></table></div>`:`<div class="muted">V kartách zamestnancov zatiaľ nie sú veľkosti ani OOPP.</div>`}</div>`}
+
+function ostatneHTML(){const ed=canEdit("personal"),vs=vehicles(),today=todayIso(),cs=centers();
+  const vehOpts=all=>`${all?`<option value="__all">Všetky firemné vozidlá (${vs.length})</option>`:`<option value="">— vyber vozidlo —</option>`}${vs.map(m=>`<option value="${m.id}">${esc(vehName(m))}</option>`).join("")}`;
+  const mode=id=>`<label>Forma<select id="${id}"><option value="list">Hromadne s podpisovou listinou</option><option value="each">Každý zamestnanec zvlášť</option></select></label>`;
+  const hint=`<span class="hint">Text dokumentu je zatiaľ všeobecný. Po dodaní vašich vzorov ho upravíme.</span>`;
+  return `<div class="dash">
+    ${ooppBubble()}
+    <form class="bubble" id="odGps"><h3>Oboznámenie s GPS vo vozidlách</h3>
+      <label>Zamestnanci<select id="gpsWho">${empOpts(true)}</select></label>
+      <label>Vozidlá<select id="gpsVeh">${vs.length?vehOpts(true):`<option value="">Vo vozovom parku nie sú autá ani nákladné vozidlá</option>`}</select></label>
+      <div class="grid2"><label>Súkromné jazdy<select id="gpsPriv"><option value="no">nie sú dovolené</option><option value="yes">len so súhlasom zamestnávateľa</option></select></label>
+        <label>Doba uchovávania záznamov<input id="gpsRet" value="3 roky"></label></div>
+      <div class="grid2"><label>Dátum<input type="date" id="gpsDate" value="${today}"></label>${mode("gpsMode")}</div>
+      ${hint}<button class="btn primary small" type="submit" style="align-self:flex-start">Stiahnuť PDF</button></form>
+    <form class="bubble" id="odCam"><h3>Oboznámenie s kamerovým systémom</h3>
+      <label>Zamestnanci<select id="camWho">${empOpts(true)}</select></label>
+      <label>Prevádzka<select id="camPlace"><option value="__hq">Sídlo firmy${firmAddress(S.firm||{})?" – "+esc(firmAddress(S.firm)):""}</option>${cs.map(c=>`<option value="${c.id}">${esc(c.name)}${centerAddr(c)?" – "+esc(centerAddr(c)):""}</option>`).join("")}</select></label>
+      <label>Snímané priestory<input id="camAreas" value="vstup do areálu, parkovisko, sklad a manipulačná plocha"></label>
+      <div class="grid2"><label>Doba uchovávania záznamov<input id="camRet" value="15 dní"></label><label>Dátum<input type="date" id="camDate" value="${today}"></label></div>
+      ${mode("camMode")}${hint}<button class="btn primary small" type="submit" style="align-self:flex-start">Stiahnuť PDF</button></form>
+    <form class="bubble" id="odVeh"><h3>Zodpovednosť za zverené vozidlo</h3>
+      <div class="grid2"><label>Zamestnanec *<select id="vhWho" required>${empOpts(false)}</select></label><label>Vozidlo *<select id="vhVeh" required>${vehOpts(false)}</select></label></div>
+      <div class="grid3"><label>Dátum prevzatia<input type="date" id="vhDate" value="${today}"></label><label>Stav tachometra km<input type="number" id="vhKm" min="0"></label><label>Počet kľúčov<input type="number" id="vhKeys" min="0" value="2"></label></div>
+      <label>Doklady a výbava<input id="vhEquip" value="osvedčenie o evidencii, doklad o PZP (zelená karta), lekárnička, výstražný trojuholník, reflexná vesta"></label>
+      <div class="grid2"><label>Súkromné použitie<select id="vhPriv"><option value="no">nie je dovolené</option><option value="yes">len so súhlasom zamestnávateľa</option></select></label><label>Stav vozidla / poznámka<input id="vhNote" placeholder="napr. bez poškodenia"></label></div>
+      ${hint}<button class="btn primary small" type="submit" style="align-self:flex-start">Stiahnuť PDF</button></form>
+    <form class="bubble" id="odTool"><h3>Zodpovednosť za pridelené náradie</h3>
+      <div class="grid2"><label>Zamestnanec *<select id="tlWho" required>${empOpts(false)}</select></label><label>Dátum prevzatia<input type="date" id="tlDate" value="${today}"></label></div>
+      <div class="stack" id="toolBox">${toolRow()}</div>
+      <button type="button" class="btn small" data-a="addTool" style="align-self:flex-start">+ Pridať náradie</button>
+      <datalist id="toolList">${[...new Set((S.rentItems||[]).map(x=>x.name).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
+      ${hint}<button class="btn primary small" type="submit" style="align-self:flex-start">Stiahnuť PDF</button></form>
+  </div>${ed?"":""}`}
+function toolRow(){return `<div class="toolrow"><label>Náradie<input data-t="name" list="toolList" placeholder="napr. Vŕtacie kladivo"></label><label>Výr. / inv. číslo<input data-t="no"></label><label>Ks<input data-t="qty" type="number" min="1" value="1"></label><label>Hodnota €<input data-t="val" type="number" min="0" step="0.01"></label><button type="button" class="x" data-a="delTool" aria-label="Odstrániť riadok">×</button></div>`}
+
+/* PDF: tok textu s nadpismi a odrážkami */
+function pdfFlow(doc,items,y){const W=182,lh=4.4;doc.setFontSize(9.5);
+  const need=h=>{if(y+h>272){doc.addPage();y=18}};
+  items.forEach(it=>{if(!it)return;
+    if(typeof it==="string"){doc.setFont("DVC","normal");const L=doc.splitTextToSize(it,W);need(L.length*lh);doc.text(L,14,y+3.5);y+=L.length*lh+2}
+    else if(it.h){need(10);doc.setFont("DVC","bold");doc.text(it.h,14,y+4);doc.setFont("DVC","normal");y+=6}
+    else if(it.li){doc.setFont("DVC","normal");it.li.forEach(t=>{const L=doc.splitTextToSize(t,W-5);need(L.length*lh);doc.text("•",15,y+3.5);doc.text(L,19,y+3.5);y+=L.length*lh+0.8});y+=1.5}});
+  return y}
+function pdfSigns(doc,y,left){y+=16+stampGap();if(y>272){doc.addPage();y=40}doc.setFontSize(9);doc.setFont("DVC","normal");
+  pdfStamp(doc,firmStamp(),126,y);doc.line(14,y,84,y);doc.text(left||"Podpis zamestnanca",14,y+4);doc.line(126,y,196,y);doc.text(`Za zamestnávateľa${S.firm.repName?": "+S.firm.repName:""}`,126,y+4);return y+8}
+function pdfSignList(doc,ws,date,title){doc.addPage();pdfFirmHeader(doc,"Podpisová listina",title);
+  doc.setFontSize(9);doc.text("Svojím podpisom potvrdzujem, že som bol(a) s uvedeným dokumentom oboznámený(á) a jeho obsahu som porozumel(a).",14,27);
+  doc.autoTable({head:[["Por.","Zamestnanec","Os. č.","Dátum","Podpis"]],body:ws.map((w,i)=>[i+1,`${w.lastName} ${w.firstName}`,w.persNo||"",plain(d2(date)),""]),startY:31,margin:{left:14,right:14,bottom:16},theme:"grid",
+    styles:{font:"DVC",fontSize:9,cellPadding:1.5,minCellHeight:9,valign:"middle",lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255,minCellHeight:6},
+    columnStyles:{0:{cellWidth:12},2:{cellWidth:18},3:{cellWidth:26},4:{cellWidth:60}}});
+  pdfSigns(doc,doc.lastAutoTable.finalY,"Vypracoval")}
+function pdfFooter(doc,label){const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(label,14,290);doc.text(`Strana ${k} / ${n}`,196,290,{align:"right"});doc.setTextColor(0)}}
+const fileSafe=s=>s.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_");
+const whoList=v=>v==="__all"?activeWorkers():S.workers.filter(w=>w.id===v);
+const odRights=()=>`Zamestnanec má právo požadovať od zamestnávateľa prístup k svojim osobným údajom, ich opravu, vymazanie alebo obmedzenie spracúvania, právo namietať proti spracúvaniu a právo podať návrh na začatie konania na Úrade na ochranu osobných údajov Slovenskej republiky, Hraničná 12, 820 07 Bratislava.${firmContact()?` Kontakt na zamestnávateľa vo veciach ochrany osobných údajov: ${firmContact()}.`:""}`;
+
+/* informačné dokumenty (GPS, kamery): text + podpis, hromadne alebo pre každého zvlášť */
+function infoDoc(title,file,items,ws,date,modeEach){if(!ws.length){toast("Vyber zamestnanca");return}const doc=newPdf("portrait");if(!doc)return;
+  const page=(w,first)=>{if(!first)doc.addPage();pdfFirmHeader(doc,title,w?`Zamestnanec: ${fullName(w)}${w.persNo?` · os. č. ${w.persNo}`:""}`:`Platné od ${plain(d2(date))}`);
+    let y=pdfFlow(doc,items,26);if(w){y=pdfFlow(doc,["Svojím podpisom potvrdzujem, že som bol(a) s týmito informáciami oboznámený(á) a ich obsahu som porozumel(a).",`V ${(S.firm||{}).city||"............"} dňa ${plain(d2(date))}`],y+2);pdfSigns(doc,y)}};
+  if(modeEach)ws.forEach((w,i)=>page(w,i===0));else{page(null,true);pdfSignList(doc,ws,date,title)}
+  pdfFooter(doc,title);offerFile(fileSafe(`${file}_${ws.length===1?fullName(ws[0]):"zamestnanci"}_${date}`)+".pdf",doc.output("arraybuffer"))}
+
+function gpsPDF(){const ws=whoList($("#gpsWho").value),vid=$("#gpsVeh").value,vs=vid==="__all"?vehicles():vehicles().filter(m=>m.id===vid),date=$("#gpsDate").value||todayIso(),priv=$("#gpsPriv").value==="yes",ret=$("#gpsRet").value.trim()||"3 roky";
+  if(!vs.length){toast("Vo vozovom parku nie je žiadne vozidlo");return}
+  infoDoc("Oboznámenie so systémom GPS vo firemných vozidlách","GPS",[
+    `Zamestnávateľ ${firmLine()} (ďalej len „zamestnávateľ“) v súlade s § 13 ods. 4 Zákonníka práce a s čl. 13 Nariadenia Európskeho parlamentu a Rady (EÚ) 2016/679 (GDPR) informuje zamestnancov, že firemné vozidlá sú vybavené zariadením na sledovanie polohy (GPS).`,
+    {h:"Vozidlá vybavené GPS"},{li:vs.map(vehName)},
+    {h:"Účel kontrolného mechanizmu"},{li:["ochrana majetku zamestnávateľa a predchádzanie krádežiam vozidiel a nákladu","vedenie knihy jázd a evidencie prevádzky vozidiel","plánovanie a riadenie prepravy a výkonov","bezpečnosť vodiča, vozidla a nákladu"]},
+    {h:"Rozsah, spôsob a trvanie"},`Zaznamenáva sa poloha vozidla, čas a trasa jazdy, rýchlosť, najazdené kilometre a doba státia. Systém nezaznamenáva zvuk ani obraz. Kontrola prebieha automaticky počas používania vozidla od ${plain(d2(date))} po celú dobu prevádzkovania systému.`,
+    priv?"Súkromné jazdy sú možné len s predchádzajúcim súhlasom zamestnávateľa. Aj počas súkromnej jazdy sa poloha vozidla zaznamenáva.":"Používanie firemného vozidla na súkromné účely nie je dovolené.",
+    {h:"Spracúvanie osobných údajov"},
+    `Právnym základom je oprávnený záujem zamestnávateľa na ochrane majetku a riadení prevádzky (čl. 6 ods. 1 písm. f) GDPR) a plnenie zákonných povinností pri evidencii jázd (čl. 6 ods. 1 písm. c) GDPR). Záznamy sa uchovávajú ${ret}, potom sa vymažú, ak ich nie je potrebné použiť v konaní pred súdom alebo iným orgánom. K záznamom majú prístup len poverené osoby zamestnávateľa a poskytovateľ služby GPS ako sprostredkovateľ; orgánom verejnej moci sa poskytujú len na základe zákona.`,
+    odRights()],ws,date,$("#gpsMode").value==="each")}
+
+function camPDF(){const ws=whoList($("#camWho").value),pv=$("#camPlace").value,c=pv==="__hq"?null:centerOf(pv),date=$("#camDate").value||todayIso(),ret=$("#camRet").value.trim()||"15 dní",areas=$("#camAreas").value.trim();
+  const place=c?`${c.name}${centerAddr(c)?", "+centerAddr(c):""}`:`sídlo firmy${firmAddress(S.firm||{})?", "+firmAddress(S.firm):""}`;
+  infoDoc("Oboznámenie s kamerovým systémom","Kamery",[
+    `Zamestnávateľ ${firmLine()} (ďalej len „zamestnávateľ“) v súlade s § 13 ods. 4 Zákonníka práce a s čl. 13 Nariadenia Európskeho parlamentu a Rady (EÚ) 2016/679 (GDPR) informuje zamestnancov, že v prevádzke ${place} je v prevádzke kamerový systém.`,
+    {h:"Snímané priestory"},areas?`${areas}.`:"",
+    "Kamery nesnímajú hygienické zariadenia, šatne ani priestory určené na odpočinok. Monitorované priestory sú zreteľne označené.",
+    {h:"Účel kontrolného mechanizmu"},{li:["ochrana majetku zamestnávateľa a predchádzanie krádežiam a vandalizmu","bezpečnosť osôb a ochrana zdravia v prevádzke","objasňovanie škodových udalostí a bezpečnostných incidentov"]},
+    {h:"Rozsah, spôsob a trvanie"},`Zaznamenáva sa obrazový záznam bez zvuku, nepretržite od ${plain(d2(date))} po celú dobu prevádzkovania systému.`,
+    {h:"Spracúvanie osobných údajov"},
+    `Právnym základom je oprávnený záujem zamestnávateľa na ochrane majetku a bezpečnosti osôb (čl. 6 ods. 1 písm. f) GDPR). Záznamy sa uchovávajú ${ret}, potom sa automaticky prepíšu, ak ich nie je potrebné použiť ako dôkaz v konaní pred súdom, orgánom činným v trestnom konaní alebo iným orgánom. K záznamom majú prístup len poverené osoby zamestnávateľa.`,
+    odRights()],ws,date,$("#camMode").value==="each")}
+
+function vehPDF(){const w=S.workers.find(x=>x.id===$("#vhWho").value),m=machine($("#vhVeh").value);if(!w){toast("Vyber zamestnanca");return}if(!m){toast("Vyber vozidlo");return}
+  const date=$("#vhDate").value||todayIso(),km=$("#vhKm").value,keys=$("#vhKeys").value,equip=$("#vhEquip").value.trim(),note=$("#vhNote").value.trim(),priv=$("#vhPriv").value==="yes";
+  const doc=newPdf("portrait");if(!doc)return;const title="Prevzatie firemného vozidla a zodpovednosť";
+  pdfFirmHeader(doc,title,`Zamestnanec: ${fullName(w)}${w.persNo?` · os. č. ${w.persNo}`:""}${w.profession?` · ${w.profession}`:""}`);
+  const st={font:"DVC",fontSize:9,cellPadding:1.3,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]};
+  doc.autoTable({body:[["Vozidlo",m.name||""],["EČV",m.ecv||""],["VIN",m.vin||(m.oev&&m.oev.vin)||""],["Dátum prevzatia",plain(d2(date))],["Stav tachometra",km?`${Number(km).toLocaleString("sk-SK")} km`:""],["Počet kľúčov",keys||""],["Doklady a výbava",equip],["Stav vozidla",note||"bez zjavného poškodenia"]],
+    startY:26,margin:{left:14,right:14},theme:"grid",styles:st,columnStyles:{0:{cellWidth:42,fontStyle:"bold"}}});
+  let y=pdfFlow(doc,[`Zamestnávateľ ${firmLine()} zveruje zamestnancovi uvedené vozidlo s doplnkami na plnenie pracovných úloh. Zamestnanec svojím podpisom potvrdzuje jeho prevzatie v uvedenom stave.`,
+    {h:"Povinnosti zamestnanca"},{li:[priv?"používať vozidlo na plnenie pracovných úloh; na súkromné účely len s predchádzajúcim písomným súhlasom zamestnávateľa":"používať vozidlo len na plnenie pracovných úloh, nie na súkromné účely",
+      "dodržiavať predpisy o cestnej premávke a neviesť vozidlo pod vplyvom alkoholu alebo iných návykových látok","starať sa o vozidlo, chrániť ho pred poškodením, stratou a odcudzením; po skončení jazdy ho uzamknúť a nenechávať v ňom kľúče ani doklady",
+      "viesť riadne a pravdivo knihu jázd","bez zbytočného odkladu hlásiť zamestnávateľovi poruchu, poškodenie, dopravnú nehodu alebo odcudzenie","dbať na termíny servisu a technických kontrol podľa pokynov zamestnávateľa",
+      "nedovoliť vedenie vozidla inej osobe bez súhlasu zamestnávateľa","vrátiť vozidlo s doplnkami na výzvu zamestnávateľa a pri skončení pracovného pomeru"]},
+    {h:"Zodpovednosť za škodu"},
+    "Zamestnanec zodpovedá za škodu, ktorú zamestnávateľovi spôsobil zavineným porušením povinností pri plnení pracovných úloh alebo v priamej súvislosti s ním (§ 179 Zákonníka práce). Za stratu zverených predmetov (kľúče, doklady, výbava) prevzatých na základe tohto písomného potvrdenia zodpovedá podľa § 185 Zákonníka práce; zodpovednosti sa zbaví, ak preukáže, že strata vznikla bez jeho zavinenia. Pokuty za priestupky, ktoré zamestnanec zavinil, znáša zamestnanec.",
+    `V ${(S.firm||{}).city||"............"} dňa ${plain(d2(date))}`],doc.lastAutoTable.finalY+4);
+  y=pdfSigns(doc,y,"Prevzal – zamestnanec");
+  if(y>240){doc.addPage();y=20}y+=6;doc.setFont("DVC","bold");doc.setFontSize(10);doc.text("Vrátenie vozidla",14,y);doc.setFont("DVC","normal");doc.setFontSize(9);
+  doc.text("Dátum: ....................   Stav tachometra: .................... km   Kľúče: ......   Poznámka: ..........................................",14,y+7);
+  pdfSigns(doc,y+4,"Odovzdal – zamestnanec");
+  pdfFooter(doc,title);offerFile(fileSafe(`Vozidlo_${m.ecv||m.name}_${fullName(w)}_${date}`)+".pdf",doc.output("arraybuffer"))}
+
+function toolPDF(){const w=S.workers.find(x=>x.id===$("#tlWho").value);if(!w){toast("Vyber zamestnanca");return}const date=$("#tlDate").value||todayIso();
+  const rows=[...document.querySelectorAll("#toolBox .toolrow")].map(r=>{const o={};r.querySelectorAll("[data-t]").forEach(f=>o[f.dataset.t]=f.value.trim());return o}).filter(o=>o.name);
+  if(!rows.length){toast("Doplň aspoň jedno náradie");return}
+  const doc=newPdf("portrait");if(!doc)return;const title="Prevzatie zvereného náradia a zodpovednosť";
+  pdfFirmHeader(doc,title,`Zamestnanec: ${fullName(w)}${w.persNo?` · os. č. ${w.persNo}`:""}${w.profession?` · ${w.profession}`:""}`);
+  const sum=rows.reduce((s,o)=>s+(+o.val||0)*(+o.qty||1),0);
+  doc.autoTable({head:[["Por.","Náradie","Výr. / inv. číslo","Ks","Hodnota €","Vrátené dňa / podpis"]],body:rows.map((o,i)=>[i+1,o.name,o.no||"",o.qty||"1",o.val?eur(+o.val):"",""]),
+    foot:sum?[["","Spolu","","",eur(sum),""]]:undefined,startY:26,margin:{left:14,right:14},theme:"grid",
+    styles:{font:"DVC",fontSize:9,cellPadding:1.4,minCellHeight:7,valign:"middle",lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255},
+    footStyles:{font:"DVC",fontStyle:"bold",fillColor:[226,240,231],textColor:[20,28,24]},columnStyles:{0:{cellWidth:11},3:{cellWidth:11,halign:"right"},4:{cellWidth:24,halign:"right"},5:{cellWidth:40}}});
+  let y=pdfFlow(doc,[`Zamestnanec svojím podpisom potvrdzuje, že od zamestnávateľa ${firmLine()} prevzal uvedené náradie v stave spôsobilom na používanie.`,
+    {h:"Povinnosti zamestnanca"},{li:["používať náradie len na plnenie pracovných úloh a v súlade s návodom na použitie a predpismi BOZP","starať sa oň, chrániť ho pred poškodením, stratou a odcudzením","bez zbytočného odkladu hlásiť poruchu, poškodenie alebo stratu","vrátiť náradie na výzvu zamestnávateľa a pri skončení pracovného pomeru"]},
+    {h:"Zodpovednosť za stratu zverených predmetov"},
+    "Zamestnanec zodpovedá za stratu náradia, ktoré mu zamestnávateľ zveril na základe tohto písomného potvrdenia (§ 185 Zákonníka práce). Zodpovednosti sa zbaví, ak preukáže, že strata vznikla bez jeho zavinenia. Za škodu spôsobenú zavineným porušením povinností zodpovedá podľa § 179 Zákonníka práce. Opotrebenie primerané bežnému používaniu nie je škodou.",
+    `V ${(S.firm||{}).city||"............"} dňa ${plain(d2(date))}`],doc.lastAutoTable.finalY+4);
+  pdfSigns(doc,y,"Prevzal – zamestnanec");pdfFooter(doc,title);offerFile(fileSafe(`Naradie_${fullName(w)}_${date}`)+".pdf",doc.output("arraybuffer"))}
+
+function ooppPDF(){const R=ooppSummary();const doc=newPdf("portrait");if(!doc)return;pdfFirmHeader(doc,"Sumár OOPP a pracovných odevov",`Stav k ${plain(d2(todayIso()))} · ${R.ws} aktívnych zamestnancov`);
+  doc.autoTable({head:[["Položka","Veľkosť","Počet"]],body:R.rows.map(r=>[r.item,r.size,r.n]),startY:26,margin:{left:14,right:14,bottom:16},theme:"grid",
+    styles:{font:"DVC",fontSize:9,cellPadding:1.2,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255},columnStyles:{1:{cellWidth:30},2:{cellWidth:20,halign:"right"}}});
+  pdfFooter(doc,"Sumár OOPP");offerFile(`Sumar_OOPP_${todayIso()}.pdf`,doc.output("arraybuffer"))}
+
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(a==="ooppPdf")ooppPDF();
+  else if(a==="addTool"){const box=$("#toolBox");box.insertAdjacentHTML("beforeend",toolRow());box.lastElementChild.querySelector("input").focus()}
+  else if(a==="delTool"){const r=b.closest(".toolrow");if(document.querySelectorAll("#toolBox .toolrow").length>1)r.remove();else r.querySelectorAll("input").forEach(i=>i.value=i.dataset.t==="qty"?"1":"")}});
+document.addEventListener("change",ev=>{if(ev.target.id==="vhVeh"&&me){const m=machine(ev.target.value),k=$("#vhKm");if(m&&k&&!k.value&&m.reading&&m.reading.value)k.value=m.reading.value}});
+document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||!["odGps","odCam","odVeh","odTool"].includes(id))return;ev.preventDefault();
+  if(id==="odGps")gpsPDF();else if(id==="odCam")camPDF();else if(id==="odVeh")vehPDF();else toolPDF()});
+
 /* ---------- Personalistika: školenia ---------- */
 const SKOL_TYPES=[["BOZP",24],["Ochrana pred požiarmi",24],["Školenie vodičov",12],["Školenie strojníkov",24],["Prvá pomoc",24],["Práca vo výškach",12],["Iné",0]];
 const skolName=s=>s.type==="Iné"?(s.title||"Školenie"):s.type+(s.title?` – ${s.title}`:"");
@@ -2960,7 +3119,7 @@ document.addEventListener("submit",ev=>{if(ev.target.id!=="tripForm"||!me)return
 
 function personalHTML(){const t=view.pTab||"emp",title=(P_TABS.find(x=>x[0]===t)||P_TABS[0])[1];
   const body=t==="att"?attHTML():t==="mzdy"?payHTML():t==="sc"?tripsHTML():t==="skol"?skolHTML()
-    :t==="ost"?`<div class="card stack"><div class="muted">Miesto pre ďalšie personálne agendy. Obsah doplníme podľa tvojho zadania.</div></div>`
+    :t==="ost"?ostatneHTML()
     :`<div class="muted">Kmeňoví zamestnanci firmy. Zadáš ich raz a na každej stavbe ich vyberáš zo zoznamu v dennom zázname.</div>${employeesList()}`;
   return `<div class="stack"><div><div class="eyebrow">Personalistika</div><h1>${title}</h1></div>${body}</div>`}
 function startChecklist(){
