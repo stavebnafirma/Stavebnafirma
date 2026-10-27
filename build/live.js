@@ -126,7 +126,7 @@ async function boot(){
   const hash=location.hash||"";if(/type=recovery/.test(hash))return;
   if(/error_description=/.test(hash)){const m=decodeURIComponent((hash.match(/error_description=([^&]*)/)||[])[1]||"").replace(/\+/g," ");history.replaceState(null,"",location.pathname);view={screen:"home",auth:"login",loginErr:/expired/i.test(m)?"Odkaz v e-maile už neplatí. Prihlás sa alebo si vyžiadaj nový.":m};render();return}
   const {data:{session}}=await SB.auth.getSession();
-  if(session&&session.user)await afterLogin(session.user);else{view={screen:"home",auth:"login",loginErr:""};render()}}
+  if(session&&session.user)await afterLogin(session.user);else{view={screen:"home",auth:/[?&]prihlasenie/.test(location.search)?"login":"landing",loginErr:""};render()}}
 async function afterLogin(u){authUser=u;view={screen:"home",auth:"loading"};render();
   try{await SB.rpc("accept_invites");
     const {data:ms,error}=await SB.from("members").select("tenant_id,role,tenants(name)").eq("user_id",u.id);if(error)throw error;
@@ -150,7 +150,7 @@ async function createFirm(name){
   const {data:ms}=await SB.from("members").select("tenant_id,role,tenants(name)").eq("user_id",authUser.id);myTenants=ms||[];
   const keepMods=S.modules;await loadTenant(tid);S.modules={...MODS_ALL,...keepMods};subscribeLive()}
 async function logout(){try{if(liveCh)SB.removeChannel(liveCh)}catch(e){}liveCh=null;await saveQ.catch(()=>{});await SB.auth.signOut();
-  me=null;authUser=null;TID=null;S=blankState();SNAP=new Map();USNAP=new Map();view={screen:"home",auth:"login",loginErr:""};render();window.scrollTo(0,0)}
+  me=null;authUser=null;TID=null;S=blankState();SNAP=new Map();USNAP=new Map();view={screen:"home",auth:"landing",loginErr:""};render();window.scrollTo(0,0)}
 function needsSetup(){return me&&me.companyRole==="admin"&&(!TID||!S.firm||!S.firm.setupDone)}
 
 function authShell(title,eyebrow,body){return `<div class="login stack"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1></div>${body}</div>`}
@@ -168,7 +168,7 @@ function loginHTML(){
       ${view.loginErr?`<div class="err">${esc(view.loginErr)}</div>`:""}<button class="btn primary" type="submit">Uložiť heslo a prihlásiť sa</button></form>`);
   if(A==="pick")return authShell("Vyber firmu","Máš prístup do viacerých firiem",`${myTenants.map(t=>`<button class="card demo" data-a="pickTenant" data-id="${t.tenant_id}"><span><b>${esc((t.tenants||{}).name||"Firma")}</b><br><span class="muted">${esc({admin:"administrátor",spravca:"správca",clen:"člen",dozor:"stavebný dozor"}[t.role]||t.role)}</span></span></button>`).join("")}
     <button class="linkbtn" data-a="logout" style="align-self:flex-start">Odhlásiť sa</button>`);
-  return `<div class="authwrap">${introHTML()}`+authShell("Prihlásenie","Prihlás sa do svojej firmy",`
+  return `<div class="authwrap solo"><button class="linkbtn ldback" data-a="landGo" data-to="landing">← Úvodná stránka</button>`+authShell("Prihlásenie","Prihlás sa do svojej firmy",`
     <form class="card stack" id="loginForm">
       <label>E-mail<input id="loginEmail" type="email" placeholder="meno@firma.sk" autocomplete="username" required value="${esc(view.loginEmail||"")}"></label>
       <label>Heslo<input id="loginPw" type="password" autocomplete="current-password" required></label>
@@ -192,7 +192,7 @@ function registerHTML(){
       <button class="btn primary" type="submit">Vytvoriť účet</button>
       <div class="muted" style="font-size:13px">Na e-mail príde odkaz na overenie adresy. Po prihlásení zadáš údaje o firme, alebo sa rovno otvorí firma, kam ťa pozvali.</div>
     </form>
-    <button class="linkbtn" data-a="authGo" data-to="login" style="align-self:flex-start">← Späť na prihlásenie</button>`)}
+    <button class="linkbtn" data-a="authGo" data-to="login" style="align-self:flex-start">Už mám účet – prihlásiť sa</button><button class="linkbtn" data-a="landGo" data-to="landing" style="align-self:flex-start">← Úvodná stránka</button>`)}
 const AUTH_ERR=m=>/Invalid login credentials/i.test(m)?"Nesprávny e-mail alebo heslo.":/Email not confirmed/i.test(m)?"E-mail ešte nie je overený. Klikni na odkaz v e-maile, ktorý ti prišiel po registrácii.":
   /already registered|already exists/i.test(m)?"Účet s týmto e-mailom už existuje. Prihlás sa, prípadne použi Zabudnuté heslo.":/rate limit|security purposes/i.test(m)?"Príliš veľa pokusov. Skús to o pár minút.":
   /Password should be/i.test(m)?"Heslo je príliš slabé – použi aspoň 8 znakov.":errText({message:m});
