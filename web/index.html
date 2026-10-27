@@ -400,6 +400,12 @@ form[data-ro] button[type=submit],form[data-ro] [data-a="addOopp"],form[data-ro]
 .narrowpage{max-width:760px}
 .monthnav{gap:10px}.mname{text-transform:capitalize;min-width:170px;text-align:center}
 .attpal{gap:10px}
+.paytab{font-size:13px}.paytab td,.paytab th{white-space:nowrap;padding:7px 7px}
+.payday{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}.payday input{width:58px;padding:4px 6px;min-height:0}.paytab td.r,.paytab th.r{text-align:right;font-variant-numeric:tabular-nums}.paytab tbody tr:hover{background:var(--bg)}.paytab tr.sel{background:var(--tint)}.paytab tfoot th{border-top:2px solid var(--line)}
+.paygrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}@media(max-width:760px){.paygrid{grid-template-columns:1fr}}
+.kv{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:13.5px;padding:3px 0;border-bottom:1px dashed var(--line)}.kv b{font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:600}.kv.tot{border-bottom:2px solid var(--line);font-size:14.5px}.kv.tot span{font-weight:700}
+.cashplan .kv{display:grid;grid-template-columns:1fr auto 120px;text-align:left}.cashplan .kv b{text-align:right}
+.warnbox{background:#fdf0e6;color:#7a3a0f;border-radius:8px;padding:7px 10px;font-size:13px}
 .paltools{display:flex;flex-wrap:wrap;gap:6px}
 .ptool{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:600;cursor:pointer;color:var(--fg)}
 .ptool .pdot{width:10px;height:10px;border-radius:50%;background:var(--c)}
@@ -666,12 +672,12 @@ const SB_URL="https://jvwyudhlpdavvwqkarcn.supabase.co";
 /* verejný kľúč projektu (anon). Je určený pre prehliadač – prístup k údajom chránia pravidlá v databáze. */
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2d3l1ZGhscGRhdnZ3cWthcmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNDEzNTgsImV4cCI6MjEwODYxNzM1OH0.O3c6CRw0jYjyE96cIGqXDz46z_7gaP4rd7UsEPLcsdg";
 const SB=window.supabase&&window.supabase.createClient?window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
-const MAP_KINDS=["att","trips"];                 /* objekty kľúč → hodnota, každý kľúč = 1 riadok */
+const MAP_KINDS=["att","trips","payProf","payMon"];                 /* objekty kľúč → hodnota, každý kľúč = 1 riadok */
 const SKIP_KEYS=new Set(["users","created"]);   /* používatelia sa ukladajú do members/invites, nie do docs */
 const MODS_ALL={personal:true,doprava:true,pozicovna:true,stavba:true};
 let TID=null,authUser=null,myTenants=[],SNAP=new Map(),USNAP=new Map(),PSNAP="",liveCh=null,saveQ=Promise.resolve(),saveBusy=0,pendingRemote=false;
 function blankState(){return {company:"",firm:{setupDone:false},users:[],projects:[],workers:[],machines:[],diary:[],tasks:[],jobs:[],weighs:[],teams:[],
-  rentItems:[],rentals:[],trainings:[],att:{},trips:{},modules:{...MODS_ALL}}}
+  rentItems:[],rentals:[],trainings:[],att:{},trips:{},payProf:{},payMon:{},modules:{...MODS_ALL}}}
 const newInvId=()=>"inv:"+(crypto.randomUUID?crypto.randomUUID():"10000000-1000-4000-8000-100000000000".replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)));
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 
@@ -1603,7 +1609,7 @@ document.addEventListener("submit",ev=>{if(ev.target.id!=="userNewForm"||!me||!i
 /* ---------- Personalistika: dochádzka ---------- */
 const ATT_TYPES=[
   ["W","Práca","",true,"var(--accent)"],["D","Dovolenka","D",true,"#2f7fb8"],["PN","Práceneschopnosť","PN",false,"#b3261e"],["OCR","OČR","OČR",false,"#c05621"],
-  ["P","Priepustka (lekár, úrady)","P",true,"#7a5bb5"],["SC","Služobná cesta","SC",true,"#0f7a7a"],["NV","Náhradné voľno","NV",true,"#5b6861"],
+  ["P","Lekár – vlastné vyšetrenie","P",true,"#7a5bb5"],["PS","Sprevádzanie člena rodiny k lekárovi","PS",true,"#9b6fc4"],["PI","Iná prekážka v práci (úrady, svadba, pohreb…)","PI",true,"#6a4f9a"],["SC","Služobná cesta","SC",true,"#0f7a7a"],["NV","Náhradné voľno","NV",true,"#5b6861"],
   ["NPV","Neplatené voľno","NPV",false,"#8a8f8c"],["A","Absencia","A",false,"#111"]];
 const ATT={};ATT_TYPES.forEach(([k,l,s,hrs,c])=>ATT[k]={l,s,hrs,c});
 function easter(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;return new Date(Date.UTC(y,mo-1,da))}
@@ -1619,9 +1625,9 @@ const DOW=["Ne","Po","Ut","St","Št","Pi","So"];
 function daysBetween(a,b){const out=[];let d=new Date(a+"T12:00");const e=new Date(b+"T12:00");while(d<=e){out.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1)}return out}
 function monthDays(ym){const [y,m]=ym.split("-").map(Number);const n=new Date(y,m,0).getDate();return daysBetween(`${ym}-01`,`${ym}-${String(n).padStart(2,"0")}`)}
 const attOf=(wid,d)=>((S.att||{})[wid]||{})[d];
-function attSummary(wid,days){const s={h:0,D:0,PN:0,OCR:0,P:0,SC:0,NV:0,NPV:0,A:0,fond:0};
+function attSummary(wid,days){const s={h:0,D:0,PN:0,OCR:0,P:0,PS:0,PI:0,SC:0,NV:0,NPV:0,A:0,fond:0};
   days.forEach(d=>{if(!isWeekend(d)&&!holiday(d))s.fond+=8;const a=attOf(wid,d);if(!a)return;
-    if(a.t==="W")s.h+=+a.h||0;else if(a.t==="SC"){s.h+=+a.h||0;s.SC+=1}else if(a.t==="D")s.D+=(+a.h||8)/8;else if(a.t==="P")s.P+=+a.h||0;else s[a.t]=(s[a.t]||0)+1});return s}
+    if(a.t==="W")s.h+=+a.h||0;else if(a.t==="SC"){s.h+=+a.h||0;s.SC+=1}else if(a.t==="D")s.D+=(+a.h||8)/8;else if(a.t==="P"||a.t==="PS"||a.t==="PI"){s.P+=+a.h||0;s[a.t]+=+a.h||0}else s[a.t]=(s[a.t]||0)+1});return s}
 const nf1=n=>Number(n).toLocaleString("sk-SK",{maximumFractionDigits:1});
 function attCellText(a){if(!a)return "";if(a.t==="W")return nf1(a.h);if(a.t==="D"&&+a.h&&+a.h<8)return "½D";return ATT[a.t]?ATT[a.t].s:a.t}
 
@@ -1676,17 +1682,33 @@ function pdfFirmHeader(doc,title,sub){const F=S.firm||{},W=doc.internal.pageSize
 function attEmployeePage(doc,w,days,from,to){
   pdfFirmHeader(doc,"Evidencia dochádzky",`${fullName(w)}${w.persNo?` · os. č. ${w.persNo}`:""}${w.profession?` · ${w.profession}`:""}`);
   doc.setFontSize(9);doc.text(`Obdobie: ${plain(d2(from))} – ${plain(d2(to))}`,14,26);
-  const body=days.map(d=>{const a=attOf(w.id,d),h=holiday(d),we=isWeekend(d);
-    return [plain(d2(d)),DOW[dow(d)],a?ATT[a.t]?.l||a.t:h?`Sviatok – ${h}`:we?"víkend":"",a&&ATT[a.t]?.hrs?nf1(a.h):"",a&&a.note?a.note:""]});
-  doc.autoTable({head:[["Dátum","Deň","Druh","Hodiny","Poznámka"]],body,startY:30,margin:{left:14,right:14,top:14,bottom:16},theme:"grid",
-    styles:{font:"DVC",fontSize:8,cellPadding:1.1,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255},
-    columnStyles:{0:{cellWidth:24},1:{cellWidth:12},2:{cellWidth:70},3:{cellWidth:18,halign:"right"}},
-    didParseCell:c=>{if(c.section==="body"){const d=days[c.row.index];if(isWeekend(d)||holiday(d))c.cell.styles.fillColor=[238,242,239]}}});
-  const s=attSummary(w.id,days);let y=doc.lastAutoTable.finalY+6;if(y>245){doc.addPage();y=20}
-  doc.setFont("DVC","bold");doc.setFontSize(9.5);doc.text("Súhrn za obdobie",14,y);doc.setFont("DVC","normal");doc.setFontSize(9);
-  const lines=[["Fond pracovného času",`${nf1(s.fond)} h`],["Odpracované hodiny (vrátane služobných ciest)",`${nf1(s.h)} h`],["Dovolenka",`${nf1(s.D)} dní`],["Práceneschopnosť (PN)",`${s.PN} dní`],["OČR",`${s.OCR} dní`],["Priepustky",`${nf1(s.P)} h`],["Náhradné voľno",`${s.NV} dní`],["Neplatené voľno",`${s.NPV} dní`],["Absencia",`${s.A} dní`]];
-  lines.forEach(([l,v],i)=>{doc.text(l,14,y+6+i*4.6);doc.text(v,110,y+6+i*4.6,{align:"right"})});
-  y=y+6+lines.length*4.6+16+stampGap();if(y>275){doc.addPage();y=40}
+  /* kompaktná mriežka: jeden pás na mesiac (dni vedľa seba) */
+  const months=[...new Set(days.map(d=>d.slice(0,7)))];let y=29;const P=payProf(w.id),dh=dayHours(P);
+  const COL={W:[20,28,24],D:[47,127,184],PN:[179,38,30],OCR:[192,86,33],P:[122,91,181],PS:[122,91,181],PI:[122,91,181],SC:[15,122,122],NV:[91,104,97],NPV:[120,125,122],A:[17,17,17]};
+  months.forEach(ym=>{const md=monthDays(ym),inR=d=>d>=from&&d<=to;
+    if(y>262){doc.addPage();y=16}
+    const head=[{content:ymName(ym),styles:{halign:"left"}},...md.map(d=>`${+d.slice(8)}\n${DOW[dow(d)]}`)];
+    while(head.length<32)head.push("");
+    const row=["Záznam",...md.map(d=>{if(!inR(d))return "";const a=attOf(w.id,d);if(a){let t=attCellText(a);if(["P","PS","PI","SC"].includes(a.t)&&+a.h)t+="\n"+nf1(a.h);return t}const h=holiday(d);return h&&!isWeekend(d)?"S":""})];
+    while(row.length<32)row.push("");
+    doc.autoTable({head:[head],body:[row],startY:y,margin:{left:14,right:14},theme:"grid",tableWidth:182,
+      styles:{font:"DVC",fontSize:6.4,cellPadding:{top:0.8,bottom:0.8,left:0.2,right:0.2},halign:"center",valign:"middle",lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24],minCellHeight:5.5},
+      headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255,fontSize:6},columnStyles:{0:{cellWidth:22,halign:"left",fontStyle:"bold"}},
+      didParseCell:c=>{const d=md[c.column.index-1];if(!d)return;if(c.section==="head"&&(isWeekend(d)||holiday(d)))c.cell.styles.fillColor=[70,110,88];
+        if(c.section==="body"){if(isWeekend(d)||holiday(d))c.cell.styles.fillColor=[236,241,238];const a=attOf(w.id,d);if(a&&COL[a.t]){c.cell.styles.textColor=COL[a.t];if(a.t!=="W")c.cell.styles.fontStyle="bold"}}}});
+    const s=attSummary(w.id,md.filter(inR));y=doc.lastAutoTable.finalY+3.2;doc.setFontSize(7.2);doc.setTextColor(70);
+    doc.text(`Fond ${nf1(s.fond)} h · odpracované ${nf1(s.h)} h · dovolenka ${nf1(s.D)} d · PN ${s.PN} d · OČR ${s.OCR} d · priepustky ${nf1(s.P)} h · NV ${s.NV} d · neplatené ${s.NPV} d · absencia ${s.A} d`,14,y);doc.setTextColor(0);y+=3.5});
+  const s=attSummary(w.id,days);y+=2;if(y>215){doc.addPage();y=20}
+  const st={font:"DVC",fontSize:8,cellPadding:0.9,lineColor:[210,216,212],lineWidth:0.1,textColor:[20,28,24]},hs={font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255};
+  const L=[["Fond pracovného času",`${nf1(s.fond)} h`],["Odpracované (vrátane služ. ciest)",`${nf1(s.h)} h`],["Služobné cesty",`${s.SC} d`],["Dovolenka",`${nf1(s.D)} d`],["Práceneschopnosť (PN)",`${s.PN} d`],["OČR",`${s.OCR} d`],["Priepustky a prekážky",`${nf1(s.P)} h`],["Náhradné voľno",`${s.NV} d`],["Neplatené voľno",`${s.NPV} d`],["Absencia",`${s.A} d`]];
+  const Y=+to.slice(0,4),v=vacation(w,Y,to),pr=priepustky(w,Y,to);
+  const R=[["Nárok na dovolenku",`${nf1(v.ent)} d${v.months<12?` (${v.months}/12)`:""}`],["Prenesená z minulého roka",`${nf1(v.carry)} d`],["Vyčerpaná k "+plain(d2(to)),`${nf1(v.used)} d`],[{content:"Zostatok dovolenky",styles:{fontStyle:"bold"}},{content:`${nf1(v.left)} d`,styles:{fontStyle:"bold"}}],
+    ["Lekár – vyčerpané / zostáva",`${nf1(pr.p)} / ${nf1(pr.pLeft)} h`],["Sprevádzanie – vyčerpané / zostáva",`${nf1(pr.ps)} / ${nf1(pr.psLeft)} h`]];
+  doc.autoTable({head:[["Súhrn za obdobie",""]],body:L,startY:y,margin:{left:14},tableWidth:88,theme:"grid",styles:st,headStyles:hs,columnStyles:{1:{halign:"right",cellWidth:26}}});const y1=doc.lastAutoTable.finalY;
+  doc.autoTable({head:[[`Dovolenka a priepustky ${Y}`,""]],body:R,startY:y,margin:{left:108},tableWidth:88,theme:"grid",styles:st,headStyles:hs,columnStyles:{1:{halign:"right",cellWidth:28}}});
+  y=Math.max(y1,doc.lastAutoTable.finalY)+4;doc.setFontSize(7);doc.setTextColor(100);
+  doc.text("Legenda: číslo = odpracované hodiny, D = dovolenka (½D polovica dňa), PN, OČR, P = lekár, PS = sprevádzanie, PI = iná prekážka, SC = služobná cesta, NV = náhradné voľno, NPV = neplatené voľno, A = absencia, S = sviatok.",14,y,{maxWidth:182});doc.setTextColor(0);
+  y+=18+stampGap();if(y>280){doc.addPage();y=40}doc.setFontSize(9);
   pdfStamp(doc,firmStamp(),126,y);doc.line(14,y,84,y);doc.text("Podpis zamestnanca",14,y+4);doc.line(126,y,196,y);doc.text(`Za zamestnávateľa${S.firm.repName?": "+S.firm.repName:""}`,126,y+4)}
 function attExport(from,to,who){
   if(!from||!to||to<from){toast("Skontroluj obdobie od – do");return}
@@ -1726,6 +1748,296 @@ function SEED_ATT(){const A={},ym="2026-10",days=monthDays(ym).filter(d=>!isWeek
   ["2026-10-12","2026-10-13","2026-10-14","2026-10-15","2026-10-16"].forEach(d=>A.w3[d]={t:"PN",h:0});
   A.w2["2026-10-07"]={t:"P",h:2};A.w2["2026-10-08"]={t:"D",h:8};A.w2["2026-10-09"]={t:"D",h:8};A.w5["2026-10-21"]={t:"D",h:4};A.w4["2026-10-20"]={t:"W",h:10};A.w1["2026-10-02"]={t:"SC",h:9};
   return A}
+
+/* ---------- Personalistika: podklady pre mzdy ---------- */
+/* Podklad pre mzdovú účtovníčku: dochádzka za mesiac, nadčasy, práca v sobotu, nedeľu a vo sviatok, dovolenka, PN, OČR, priepustky,
+   prémie a zrážky. Výpočet čistej mzdy a odvodov je ORIENTAČNÝ (kontrola), záväzný výpočet robí mzdový program účtovníčky.
+   Sadzby SR pre rok 2026. */
+const PAY={year:2026,minWage:915,minHour:5.259,maxBase:16764,
+  ee:[["Nemocenské",1.4],["Starobné",4],["Invalidné",3],["V nezamestnanosti",1]],zpEE:5,zpEEztp:2.5,zpER:11,zpERztp:5.5,
+  er:[["Nemocenské",1.4],["Starobné",14],["Invalidné",3],["V nezamestnanosti",0.5],["Podpora v čase skrátenej práce",0.5],["Garančné",0.25],["Rezervný fond solidarity",4.75]],erUncapped:[["Úrazové",0.8]],
+  nczd:497.23,nczdLim:2173.59,nczdK:1221.76,bands:[[3665.28,19],[5029.10,25],[6250.86,30],[Infinity,35]],
+  bonusU15:100,bonusU18:50,bonusLim:[0,29,36,43,50,57,64],bonusRed:2286,
+  supSat:0.5,supSun:1,supHol:1,supOver:0.25,vacBase:20,vacPlus:25,priepDays:7,
+  source:"Sadzby 2026: poistné podľa zákona č. 461/2003 Z. z. a č. 580/2004 Z. z. (max. vymeriavací základ 16 764 €), daň podľa zákona č. 595/2003 Z. z. (19/25/30/35 %, NČZD 497,23 €/mes.), minimálna mzda 915 €, Zákonník práce (dovolenka, priepustky, príplatky)."};
+const r2=x=>Math.round((+x||0)*100+1e-9)/100,fl2=x=>Math.floor((+x||0)*100+1e-7)/100;
+const payProf=wid=>((S.payProf||{})[wid])||{};
+const payMonKey=(ym,wid)=>ym+"_"+wid;
+const payMon=(ym,wid)=>((S.payMon||{})[payMonKey(ym,wid)])||{};
+const dayHours=P=>(+P.weekHours||40)/5;
+const isWorkday=d=>!isWeekend(d)&&!holiday(d);
+const ymName=ym=>{const [y,m]=ym.split("-").map(Number);return new Date(y,m-1,15).toLocaleDateString("sk-SK",{month:"long",year:"numeric"})};
+const inJob=(P,d)=>(!P.start||d>=P.start)&&(!P.end||d<=P.end);
+function isoShift(d,n){const x=new Date(d+"T12:00");x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)}
+/* PN počíta kalendárne dni: neoznačený víkend alebo sviatok medzi dvoma dňami PN je tiež PN */
+function isPNday(wid,d){const a=attOf(wid,d);if(a)return a.t==="PN";if(isWorkday(d))return false;
+  const near=dir=>{let c=d;for(let i=0;i<4;i++){c=isoShift(c,dir);const b=attOf(wid,c);if(b)return b.t==="PN";if(isWorkday(c))return false}return false};
+  return near(-1)&&near(1)}
+function pnIndex(wid,d){let k=1,c=d;while(k<12){c=isoShift(c,-1);if(!isPNday(wid,c))break;k++}return k}
+/* súvislé obdobia (napr. PN 12. – 16. 10.) */
+function ranges(list){const out=[];list.forEach(d=>{const L=out[out.length-1];if(L&&isoShift(L[1],1)===d)L[1]=d;else out.push([d,d])});
+  return out.map(([a,b])=>a===b?d2(a).replace(/ \d{4}$/,""):`${d2(a).replace(/ \d{4}$/,"")} – ${d2(b).replace(/ \d{4}$/,"")}`).join(", ")}
+
+/* dochádzka mesiaca rozpísaná pre mzdy */
+function payAtt(w,ym){const P=payProf(w.id),dh=dayHours(P),days=monthDays(ym),today=todayIso();
+  const R={dh,fondDays:0,fondDaysFull:0,fondH:0,hWork:0,hOver:0,hSat:0,hSun:0,hHol:0,dD:0,hD:0,pn:[],pnCal:0,ocr:[],dOCR:0,hP:0,hPS:0,hPI:0,dNV:0,dNPV:0,dA:0,npv:[],abs:[],holWork:0,empty:[],sc:0,unpaidDays:0};
+  days.forEach(d=>{const wd=isWorkday(d);if(wd)R.fondDaysFull++;if(!inJob(P,d))return;if(wd)R.fondDays++;
+    const a=attOf(w.id,d);
+    if(isPNday(w.id,d)){R.pnCal++;R.pn.push(d);if(wd)R.unpaidDays++;return}
+    if(!a){if(wd&&d<=today)R.empty.push(d);if(holiday(d)&&!isWeekend(d))R.holWork++;return}
+    const h=+a.h||0;
+    if(a.t==="W"||a.t==="SC"){if(a.t==="SC")R.sc++;if(holiday(d))R.hHol+=h;else if(dow(d)===6)R.hSat+=h;else if(dow(d)===0)R.hSun+=h;else{R.hWork+=Math.min(h,dh);R.hOver+=Math.max(0,h-dh)}}
+    else if(a.t==="D"){const hh=h||dh;R.hD+=hh;R.dD+=hh/dh}
+    else if(a.t==="OCR"){R.ocr.push(d);if(wd){R.dOCR++;R.unpaidDays++}}
+    else if(a.t==="P")R.hP+=h;else if(a.t==="PS")R.hPS+=h;else if(a.t==="PI")R.hPI+=h;
+    else if(a.t==="NV")R.dNV+=(h||dh)/dh;
+    else if(a.t==="NPV"){R.npv.push(d);if(wd){R.dNPV++;R.unpaidDays++}}
+    else if(a.t==="A"){R.abs.push(d);if(wd){R.dA++;R.unpaidDays++}}});
+  R.fondH=R.fondDays*dh;R.hTotal=R.hWork+R.hOver+R.hSat+R.hSun+R.hHol;return R}
+
+/* dovolenka v roku: nárok, prenos, čerpanie, zostatok (k dátumu upTo) */
+function vacation(w,Y,upTo,depth){const P=payProf(w.id),I=P.init||{},dh=dayHours(P);depth=depth||0;
+  const iy=I.asOf?+I.asOf.slice(0,4):null,sy=P.start?+P.start.slice(0,4):null;
+  const R={base:0,ent:0,carry:0,used:0,usedInit:0,left:0,months:12};
+  if(sy&&sy>Y)return R;
+  R.base=+P.vacDays||((P.childCare||(P.birthYear&&Y-(+P.birthYear)>=33))?PAY.vacPlus:PAY.vacBase);
+  let months=0;for(let m=1;m<=12;m++){const a=`${Y}-${String(m).padStart(2,"0")}-01`,b=monthDays(a.slice(0,7)).pop();if((!P.start||P.start<=a)&&(!P.end||P.end>=b))months++}
+  R.months=months;R.ent=months>=12?R.base:Math.ceil(R.base*months/12*2)/2;
+  const from=iy===Y?I.asOf:`${Y}-01-01`,to=upTo||`${Y}-12-31`;
+  if(iy===Y){R.carry=+I.carry||0;R.usedInit=+I.used||0}
+  else if((iy&&Y>iy||!iy&&sy&&Y>sy)&&depth<6){R.carry=Math.max(0,vacation(w,Y-1,null,depth+1).left)}
+  if(!iy||Y>=iy)Object.entries((S.att||{})[w.id]||{}).forEach(([d,a])=>{if(a.t==="D"&&d>=from&&d<=to&&d.startsWith(String(Y)))R.used+=(+a.h||dh)/dh});
+  R.used+=R.usedInit;R.left=R.ent+R.carry-R.used;return R}
+/* priepustky v roku (hodiny): vlastné vyšetrenie / sprevádzanie, nárok 7 dní každá */
+function priepustky(w,Y,upTo){const P=payProf(w.id),I=P.init||{},dh=dayHours(P),iy=I.asOf?+I.asOf.slice(0,4):null;
+  const from=iy===Y?I.asOf:`${Y}-01-01`,to=upTo||`${Y}-12-31`;let p=iy===Y?+I.pl||0:0,ps=iy===Y?+I.ps||0:0;
+  if(!iy||Y>=iy)Object.entries((S.att||{})[w.id]||{}).forEach(([d,a])=>{if(d>=from&&d<=to&&d.startsWith(String(Y))){if(a.t==="P")p+=+a.h||0;else if(a.t==="PS")ps+=+a.h||0}});
+  const lim=PAY.priepDays*dh;return {lim,p,ps,pLeft:lim-p,psLeft:lim-ps}}
+
+/* orientačný výpočet mzdy za mesiac */
+function payCalc(w,ym){const P=payProf(w.id),M=payMon(ym,w.id),A=payAtt(w,ym),dh=A.dh,warn=[];
+  const wage=+w.wage||0,hourly=w.wageType!=="month";
+  const rateH=hourly?wage:(A.fondDaysFull?wage/(A.fondDaysFull*dh):0);
+  const L=[];const add=(l,v,info)=>{v=r2(v);if(v)L.push([l,v,info||""]);return v};
+  let base=0;
+  if(hourly){base=add("Mzda za odpracované hodiny",(A.hWork+A.hOver+A.hSat+A.hSun+A.hHol)*wage,`${nf1(A.hTotal)} h × ${eur(wage)}`);
+    add("Náhrada mzdy – dovolenka",A.hD*rateH,`${nf1(A.hD)} h`);add("Náhrada mzdy – sviatok",A.holWork*dh*rateH,A.holWork?`${A.holWork} d`:"");
+    add("Náhrada mzdy – priepustky a prekážky",(A.hP+A.hPS+A.hPI)*rateH,`${nf1(A.hP+A.hPS+A.hPI)} h`);add("Náhradné voľno",A.dNV*dh*rateH,A.dNV?`${nf1(A.dNV)} d`:"")}
+  else{const paid=Math.max(0,A.fondDays-A.unpaidDays);base=add("Mesačná mzda",A.fondDaysFull?wage*paid/A.fondDaysFull:0,paid<A.fondDaysFull?`${paid} z ${A.fondDaysFull} prac. dní`:"");
+    add("Mzda za nadčas a prácu v So/Ne/Sv",(A.hOver+A.hSat+A.hSun+A.hHol)*rateH,A.hOver+A.hSat+A.hSun+A.hHol?`${nf1(A.hOver+A.hSat+A.hSun+A.hHol)} h × ${eur(r2(rateH))}`:"")}
+  add("Príplatok za nadčas 25 %",A.hOver*rateH*PAY.supOver,A.hOver?`${nf1(A.hOver)} h`:"");
+  add("Príplatok za sobotu 50 % min. mzdy",A.hSat*PAY.minHour*PAY.supSat,A.hSat?`${nf1(A.hSat)} h`:"");
+  add("Príplatok za nedeľu 100 % min. mzdy",A.hSun*PAY.minHour*PAY.supSun,A.hSun?`${nf1(A.hSun)} h`:"");
+  add("Príplatok za sviatok 100 %",A.hHol*rateH*PAY.supHol,A.hHol?`${nf1(A.hHol)} h`:"");
+  add("Prémie a odmeny",+M.bonus||0);add("Iné zdaniteľné príjmy",+M.other||0,M.otherNote||"");
+  const gross=r2(L.reduce((s,x)=>s+x[1],0));
+  /* náhrada príjmu pri PN: 1.–3. deň 25 %, 4.–10. deň 55 % denného vymeriavacieho základu */
+  const monthEq=hourly?wage*dh*5*52/12:wage,dvz=+P.dvz||r2(monthEq*12/365);let pnPay=0,pn13=0,pn410=0;
+  A.pn.forEach(d=>{const k=pnIndex(w.id,d);if(k<=3){pn13++;pnPay+=dvz*0.25}else if(k<=10){pn410++;pnPay+=dvz*0.55}});pnPay=r2(pnPay);
+  const ztp=!!P.ztp,vz=gross,vzS=Math.min(vz,PAY.maxBase);
+  const ee=PAY.ee.map(([l,p])=>[l,r2(vzS*p/100)]);ee.push(["Zdravotné",r2(vz*(ztp?PAY.zpEEztp:PAY.zpEE)/100)]);
+  const eeSum=r2(ee.reduce((s,x)=>s+x[1],0));
+  const zd=fl2(gross+pnPay-eeSum);
+  const nczd=P.nczd===false?0:(zd<=PAY.nczdLim?PAY.nczd:Math.max(0,r2(PAY.nczdK-zd/3)));
+  const tb=Math.max(0,fl2(zd-nczd));let tax=0,prev=0;PAY.bands.forEach(([lim,p])=>{if(tb>prev)tax+=(Math.min(tb,lim)-prev)*p/100;prev=lim});tax=fl2(tax);
+  /* daňový bonus na deti (len pri podpísanom vyhlásení) */
+  const [y,m]=ym.split("-").map(Number);let bonus=0,kids=0;
+  if(P.nczd!==false&&zd>0){const ages=(P.children||[]).filter(c=>c.born).map(c=>{const [by,bm]=c.born.split("-").map(Number);return (y-by)*12+(m-bm)});
+    const amt=ages.map(a=>a<0?0:a<15*12?PAY.bonusU15:a<18*12?PAY.bonusU18:0).filter(Boolean);kids=amt.length;
+    const red=zd>PAY.bonusRed?(zd-PAY.bonusRed)/10:0;const raw=amt.reduce((s,a)=>s+Math.max(0,a-red),0);
+    bonus=fl2(Math.min(raw,zd*PAY.bonusLim[Math.min(6,kids)]/100))}
+  const net=r2(gross+pnPay-eeSum-tax+bonus);
+  const nontax=+M.nontax||0,deduct=+M.deduct||0,advance=+M.advance||0,payout=r2(net+nontax-deduct-advance);
+  const er=PAY.er.map(([l,p])=>[l,r2(vzS*p/100)]).concat(PAY.erUncapped.map(([l,p])=>[l,r2(vz*p/100)]));er.push(["Zdravotné",r2(vz*(ztp?PAY.zpERztp:PAY.zpER)/100)]);
+  const erSum=r2(er.reduce((s,x)=>s+x[1],0)),cost=r2(gross+pnPay+erSum);
+  if(!wage)warn.push("Chýba mzda v karte zamestnanca.");
+  if(hourly&&wage&&wage<PAY.minHour-0.0005)warn.push(`Hodinová mzda je nižšia ako minimálna (${eur(PAY.minHour)} / h).`);
+  if(!hourly&&wage&&wage<PAY.minWage*((+P.weekHours||40)/40)-0.005)warn.push(`Mesačná mzda je nižšia ako minimálna mzda (${eur(PAY.minWage)} pri plnom úväzku).`);
+  if(A.empty.length)warn.push(`Nevyplnená dochádzka: ${A.empty.length} prac. dní (${ranges(A.empty)}).`);
+  if(gross+pnPay>0&&A.pn.length>0&&!P.dvz)warn.push("Náhrada PN je odhad z mzdy – presný denný vymeriavací základ určí účtovníčka (môžeš ho zadať v karte zamestnanca).");
+  return {P,M,A,L,gross,pnPay,pn13,pn410,dvz,ee,eeSum,zd,nczd,tb,tax,bonus,kids,net,nontax,deduct,advance,payout,er,erSum,cost,rateH,warn}}
+
+/* poznámky pre účtovníčku (obdobia PN, OČR, …) */
+function payNotes(C){const A=C.A,n=[];if(A.pn.length)n.push(`PN ${ranges(A.pn)}`);if(A.ocr.length)n.push(`OČR ${ranges(A.ocr)}`);if(A.npv.length)n.push(`NV bez náhrady ${ranges(A.npv)}`);
+  if(A.abs.length)n.push(`absencia ${ranges(A.abs)}`);if(C.M.note)n.push(C.M.note);return n.join("; ")}
+const payWorkers=ym=>S.workers.filter(w=>{const P=payProf(w.id),a=`${ym}-01`,b=monthDays(ym).pop();return (w.active!==false||monthDays(ym).some(d=>attOf(w.id,d)))&&(!P.start||P.start<=b)&&(!P.end||P.end>=a)})
+  .sort((a,b)=>String(a.persNo||"").localeCompare(String(b.persNo||""),"sk",{numeric:true}));
+const h0=v=>v?nf1(v):"";
+
+function payHTML(){
+  const ym=view.payMonth||view.attMonth||todayIso().slice(0,7),ws=payWorkers(ym),ed=canEdit("personal"),Y=+ym.slice(0,4),end=monthDays(ym).pop();
+  const C=Object.fromEntries(ws.map(w=>[w.id,payCalc(w,ym)]));
+  const T=ws.reduce((t,w)=>{const c=C[w.id];["gross","pnPay","net","cost","eeSum","erSum","tax","bonus"].forEach(k=>t[k]+=c[k]);t.h+=c.A.hTotal;return t},{gross:0,pnPay:0,net:0,cost:0,eeSum:0,erSum:0,tax:0,bonus:0,h:0});
+  const open=view.payOpen&&C[view.payOpen]?view.payOpen:null;
+  const rows=ws.map(w=>{const c=C[w.id],A=c.A,v=vacation(w,Y,end);
+    return `<tr class="${open===w.id?"sel":""}" data-a="payOpen" data-id="${w.id}" style="cursor:pointer"><td><b>${esc(w.lastName)} ${esc(w.firstName)}</b><small class="muted" style="display:block">${esc(w.persNo||"")}${c.warn.length?` · <span style="color:#b3261e">⚠ ${c.warn.length}</span>`:""}</small></td>
+      <td class="r">${nf1(A.hTotal)}</td><td class="r">${h0(A.hOver)}</td><td class="r">${h0(A.hSat+A.hSun+A.hHol)}</td><td class="r">${h0(A.dD)}</td><td class="r">${A.pnCal||""}</td><td class="r">${A.dOCR||""}</td><td class="r">${h0(A.hP+A.hPS+A.hPI)}</td>
+      <td class="r">${eur(c.gross+c.pnPay)}</td><td class="r"><b>${eur(c.net)}</b></td><td class="r">${eur(c.cost)}</td><td class="r">${nf1(v.left)}</td></tr>`}).join("");
+  const detail=open?payDetailHTML(S.workers.find(w=>w.id===open),ym,C[open],ed):"";
+  return `<div class="stack">
+    <div class="entry-head"><div class="row monthnav"><button class="btn small" data-a="payMonth" data-d="-1" aria-label="Predchádzajúci mesiac">←</button><h2 class="mname">${esc(ymName(ym))}</h2><button class="btn small" data-a="payMonth" data-d="1" aria-label="Nasledujúci mesiac">→</button></div>
+      <div class="row"><button class="btn small primary" data-a="payPdf">Podklady pre účtovníčku (PDF)</button><button class="btn small" data-a="payXlsx">Excel</button></div></div>
+    <div class="muted" style="font-size:13px">Podklad pre mzdovú účtovníčku zo zápisu dochádzky. Sumy mzdy sú <b>orientačný výpočet</b> podľa sadzieb ${PAY.year} – záväzný výpočet urobí mzdový program. Kliknutím na riadok doplníš prémie, zrážky a poznámku.</div>
+    <div class="card attwrap"><table class="list paytab"><thead><tr><th>Zamestnanec</th><th class="r" title="Odpracované hodiny spolu">Odprac. h</th><th class="r" title="Nadčas v pracovné dni">Nadčas h</th><th class="r" title="Práca v sobotu, nedeľu a vo sviatok">So/Ne/Sv h</th><th class="r">Dov. dni</th><th class="r" title="Kalendárne dni PN">PN dni</th><th class="r">OČR dni</th><th class="r">Priep. h</th>
+      <th class="r" title="Hrubá mzda + náhrada PN (odhad)">Hrubá mzda</th><th class="r" title="Odhad">Čistá mzda</th><th class="r" title="Hrubá mzda + odvody zamestnávateľa">Cena práce</th><th class="r" title="Zostatok dovolenky ku koncu mesiaca">Dov. zost.</th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="12" class="muted">V tomto mesiaci nie sú žiadni zamestnanci.</td></tr>`}</tbody>
+      ${ws.length?`<tfoot><tr><th>Spolu</th><th class="r">${nf1(T.h)}</th><th colspan="6"></th><th class="r">${eur(r2(T.gross+T.pnPay))}</th><th class="r">${eur(r2(T.net))}</th><th class="r">${eur(r2(T.cost))}</th><th></th></tr></tfoot>`:""}</table></div>
+    ${payCashHTML(ym,ws,C,ed)}
+    ${detail}
+    <div class="muted" style="font-size:12px">${esc(PAY.source)}</div></div>`}
+
+function payDetailHTML(w,ym,c,ed){const A=c.A,Y=+ym.slice(0,4),end=monthDays(ym).pop(),v=vacation(w,Y,end),pr=priepustky(w,Y,end),M=c.M,dis=ed?"":"disabled";
+  const kv=(l,v,cls)=>`<div class="kv ${cls||""}"><span>${l}</span><b>${v}</b></div>`;
+  const att=[["Fond pracovného času",`${nf1(A.fondH)} h (${A.fondDays} d)`],["Odpracované v pracovné dni",`${nf1(A.hWork)} h`],["Nadčas v pracovné dni",`${nf1(A.hOver)} h`],["Práca v sobotu",`${nf1(A.hSat)} h`],["Práca v nedeľu",`${nf1(A.hSun)} h`],["Práca vo sviatok",`${nf1(A.hHol)} h`],
+    ["Služobné cesty",`${A.sc} d`],["Dovolenka",`${nf1(A.dD)} d`],["PN (kalendárne dni)",`${A.pnCal} d${A.pn.length?` · ${ranges(A.pn)}`:""}`],["OČR",`${A.dOCR} d${A.ocr.length?` · ${ranges(A.ocr)}`:""}`],
+    ["Lekár – vlastné vyšetrenie",`${nf1(A.hP)} h`],["Sprevádzanie člena rodiny",`${nf1(A.hPS)} h`],["Iné prekážky v práci",`${nf1(A.hPI)} h`],["Náhradné voľno",`${nf1(A.dNV)} d`],["Neplatené voľno",`${A.dNPV} d`],["Absencia",`${A.dA} d`]];
+  return `<div class="card stack paydet"><div class="entry-head"><h3>${esc(fullName(w))}${w.persNo?` <span class="muted">· ${esc(w.persNo)}</span>`:""}</h3><div class="row"><button class="btn small" data-a="payPdfOne" data-id="${w.id}">Výplatná páska PDF</button><button class="btn small ghost" data-a="payOpen" data-id="">Zavrieť</button></div></div>
+    ${c.warn.map(x=>`<div class="warnbox">⚠ ${esc(x)}</div>`).join("")}
+    <div class="paygrid">
+      <div class="stack"><b>Dochádzka</b>${att.filter(([l,v],i)=>i<2||!/^0 [hd]/.test(v)).map(([l,v])=>kv(l,v)).join("")}
+        <b style="margin-top:8px">Dovolenka ${Y}</b>${kv("Nárok za rok",`${nf1(v.ent)} d${v.months<12?` (${v.months}/12)`:""}`)}${kv("Prenesená z minulého roka",`${nf1(v.carry)} d`)}${kv("Vyčerpaná do konca mesiaca",`${nf1(v.used)} d`)}${kv("Zostatok",`${nf1(v.left)} d`,"tot")}
+        <b style="margin-top:8px">Priepustky ${Y} (nárok ${PAY.priepDays} dní = ${nf1(pr.lim)} h)</b>${kv("Lekár – vyčerpané / zostáva",`${nf1(pr.p)} h / ${nf1(pr.pLeft)} h`)}${kv("Sprevádzanie – vyčerpané / zostáva",`${nf1(pr.ps)} h / ${nf1(pr.psLeft)} h`)}</div>
+      <div class="stack"><b>Mzda – orientačný výpočet</b>
+        ${c.L.map(([l,x,i])=>kv(`${l}${i?` <small class="muted">${esc(i)}</small>`:""}`,eur(x))).join("")}
+        ${kv("Hrubá mzda",eur(c.gross),"tot")}
+        ${c.pnPay?kv(`Náhrada príjmu PN <small class="muted">${c.pn13} d × 25 % + ${c.pn410} d × 55 % z DVZ ${eur(c.dvz)}</small>`,eur(c.pnPay)):""}
+        ${c.ee.map(([l,x])=>kv(`Poistné zamestnanca – ${l.toLowerCase()}`,"−"+eur(x))).join("")}
+        ${kv("Čiastkový základ dane",eur(c.zd))}${kv("Nezdaniteľná časť (NČZD)",eur(c.nczd))}${kv("Preddavok na daň",`−${eur(c.tax)}`)}
+        ${c.bonus?kv(`Daňový bonus na deti (${c.kids})`,"+"+eur(c.bonus)):""}
+        ${kv("Čistá mzda",eur(c.net),"tot")}
+        ${c.nontax?kv("Nezdaniteľné náhrady","+"+eur(c.nontax)):""}${c.deduct?kv("Zrážky","−"+eur(c.deduct)):""}${c.advance?kv("Vyplatená záloha","−"+eur(c.advance)):""}
+        ${c.nontax||c.deduct||c.advance?kv("Na výplatu",eur(c.payout),"tot"):""}
+        <b style="margin-top:8px">Zamestnávateľ</b>${c.er.map(([l,x])=>kv(`Odvody – ${l.toLowerCase()}`,eur(x))).join("")}${kv("Odvody zamestnávateľa spolu",eur(c.erSum))}${kv("Cena práce (superhrubá mzda)",eur(c.cost),"tot")}</div>
+    </div>
+    <form class="stack" id="payMonForm" data-id="${w.id}" data-ym="${ym}"><b>Doplnenie za ${esc(ymName(ym))}</b>
+      <div class="grid3"><label>Prémie a odmeny €<input type="number" step="0.01" min="0" id="pmBonus" value="${M.bonus||""}" ${dis}></label>
+        <label>Iné zdaniteľné príjmy €<input type="number" step="0.01" id="pmOther" value="${M.other||""}" ${dis}></label><label>Popis iných príjmov<input id="pmOtherNote" value="${esc(M.otherNote)}" placeholder="napr. príplatok za sťažené podmienky" ${dis}></label></div>
+      <div class="grid3"><label>Nezdaniteľné náhrady €<input type="number" step="0.01" min="0" id="pmNontax" value="${M.nontax||""}" placeholder="cestovné, stravné" ${dis}></label>
+        <label>Zrážky zo mzdy €<input type="number" step="0.01" min="0" id="pmDeduct" value="${M.deduct||""}" placeholder="exekúcia, pôžička…" ${dis}></label><label>Vyplatená záloha €<input type="number" step="0.01" min="0" id="pmAdvance" value="${M.advance||""}" ${dis}></label></div>
+      <label>Poznámka pre účtovníčku<input id="pmNote" value="${esc(M.note)}" ${dis}></label>
+      ${ed?`<div class="row"><button class="btn primary small" type="submit">Uložiť</button></div>`:""}</form></div>`}
+
+/* finančný plán výplaty: koľko peňazí a kedy treba pripraviť */
+const HI_LIST=["Všeobecná zdravotná poisťovňa","Dôvera","Union"];
+const payCfg=()=>((S.payMon||{}).cfg)||{};
+function payCash(ym,ws,C){const R={payout:0,advance:0,deduct:0,sp:0,zp:{},tax:0,n:ws.length};
+  ws.forEach(w=>{const c=C[w.id],eeZ=c.ee.find(x=>x[0]==="Zdravotné")[1],erZ=c.er.find(x=>x[0]==="Zdravotné")[1],hi=c.P.hi||"Neuvedená poisťovňa";
+    R.payout+=c.payout;R.advance+=c.advance;R.deduct+=c.deduct;R.sp+=c.eeSum-eeZ+c.erSum-erZ;R.zp[hi]=(R.zp[hi]||0)+eeZ+erZ;R.tax+=c.tax-c.bonus});
+  const [y,m]=ym.split("-").map(Number),nx=new Date(y,m,1),nY=nx.getFullYear(),nM=nx.getMonth()+1,last=new Date(nY,nM,0).getDate();
+  const pd=Math.min(last,Math.max(1,+payCfg().payDay||15)),iso=d=>`${nY}-${String(nM).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  R.payDate=iso(pd);R.zpDate=iso(Math.min(pd,8));R.taxDate=isoShift(R.payDate,5);R.payDay=pd;
+  R.total=r2(R.payout+R.deduct+R.sp+Object.values(R.zp).reduce((s,x)=>s+x,0)+Math.max(0,R.tax));return R}
+function payCashHTML(ym,ws,C,ed){if(!ws.length)return "";const R=payCash(ym,ws,C);
+  const line=(l,when,v,sub)=>`<div class="kv"><span>${l}${sub?` <small class="muted">${sub}</small>`:""}</span><span class="muted" style="font-size:12px;white-space:nowrap">${when}</span><b>${eur(r2(v))}</b></div>`;
+  return `<div class="card stack cashplan"><div class="entry-head"><b>Peniaze na výplatu za ${esc(ymName(ym))}</b>
+      <div class="payday">Výplatný termín <input type="number" id="payDay" aria-label="Výplatný termín – deň" min="1" max="31" value="${R.payDay}" ${ed?"":"disabled"}> . deň nasledujúceho mesiaca</div></div>
+    ${line("Čisté mzdy zamestnancom",d2(R.payDate),R.payout,R.advance?`(po odpočítaní záloh ${eur(r2(R.advance))})`:"")}
+    ${R.deduct?line("Zrážky zo miezd (oprávneným, napr. exekútor)",d2(R.payDate),R.deduct):""}
+    ${line("Sociálna poisťovňa (zamestnanci + zamestnávateľ)",`v lehote výplaty · ${d2(R.payDate)}`,R.sp)}
+    ${Object.entries(R.zp).map(([k,v])=>line(`Zdravotné poistenie – ${esc(k)}`,`najneskôr ${d2(R.zpDate)}`,v)).join("")}
+    ${line("Daňový úrad – preddavky na daň mínus daňový bonus",`do ${d2(R.taxDate)}`,R.tax,R.tax<0?"(bonus prevyšuje daň – rozdiel sa započíta)":"")}
+    <div class="kv tot"><span>Spolu treba pripraviť</span><span></span><b>${eur(R.total)}</b></div>
+    <span class="hint">Odhad z orientačného výpočtu ${R.n} zamestnancov. Termíny: mzda do výplatného termínu (najneskôr do konca nasledujúceho mesiaca), poistné do Sociálnej poisťovne v lehote na výplatu mzdy, zdravotné v deň výplaty, najneskôr do 8. dňa nasledujúceho mesiaca, preddavok dane do 5 dní od výplaty. Presné sumy a termíny potvrdí účtovníčka.</span></div>`}
+
+/* mzdové údaje v karte zamestnanca */
+function childRow(c={}){return `<div class="oprow chrow"><label>Meno dieťaťa<input data-c="name" value="${esc(c.name)}"></label><label>Mesiac a rok narodenia<input type="month" data-c="born" value="${esc(c.born)}"></label><span></span>
+  <button type="button" class="x" data-a="delChild" aria-label="Odstrániť dieťa">×</button></div>`}
+function payFormHTML(w){const P=w.id?payProf(w.id):{},I=P.init||{};
+  return `<fieldset class="modes" id="payBox"><legend>Mzdové údaje</legend>
+    <div class="grid3"><label>Úväzok (hodín týždenne)<input type="number" id="pWeek" min="1" max="48" step="0.5" value="${P.weekHours||40}"></label>
+      <label>Dátum nástupu<input type="date" id="pStart" value="${esc(P.start)}"></label><label>Dátum ukončenia<input type="date" id="pEnd" value="${esc(P.end)}"></label></div>
+    <div class="grid3"><label>Rok narodenia<input type="number" id="pBirth" min="1940" max="2015" value="${esc(P.birthYear)}" placeholder="pre nárok na 25 dní dovolenky"></label>
+      <label>Zmluvný nárok na dovolenku (dni)<input type="number" id="pVacDays" min="20" max="40" step="0.5" value="${esc(P.vacDays)}" placeholder="ak je vyšší ako zákonný"></label>
+      <label>Denný vymeriavací základ pre PN €<input type="number" id="pDvz" min="0" step="0.0001" value="${esc(P.dvz)}" placeholder="od účtovníčky (inak odhad)"></label></div>
+    <div class="grid3"><label>Zdravotná poisťovňa<input id="pHi" list="hiList" value="${esc(P.hi)}" placeholder="vyber alebo napíš"></label><span></span><span></span></div>
+    <datalist id="hiList">${HI_LIST.map(x=>`<option value="${x}">`).join("")}</datalist>
+    <label class="chk"><input type="checkbox" id="pChildCare" ${P.childCare?"checked":""}> Trvale sa stará o dieťa (nárok 25 dní dovolenky)</label>
+    <label class="chk"><input type="checkbox" id="pNczd" ${P.nczd===false?"":"checked"}> Podpísané vyhlásenie na zdanenie (nezdaniteľná časť a daňový bonus)</label>
+    <label class="chk"><input type="checkbox" id="pZtp" ${P.ztp?"checked":""}> Zamestnanec so zdravotným postihnutím (polovičné zdravotné poistenie)</label>
+    <div class="stack"><b style="font-size:14px">Deti na daňový bonus</b><div class="stack" id="childBox">${(P.children||[]).map(childRow).join("")}</div>
+      <button type="button" class="btn small" data-a="addChild" style="align-self:flex-start">+ Pridať dieťa</button></div>
+    <div class="stack"><b style="font-size:14px">Počiatočné stavy pri prechode do systému</b>
+      <span class="hint">Vyplň, ak zamestnanec pracoval u vás už pred začatím evidencie tu. Dochádzka sa pre dovolenku a priepustky počíta od zadaného dátumu.</span>
+      <div class="grid3"><label>Evidencia v systéme od<input type="date" id="iAsOf" value="${esc(I.asOf)}"></label>
+        <label>Zostatok dovolenky z minulého roka (dni)<input type="number" id="iCarry" step="0.5" value="${esc(I.carry)}"></label>
+        <label>Vyčerpaná dovolenka pred evidenciou (dni)<input type="number" id="iUsed" step="0.5" min="0" value="${esc(I.used)}"></label></div>
+      <div class="grid3"><label>Lekár – vyčerpané hodiny pred evidenciou<input type="number" id="iPl" step="0.5" min="0" value="${esc(I.pl)}"></label>
+        <label>Sprevádzanie – vyčerpané hodiny pred evid.<input type="number" id="iPs" step="0.5" min="0" value="${esc(I.ps)}"></label><span></span></div></div>
+  </fieldset>`}
+function readPayForm(){if(!$("#payBox"))return null;const v=id=>($("#"+id)?.value||"").trim(),n=id=>v(id)===""?undefined:+v(id),c=id=>!!$("#"+id)?.checked;
+  const P={weekHours:n("pWeek")||40,start:v("pStart")||undefined,end:v("pEnd")||undefined,birthYear:n("pBirth"),vacDays:n("pVacDays"),dvz:n("pDvz"),childCare:c("pChildCare"),nczd:c("pNczd"),ztp:c("pZtp"),hi:v("pHi")||undefined,
+    children:[...document.querySelectorAll("#childBox .chrow")].map(r=>({name:r.querySelector('[data-c="name"]').value.trim(),born:r.querySelector('[data-c="born"]').value})).filter(x=>x.born||x.name),
+    init:{asOf:v("iAsOf")||undefined,carry:n("iCarry"),used:n("iUsed"),pl:n("iPl"),ps:n("iPs")}};
+  if(P.start&&P.end&&P.end<P.start)return {error:"Dátum ukončenia je skôr ako dátum nástupu."};
+  if(P.children.some(x=>!x.born))return {error:"Pri dieťati doplň mesiac a rok narodenia."};
+  if(!P.init.asOf&&[P.init.carry,P.init.used,P.init.pl,P.init.ps].some(x=>x!=null))return {error:"Pri počiatočných stavoch zadaj dátum, od ktorého sa evidencia v systéme vedie."};
+  return JSON.parse(JSON.stringify(P))}
+
+/* PDF: výplatná páska (orientačná) – dve na stranu A4 */
+function payslipBlock(doc,w,ym,c,y0){const A=c.A,Y=+ym.slice(0,4),end=monthDays(ym).pop(),v=vacation(w,Y,end),pr=priepustky(w,Y,end),F=S.firm||{};
+  doc.setFont("DVC","bold");doc.setFontSize(11);doc.text(`Výplatná páska – ${ymName(ym)}`,14,y0+6);
+  doc.setFont("DVC","normal");doc.setFontSize(8);doc.text([F.name||S.company||"",[firmAddress(F),F.ico?`IČO ${F.ico}`:""].filter(Boolean).join(" · ")],196,y0+3,{align:"right"});
+  doc.setFontSize(9.5);doc.text(`${fullName(w)}${w.persNo?` · os. č. ${w.persNo}`:""}${w.profession?` · ${w.profession}`:""}`,14,y0+11.5);
+  const st={font:"DVC",fontSize:7.6,cellPadding:0.7,lineColor:[210,216,212],lineWidth:0.1,textColor:[20,28,24]},hs={font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255,fontSize:7.8};
+  const left=[["Fond pracovného času",`${nf1(A.fondH)} h`],["Odpracované spolu",`${nf1(A.hTotal)} h`],["z toho nadčas (prac. dni)",`${nf1(A.hOver)} h`],["Sobota / nedeľa / sviatok",`${nf1(A.hSat)} / ${nf1(A.hSun)} / ${nf1(A.hHol)} h`],
+    ["Dovolenka",`${nf1(A.dD)} d`],["PN / OČR",`${A.pnCal} / ${A.dOCR} d`],["Lekár / sprevádzanie / iné",`${nf1(A.hP)} / ${nf1(A.hPS)} / ${nf1(A.hPI)} h`],["Náhr. voľno / neplat. voľno / abs.",`${nf1(A.dNV)} / ${A.dNPV} / ${A.dA} d`],
+    [{content:`Dovolenka ${Y}`,styles:{fontStyle:"bold"}},""],["Nárok + prenos",`${nf1(v.ent)} + ${nf1(v.carry)} d`],["Vyčerpané",`${nf1(v.used)} d`],[{content:"Zostatok",styles:{fontStyle:"bold"}},{content:`${nf1(v.left)} d`,styles:{fontStyle:"bold"}}],
+    ["Priepustky lekár zost.",`${nf1(pr.pLeft)} h`],["Sprevádzanie zost.",`${nf1(pr.psLeft)} h`]];
+  const b=x=>({content:x,styles:{fontStyle:"bold"}});
+  const right=[...c.L.map(([l,x])=>[l,eur(x)]),[b("Hrubá mzda"),b(eur(c.gross))]];
+  if(c.pnPay)right.push([`Náhrada PN (${c.pn13}×25 % + ${c.pn410}×55 %)`,eur(c.pnPay)]);
+  right.push([`Poistné zamestnanca (${c.ee.map(x=>x[0].slice(0,4).toLowerCase()).join(", ")})`,"−"+eur(c.eeSum)],["Čiastkový základ dane / NČZD",`${eur(c.zd)} / ${eur(c.nczd)}`],["Preddavok na daň","−"+eur(c.tax)]);
+  if(c.bonus)right.push([`Daňový bonus (${c.kids} deti)`,"+"+eur(c.bonus)]);
+  right.push([b("Čistá mzda"),b(eur(c.net))]);if(c.nontax)right.push(["Nezdaniteľné náhrady","+"+eur(c.nontax)]);if(c.deduct)right.push(["Zrážky","−"+eur(c.deduct)]);if(c.advance)right.push(["Záloha","−"+eur(c.advance)]);
+  if(c.nontax||c.deduct||c.advance)right.push([b("Na výplatu"),b(eur(c.payout))]);
+  right.push(["Odvody zamestnávateľa",eur(c.erSum)],[b("Cena práce"),b(eur(c.cost))]);
+  doc.autoTable({head:[["Dochádzka",""]],body:left,startY:y0+14,margin:{left:14},tableWidth:78,theme:"grid",styles:st,headStyles:hs,columnStyles:{1:{halign:"right",cellWidth:30}}});const yl=doc.lastAutoTable.finalY;
+  doc.autoTable({head:[["Mzda (orientačný výpočet)",""]],body:right,startY:y0+14,margin:{left:96},tableWidth:100,theme:"grid",styles:st,headStyles:hs,columnStyles:{1:{halign:"right",cellWidth:26}}});const yr=doc.lastAutoTable.finalY;
+  let y=Math.max(yl,yr)+4;doc.setFontSize(7);doc.setTextColor(100);
+  const notes=payNotes(c);if(notes){doc.text(doc.splitTextToSize("Poznámka: "+notes,182),14,y);y+=4}
+  doc.text("Orientačný výpočet podľa sadzieb "+PAY.year+". Záväzná je výplatná páska z mzdového programu.",14,y);doc.setTextColor(0);return y}
+
+function payPDF(ym,only){const ws=only?S.workers.filter(w=>w.id===only):payWorkers(ym);if(!ws.length){toast("V tomto mesiaci nie sú žiadni zamestnanci");return}
+  const C=Object.fromEntries(ws.map(w=>[w.id,payCalc(w,ym)]));let doc;
+  if(!only){doc=newPdf("landscape");if(!doc)return;pdfFirmHeader(doc,"Podklady pre mzdy",ymName(ym));
+    const fond=monthDays(ym).filter(isWorkday).length;
+    const body=ws.map(w=>{const c=C[w.id],A=c.A;return [w.persNo||"",`${w.lastName} ${w.firstName}`,w.wageType==="month"?`${eur(+w.wage||0)}/m`:`${eur(+w.wage||0)}/h`,nf1(A.fondH),nf1(A.hWork+A.hOver),h0(A.hOver),h0(A.hSat),h0(A.hSun),h0(A.hHol),h0(A.dD),A.pnCal||"",A.dOCR||"",h0(A.hP),h0(A.hPS+A.hPI),h0(A.dNV),A.dNPV||"",A.dA||"",
+      c.M.bonus?eur(+c.M.bonus):"",c.M.other?eur(+c.M.other):"",c.M.nontax?eur(+c.M.nontax):"",c.M.deduct||c.M.advance?eur((+c.M.deduct||0)+(+c.M.advance||0)):"",payNotes(c)]});
+    doc.autoTable({head:[["Os. č.","Zamestnanec","Mzda","Fond h","Prac. dni h","Nadčas h","So h","Ne h","Sv h","Dov. d","PN d","OČR d","Lekár h","Spr./iné h","NV d","NPV d","Abs. d","Prémie","Iné zdan.","Nezdan.","Zrážky/záloha","Poznámka"]],body,startY:26,
+      margin:{left:10,right:10,bottom:14},theme:"grid",styles:{font:"DVC",fontSize:7.3,cellPadding:0.9,lineColor:[200,208,203],lineWidth:0.1,textColor:[20,28,24],valign:"middle"},
+      headStyles:{font:"DVC",fontStyle:"bold",fillColor:[28,74,51],textColor:255,fontSize:7},columnStyles:Object.fromEntries([...Array(19).keys()].slice(3).map(i=>[i,{halign:"right"}]).concat([[1,{cellWidth:32}],[21,{cellWidth:46}]]))});
+    let y=doc.lastAutoTable.finalY+5;doc.setFontSize(7.5);doc.setTextColor(90);
+    doc.text(`Fond pracovného času: ${fond} prac. dní. PN = kalendárne dni. Nadčas = hodiny nad denný úväzok v pracovné dni; práca v sobotu, nedeľu a vo sviatok je uvedená zvlášť. Dochádzka je potvrdená zamestnávateľom.`,10,y);doc.setTextColor(0);
+    y+=14+stampGap();if(y>190){doc.addPage();y=40}pdfStamp(doc,firmStamp(),200,y);doc.setFontSize(8.5);doc.line(200,y,287,y);doc.text(`Vypracoval za zamestnávateľa${S.firm.repName?": "+S.firm.repName:""}`,200,y+4);
+    doc.addPage("a4","portrait")}
+  else{doc=newPdf("portrait");if(!doc)return}
+  ws.forEach((w,i)=>{if(i&&i%2===0)doc.addPage("a4","portrait");const y0=i%2===0?6:150;if(i%2===1){doc.setLineDashPattern([1.5,1.5],0);doc.setDrawColor(150);doc.line(8,146,202,146);doc.setLineDashPattern([],0);doc.setDrawColor(0)}payslipBlock(doc,w,ym,C[w.id],y0)});
+  const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);const W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight();doc.setFontSize(7);doc.setTextColor(110);doc.text(`Podklady pre mzdy · ${ymName(ym)}`,10,H-5);doc.text(`Strana ${k} / ${n}`,W-10,H-5,{align:"right"});doc.setTextColor(0)}
+  const nm=only?fullName(ws[0]):"firma";offerFile(`Mzdy_${nm}_${ym}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_")+".pdf",doc.output("arraybuffer"))}
+
+function payXLSX(ym){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.");return}const ws=payWorkers(ym);
+  const head=["Os. č.","Priezvisko","Meno","Pozícia","Typ mzdy","Mzda €","Úväzok h/týž.","Fond h","Odprac. v prac. dni h","Nadčas h","Sobota h","Nedeľa h","Sviatok h","Služ. cesty d","Dovolenka d","PN kal. d","PN obdobie","OČR d","OČR obdobie","Lekár h","Sprevádzanie h","Iné prekážky h","Náhr. voľno d","Neplat. voľno d","Absencia d",
+    "Prémie €","Iné zdaniteľné €","Nezdaniteľné náhrady €","Zrážky €","Záloha €","Dovolenka zostatok d","Hrubá mzda (odhad) €","Náhrada PN (odhad) €","Poistné zamestnanca €","Preddavok dane €","Daňový bonus €","Čistá mzda (odhad) €","Odvody zamestnávateľa €","Cena práce €","Poznámka"];
+  const Y=+ym.slice(0,4),end=monthDays(ym).pop();
+  const rows=ws.map(w=>{const c=payCalc(w,ym),A=c.A,P=c.P;return [w.persNo||"",w.lastName||"",w.firstName||"",w.profession||"",w.wageType==="month"?"mesačná":"hodinová",+w.wage||0,+P.weekHours||40,A.fondH,A.hWork+A.hOver,A.hOver,A.hSat,A.hSun,A.hHol,A.sc,r2(A.dD),A.pnCal,ranges(A.pn),A.dOCR,ranges(A.ocr),A.hP,A.hPS,A.hPI,r2(A.dNV),A.dNPV,A.dA,
+    +c.M.bonus||0,+c.M.other||0,c.nontax,c.deduct,c.advance,r2(vacation(w,Y,end).left),c.gross,c.pnPay,c.eeSum,c.tax,c.bonus,c.net,c.erSum,c.cost,[c.M.otherNote,c.M.note].filter(Boolean).join("; ")]});
+  const sh=XLSX.utils.aoa_to_sheet([[`Podklady pre mzdy – ${ymName(ym)} – ${S.firm.name||S.company||""}`],[],head,...rows,[],["Sumy mzdy sú orientačný výpočet podľa sadzieb "+PAY.year+"."]]);
+  sh["!cols"]=head.map((h,i)=>({wch:i===1||i===2||i===3?14:i===16||i===18||i===39?24:10}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,sh,"Podklady");
+  offerFile(`Podklady_mzdy_${ym}.xlsx`,XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
+
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(a==="payMonth"){const [y,m]=(view.payMonth||view.attMonth||todayIso().slice(0,7)).split("-").map(Number);const d=new Date(y,m-1+(+b.dataset.d),15);view.payMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;render()}
+  else if(a==="payOpen"){view.payOpen=b.dataset.id&&view.payOpen!==b.dataset.id?b.dataset.id:null;render();if(view.payOpen){const el=document.querySelector(".paydet");if(el)el.scrollIntoView({behavior:"smooth",block:"start"})}}
+  else if(a==="payPdf")payPDF(view.payMonth||view.attMonth||todayIso().slice(0,7));
+  else if(a==="payPdfOne")payPDF(view.payMonth||view.attMonth||todayIso().slice(0,7),b.dataset.id);
+  else if(a==="payXlsx")payXLSX(view.payMonth||view.attMonth||todayIso().slice(0,7));
+  else if(a==="addChild"){const box=$("#childBox");box.insertAdjacentHTML("beforeend",childRow({}));box.lastElementChild.querySelector("input").focus()}
+  else if(a==="delChild"){b.closest(".chrow").remove()}});
+document.addEventListener("submit",ev=>{if(ev.target.id!=="payMonForm"||!me)return;ev.preventDefault();if(!canEdit("personal"))return;
+  const f=ev.target,k=payMonKey(f.dataset.ym,f.dataset.id),n=id=>+($("#"+id).value||0)||0,t=id=>$("#"+id).value.trim();
+  const d={bonus:n("pmBonus"),other:n("pmOther"),otherNote:t("pmOtherNote"),nontax:n("pmNontax"),deduct:n("pmDeduct"),advance:n("pmAdvance"),note:t("pmNote")};
+  Object.keys(d).forEach(x=>{if(!d[x])delete d[x]});S.payMon=S.payMon||{};if(Object.keys(d).length)S.payMon[k]=d;else delete S.payMon[k];save();toast("Uložené");render()});
+document.addEventListener("change",ev=>{if(ev.target.id!=="payDay"||!me||!canEdit("personal"))return;const d=Math.max(1,Math.min(31,Math.round(+ev.target.value||15)));S.payMon=S.payMon||{};S.payMon.cfg={...payCfg(),payDay:d};save();render()});
 
 /* ---------- Personalistika: školenia ---------- */
 const SKOL_TYPES=[["BOZP",24],["Ochrana pred požiarmi",24],["Školenie vodičov",12],["Školenie strojníkov",24],["Prvá pomoc",24],["Práca vo výškach",12],["Iné",0]];
@@ -2705,7 +3017,7 @@ function firmaHTML(){
   const t=firmTabCur(),tabs="";
   const body=t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML());
   return `<div class="stack"><div><div class="eyebrow">Firma</div><h1>${esc(S.firm.name||"Firma")}</h1></div>${tabs}${t==="udaje"&&!view.firmEditing?startChecklist():""}${body}</div>`}
-const P_TABS=[["emp","Zamestnanci"],["att","Dochádzka"],["sc","Služobné cesty"],["skol","Školenia"],["ost","Ostatné"]];
+const P_TABS=[["emp","Zamestnanci"],["att","Dochádzka"],["mzdy","Podklady pre mzdy"],["sc","Služobné cesty"],["skol","Školenia"],["ost","Ostatné"]];
 /* služobné cesty sa skladajú z dní "SC" v dochádzke; po sebe idúce dni jedného zamestnanca = jedna cesta */
 /* sadzby: tuzemské stravné od 1. 12. 2025; zahraničné stravné podľa opatrenia MF SR č. 401/2012 Z. z. v znení účinnom od 30. 1. 2026; základná náhrada za 1 km od 1. 1. 2026 */
 const TRAVEL={dom:[[5,12,9.30],[12,18,13.80],[18,24,20.60]],domFull:20.60,kmBase:0.313,source:"tuzemské stravné od 1. 12. 2025 · zahraničné stravné podľa opatrenia MF SR č. 401/2012 Z. z. (znenie od 30. 1. 2026) · základná náhrada 0,313 €/km od 1. 1. 2026"};
@@ -2845,7 +3157,7 @@ document.addEventListener("submit",ev=>{if(ev.target.id!=="tripForm"||!me)return
   const {key,...data}=D;(S.trips=S.trips||{})[key]=data;view.tripEdit=null;view.tripDraft=null;save();toast("Cesta uložená");render()});
 
 function personalHTML(){const t=view.pTab||"emp",title=(P_TABS.find(x=>x[0]===t)||P_TABS[0])[1];
-  const body=t==="att"?attHTML():t==="sc"?tripsHTML():t==="skol"?skolHTML()
+  const body=t==="att"?attHTML():t==="mzdy"?payHTML():t==="sc"?tripsHTML():t==="skol"?skolHTML()
     :t==="ost"?`<div class="card stack"><div class="muted">Miesto pre ďalšie personálne agendy. Obsah doplníme podľa tvojho zadania.</div></div>`
     :`<div class="muted">Kmeňoví zamestnanci firmy. Zadáš ich raz a na každej stavbe ich vyberáš zo zoznamu v dennom zázname.</div>${employeesList()}`;
   return `<div class="stack"><div><div class="eyebrow">Personalistika</div><h1>${title}</h1></div>${body}</div>`}
@@ -3307,6 +3619,7 @@ function employeeForm(w){
       <div class="stack" id="ooppBox">${(w.oopp||[]).map(ooppRow).join("")}</div>
       <button type="button" class="btn small" data-a="addOopp" style="align-self:flex-start">+ Pridať pomôcku</button>
     </fieldset>
+    ${payFormHTML(w)}
     ${!isNew?`<label class="chk"><input type="checkbox" id="eActive" ${w.active!==false?"checked":""}> Aktívny zamestnanec (zobrazuje sa pri výbere v dennom zázname)</label>`:""}
     <datalist id="ooppList">${OOPP_ITEMS.map(x=>`<option value="${x}">`).join("")}</datalist>
     <datalist id="sizeList">${SIZE_SUGG.map(x=>`<option value="${x}">`).join("")}</datalist>
@@ -3918,7 +4231,9 @@ document.addEventListener("submit",ev=>{
     if(!u){u={id:uid("u"),email,name:$("#crName").value.trim()||email.split("@")[0],companyRole:role};S.users.push(u)}else u.companyRole=role;
     S.projects.forEach(p=>p.members=p.members.filter(m=>m.userId!==u.id));save();toast(`${ROLES[role]} pridaný. Prihlási sa e-mailom ${email}.`);render()}
   else if(f==="empForm"){if(!canEdit("personal"))return;const d=readEmployeeForm();if(d.error){toast(d.error);return}
-    const id=ev.target.dataset.id;if(id){Object.assign(S.workers.find(w=>w.id===id),d);toast("Zmeny uložené")}else{S.workers.push({id:uid("w"),active:true,...d});toast("Zamestnanec pridaný")}
+    const pp=readPayForm();if(pp&&pp.error){toast(pp.error);return}
+    let id=ev.target.dataset.id;if(id){Object.assign(S.workers.find(w=>w.id===id),d);toast("Zmeny uložené")}else{id=uid("w");S.workers.push({id,active:true,...d});toast("Zamestnanec pridaný")}
+    if(pp){S.payProf=S.payProf||{};S.payProf[id]=pp}
     view.empEdit=null;save();render()}
   else if(f==="diaryForm"){readDraft();
     const data={date:$("#dDate").value,weather:$("#dWeather").value,temp:$("#dTemp").value,work:$("#dWork").value.trim()};

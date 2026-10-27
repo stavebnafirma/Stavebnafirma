@@ -6,12 +6,12 @@ const SB_URL="https://jvwyudhlpdavvwqkarcn.supabase.co";
 /* verejný kľúč projektu (anon). Je určený pre prehliadač – prístup k údajom chránia pravidlá v databáze. */
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2d3l1ZGhscGRhdnZ3cWthcmNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwNDEzNTgsImV4cCI6MjEwODYxNzM1OH0.O3c6CRw0jYjyE96cIGqXDz46z_7gaP4rd7UsEPLcsdg";
 const SB=window.supabase&&window.supabase.createClient?window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
-const MAP_KINDS=["att","trips"];                 /* objekty kľúč → hodnota, každý kľúč = 1 riadok */
+const MAP_KINDS=["att","trips","payProf","payMon"];                 /* objekty kľúč → hodnota, každý kľúč = 1 riadok */
 const SKIP_KEYS=new Set(["users","created"]);   /* používatelia sa ukladajú do members/invites, nie do docs */
 const MODS_ALL={personal:true,doprava:true,pozicovna:true,stavba:true};
 let TID=null,authUser=null,myTenants=[],SNAP=new Map(),USNAP=new Map(),PSNAP="",liveCh=null,saveQ=Promise.resolve(),saveBusy=0,pendingRemote=false;
 function blankState(){return {company:"",firm:{setupDone:false},users:[],projects:[],workers:[],machines:[],diary:[],tasks:[],jobs:[],weighs:[],teams:[],
-  rentItems:[],rentals:[],trainings:[],att:{},trips:{},modules:{...MODS_ALL}}}
+  rentItems:[],rentals:[],trainings:[],att:{},trips:{},payProf:{},payMon:{},modules:{...MODS_ALL}}}
 const newInvId=()=>"inv:"+(crypto.randomUUID?crypto.randomUUID():"10000000-1000-4000-8000-100000000000".replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16)));
 const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 
