@@ -1734,7 +1734,7 @@ document.addEventListener("submit",ev=>{if(ev.target.id!=="userNewForm"||!me||!i
   const name=($("#unName").value||"").trim(),email=($("#unEmail").value||"").trim().toLowerCase();if(!name||!email)return;
   if(S.users.some(u=>(u.email||"").toLowerCase()===email)){toast("Používateľ s týmto e-mailom už existuje");return}
   const rights={};RIGHT_MODS.forEach(([k])=>{if($("#un_"+k).checked)rights[k]=document.querySelector(`input[name="unl_${k}"]:checked`).value});
-  S.users.push({id:newInvId(),email,name,companyRole:"clen",rights,pending:true});view.userNew=false;save();toast(`Pozvánka uložená. Pošli kolegovi odkaz www.stavebnafirma.com – zaregistruje sa e-mailom ${email}.`);render()});
+  S.users.push({id:newInvId(),email,name,companyRole:"clen",rights,pending:true});view.userNew=false;save();toast(`Pozvánka uložená. Pošli kolegovi odkaz www.stavebnafirma.eu – zaregistruje sa e-mailom ${email}.`);render()});
 
 /* ---------- Personalistika: dochádzka ---------- */
 const ATT_TYPES=[
@@ -2463,7 +2463,7 @@ function landingHTML(){
 
   <section class="ld-final"><div class="ld-in"><h2>Vyskúšaj to na svojej firme</h2><p>Každý modul sa predpláca zvlášť, mesačne alebo ročne. Prvých 14 dní platíš nula.</p>
     <div class="ld-cta"><button class="ld-btn sig big" data-a="landGo" data-to="register">Zaregistrovať sa</button><button class="ld-btn line big" data-a="landGo" data-to="login">Prihlásiť sa</button></div></div></section>
-  <footer class="ld-foot"><div class="ld-in"><span>Stavebná firma · ${new Date().getFullYear()}</span><span>www.stavebnafirma.com</span></div></footer>
+  <footer class="ld-foot"><div class="ld-in"><span>Stavebná firma · ${new Date().getFullYear()}</span><span>www.stavebnafirma.eu</span></div></footer>
   </div>`}
 function landingInit(){const root=document.querySelector(".ld");if(!root)return;
   requestAnimationFrame(()=>root.classList.add("go"));
@@ -4712,7 +4712,7 @@ document.addEventListener("submit",ev=>{
     if(!u){u={id:newInvId(),email,name:$("#invName").value.trim()||email.split("@")[0],companyRole:"clen",pending:true};S.users.push(u)}
     if(isAdmin(u)||rightOf(u,"stavba")==="edit"){toast(`${u.name} už spravuje všetky stavby cez modul Stavba`);return}
     const m=p.members.find(m=>m.userId===u.id);
-    if(m){m.role=role;toast("Rola aktualizovaná")}else{p.members.push({userId:u.id,role,status:u.pending?"pozvaný":"aktívny"});toast(u.pending?`Pozvánka uložená. Pošli mu odkaz www.stavebnafirma.com – zaregistruje sa e-mailom ${u.email}.`:`${u.name} pridaný na stavbu`)}
+    if(m){m.role=role;toast("Rola aktualizovaná")}else{p.members.push({userId:u.id,role,status:u.pending?"pozvaný":"aktívny"});toast(u.pending?`Pozvánka uložená. Pošli mu odkaz www.stavebnafirma.eu – zaregistruje sa e-mailom ${u.email}.`:`${u.name} pridaný na stavbu`)}
     save();render()}
 });
 boot();

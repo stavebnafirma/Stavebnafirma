@@ -93,7 +93,7 @@ export function paidFromSubscription(sub: any) {
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const admin = createClient(SB_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 // adresa aplikácie pre návrat zo Stripe (doplní https://, ak chýba)
-const appUrl = () => { let u = (Deno.env.get("APP_URL") || "https://www.stavebnafirma.com").trim().replace(/\/+$/, ""); if (!/^https?:\/\//i.test(u)) u = "https://" + u; return u; };
+const appUrl = () => { let u = (Deno.env.get("APP_URL") || "https://www.stavebnafirma.eu").trim().replace(/\/+$/, ""); if (!/^https?:\/\//i.test(u)) u = "https://" + u; return u; };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
