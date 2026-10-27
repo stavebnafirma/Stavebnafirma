@@ -279,8 +279,10 @@ tr.sel-row td{background:var(--tint)}
 .bar-in>.brand{grid-row:1}.acct{grid-row:1}.topnav{grid-row:2}
 @media (max-width:559px){.who .wmail{display:none}.brand{font-size:20px}.bar .logout{padding:4px 8px}.stab{max-width:210px;padding-inline:11px}}
 @media (min-width:560px){.ntab .l-full{display:inline;white-space:nowrap}.ntab .l-short{display:none}.ntab{font-size:13px}}
-@media (min-width:920px){
-  .bar-in{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);padding-top:0}
+@media (min-width:920px) and (max-width:1499px){.ntab{flex-direction:row;gap:8px;font-size:14px;padding:10px 12px 11px}.ntab[aria-selected="true"]{padding-top:12px}.ntab .badge{position:static}}
+/* jeden riadok (logo – karty – účet) len na širokej obrazovke, inak karty v druhom riadku, aby sa nič neprekrývalo */
+@media (min-width:1500px){
+  .bar-in{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);padding-top:0;max-width:1480px}
   .bar-in>.brand{padding-bottom:0}
   .topnav{grid-column:2;grid-row:1;display:flex;gap:6px;padding-top:12px}
   .acct{grid-column:3;grid-row:1;justify-self:end;padding-bottom:0}
