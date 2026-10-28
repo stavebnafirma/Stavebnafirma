@@ -357,17 +357,18 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 .ld-hero p{font-size:18px;line-height:1.55;max-width:34em;margin:0 0 26px;color:var(--l-mut)}
 .ld-cta{display:flex;flex-wrap:wrap;gap:10px}
 .ld-hero .ld-small{font-size:14px;margin:16px 0 0;color:var(--l-mut)}
-.ld-build{position:relative;height:440px;align-self:end}
-.ld-crane{position:absolute;left:0;bottom:0;width:100%;height:100%;fill:none;stroke:var(--l-sig);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
-.ld-crane path{stroke-dasharray:1;stroke-dashoffset:0;vector-effect:non-scaling-stroke}
+.ld-build{position:relative;aspect-ratio:1/1;align-self:end}
+.ld-crane{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:var(--l-sig);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.ld-crane path{stroke-dasharray:1;stroke-dashoffset:0}.ld-crane .fillp{fill:color-mix(in srgb,var(--l-sig) 22%,transparent)}.ld-crane.tall{display:none}.ld-crane .d1,.ld-crane .d2{stroke-width:2.2}
 .ld-floors{position:absolute;left:0;bottom:16px;width:76%;display:flex;flex-direction:column;align-items:center;gap:4px}
-.ld-floor{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;background:var(--l-paper);color:var(--l-ink);border:1px solid var(--l-line);border-radius:4px;padding:8px 12px;box-shadow:0 10px 18px -14px rgba(0,0,0,.35)}
-.ld-floor svg{width:24px;height:24px;grid-row:1/3;color:#c4560f}
+.ld-floor{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;background:var(--l-paper);color:var(--l-ink);border:1px solid var(--l-line);border-radius:4px;padding:8px 12px;box-shadow:0 10px 18px -14px rgba(0,0,0,.35)}
+.ld-floor b{display:inline-flex;align-items:center;gap:8px}.ld-floor svg{width:21px;height:21px;flex:none;color:#c4560f}
 .ld-floor b{font:700 20px/1.05 var(--display);letter-spacing:.01em}.ld-floor span{font-size:12.5px;line-height:1.3;color:var(--l-mut)}
 .ld-floor.f0{width:50%}.ld-floor.f1{width:63%}.ld-floor.f2{width:76%}.ld-floor.f3{width:88%}.ld-floor.f4{width:100%}
 .ld-floor.base{background:var(--l-sig);color:var(--l-sig-ink)}.ld-floor.base svg{color:var(--l-sig-ink)}.ld-floor.base span{color:#3a2412}
 .ld-ground{position:absolute;left:-40px;right:-40px;bottom:0;height:16px;background:repeating-linear-gradient(-45deg,var(--l-sig) 0 14px,#1b1b14 14px 28px)}
-@media (max-width:860px){.ld-herogrid{grid-template-columns:1fr}.ld-herotext{padding-bottom:0}.ld-build{height:auto;padding:96px 0 16px}.ld-floors{position:relative;bottom:auto}.ld-floor.f0{width:66%}.ld-floor.f1{width:75%}.ld-floor.f2{width:84%}.ld-floor.f3{width:92%}}
+@media (max-width:1099px){.ld-build{aspect-ratio:3/5;width:100%;max-width:440px;justify-self:center}.ld-crane.wide{display:none}.ld-crane.tall{display:block}}
+@media (max-width:860px){.ld-herogrid{grid-template-columns:1fr}.ld-herotext{padding-bottom:0}.ld-floor.f0{width:66%}.ld-floor.f1{width:75%}.ld-floor.f2{width:84%}.ld-floor.f3{width:92%}}
 
 .ld-sec{padding:84px 0}
 .ld-mod.alt{background:var(--l-card)}
@@ -427,6 +428,7 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 /* pohyb: stavba sa poskladá pri načítaní, ukážky modulov sa rozbehnú pri zobrazení */
 @media (prefers-reduced-motion:no-preference){
   .ld .ld-crane path{stroke-dashoffset:1}
+  .ld .ld-crane .fillp{fill-opacity:0;transition:fill-opacity .6s 1.6s}.ld.go .ld-crane .fillp{fill-opacity:1}
   .ld.go .ld-crane path{animation:ldDraw 1s cubic-bezier(.6,0,.3,1) forwards}
   .ld.go .ld-crane .d2{animation-delay:.35s}.ld.go .ld-crane .d3{animation-delay:.55s}.ld.go .ld-crane .d4{animation-delay:.7s}.ld.go .ld-crane .d5{animation-delay:.85s}
   .ld .ld-floor{opacity:0}
@@ -2209,6 +2211,15 @@ document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="nbGo"
   render();window.scrollTo(0,0)});
 
 /* ---------- Úvodná stránka (pred prihlásením) ---------- */
+function craneSVG(W,H,cls){const r=n=>Math.round(n*10)/10,mx1=W-74,mx2=W-52,mc=(mx1+mx2)/2,jy=50,jt=36,tip=22,tipT=46,hx=r(W*.38),ht=104;
+  const topAt=x=>r(jt+(tipT-jt)*(mx1-x)/(mx1-tip));
+  let mast=`M${mx1} ${H}V${jy}M${mx2} ${H}V${jy}`;let s=0;for(let y=H;y>jy+11;y-=22){mast+=`M${s%2?mx2:mx1} ${y}L${s%2?mx1:mx2} ${y-22}M${mx1} ${y-22}H${mx2}`;s++}
+  let jib=`M${mx1} ${jy}H${tip}M${mx1} ${jt}L${tip} ${tipT}V${jy}M${mx2} ${jy}H${W-6}M${mx2} ${jt+2}L${W-6} ${jy-8}V${jy}`;let k=0;for(let x=mx1;x>tip+14;x-=28){const x2=Math.max(tip,x-28);jib+=k%2?`M${x} ${topAt(x)}L${x2} ${jy}`:`M${x} ${jy}L${x2} ${topAt(x2)}`;k++}
+  for(let x=mx2;x<W-12;x+=12)jib+=`M${x} ${jy}L${x+6} ${r(jt+2+(jy-8-jt-2)*(x+6-mx2)/(W-6-mx2))}`;
+  const apex=`M${mx1} ${jt}L${mc} 4L${mx2} ${jt}M${mc} 4L${r((tip+mx1)/2)} ${topAt((tip+mx1)/2)}M${mc} 4L${W-6} ${jy-8}M${mc-4} 12H${mc+4}`;
+  const cab=`M${mx2+1} ${jy+4}h20v18h-20zM${mx2+5} ${jy+9}h12v7h-12zM${W-30} ${jy+2}h22v9h-22zM${W-30} ${jy+11}h22v9h-22z`;
+  const hook=`M${hx-11} ${jy}h22v7h-22zM${hx-4} ${jy+7}V${ht}M${hx+4} ${jy+7}V${ht}M${hx-9} ${ht}h18v10h-18zM${hx} ${ht+10}v6a6 6 0 1 1-9 5`;
+  return `<svg class="ld-crane ${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><path pathLength="1" class="d1" d="${mast}"/><path pathLength="1" class="d2" d="${jib}"/><path pathLength="1" class="d3" d="${apex}"/><path pathLength="1" class="d4 fillp" d="${cab}"/><path pathLength="1" class="d5 fillp" d="${hook}"/></svg>`}
 function landingHTML(){
   const floors=[["firma","Firma","Všetko pod jednou strechou"],["stavba","Stavba","Stavebný denník, fakturácia, čerpanie, dokumentácia"],["personal","Personalistika","Dochádzka, mzdy, OOPP, povinné formuláre a školenia"],["pozicovna","Požičovňa","Evidencia strojov a náradia, prehľady a exporty"],["doprava","Doprava a logistika","Mechanizácia, vozový park, pracovné tímy, plánovanie, prehľady"]];
   const attRows=[["Fekete L.","8 8 8 8 D 8 8 8 8 8"],["Szabó R.","8 8 P 8 8 8 8 8 10 8"],["Oláh T.","8 8 8 PN PN PN PN PN 8 8"],["Lukáč M.","8 10 8 8 8 8 8 8 8 8"],["Vašek J.","8 8 8 8 8 8 ½D 8 8 8"]];
@@ -2225,8 +2236,8 @@ function landingHTML(){
       <p class="ld-small">Pracuj s modulmi, ktoré potrebuješ, a ušetri svoj čas.</p>
     </div>
     <div class="ld-build" aria-label="Aplikácia sa skladá z piatich častí: Firma, Personalistika, Doprava a logistika, Požičovňa a Stavba">
-      <svg class="ld-crane" viewBox="0 0 1000 440" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" class="d1" d="M905 440V14M930 440V14M905 400l25-30M905 330l25-30M905 260l25-30M905 190l25-30M905 120l25-30"/><path pathLength="1" class="d2" d="M60 46H995M60 58H905M917 14L60 46M917 14L995 46"/><path pathLength="1" class="d3" d="M955 58v22h36v-22"/><path pathLength="1" class="d4" d="M380 58v22"/><path pathLength="1" class="d5" d="M368 80h24v7h-24zM380 87v7a7 7 0 0 1-12 4"/></svg>
-      <div class="ld-floors">${floors.map(([k,l,d],i)=>`<div class="ld-floor f${i}${k==="firma"?" base":""}" style="--i:${4-i}">${icon(k==="stavba"?"home":k)}<b>${l}</b><span>${d}</span></div>`).join("")}</div>
+      ${craneSVG(500,500,"wide")}${craneSVG(300,500,"tall")}
+      <div class="ld-floors">${floors.map(([k,l,d],i)=>`<div class="ld-floor f${i}${k==="firma"?" base":""}" style="--i:${4-i}"><b>${icon(k==="stavba"?"home":k)}${l}</b><span>${d}</span></div>`).join("")}</div>
       <div class="ld-ground" aria-hidden="true"></div>
     </div></div></header>
 
