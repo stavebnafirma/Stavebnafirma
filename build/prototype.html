@@ -388,7 +388,7 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 .ld-mod.alt .ld-mock{background:var(--l-paper)}
 .ld-mockbar{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--l-line);padding-bottom:10px;margin-bottom:10px}
 .ld-mockbar b{font-size:14px}.ld-mockbar span{color:var(--l-mut)}
-.ld-arow{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:8px;padding:3px 0}
+.ld-arow{display:grid;grid-template-columns:96px 1fr;align-items:center;gap:8px;padding:3px 0}
 .ld-arow>span{font-weight:600;font-size:12.5px;white-space:nowrap}
 .ld-arow div{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
 .ld-arow i{font-style:normal;text-align:center;font-size:11.5px;font-weight:600;border-radius:4px;padding:5px 0;background:#fbe9da;color:#9a4309}
@@ -2222,7 +2222,7 @@ function craneSVG(W,H,cls){const r=n=>Math.round(n*10)/10,mx1=W-74,mx2=W-52,mc=(
   return `<svg class="ld-crane ${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><path pathLength="1" class="d1" d="${mast}"/><path pathLength="1" class="d2" d="${jib}"/><path pathLength="1" class="d3" d="${apex}"/><path pathLength="1" class="d4 fillp" d="${cab}"/><path pathLength="1" class="d5 fillp" d="${hook}"/></svg>`}
 function landingHTML(){
   const floors=[["firma","Firma","Všetko pod jednou strechou"],["stavba","Stavba","Stavebný denník, fakturácia, čerpanie, dokumentácia"],["pozicovna","Požičovňa","Evidencia strojov a náradia, prehľady a exporty"],["personal","Personalistika","Dochádzka, mzdy, OOPP, povinné formuláre a školenia"],["doprava","Doprava a logistika","Mechanizácia, vozový park, pracovné tímy, plánovanie, prehľady"]];
-  const attRows=[["Fekete L.","8 8 8 8 D 8 8 8 8 8"],["Szabó R.","8 8 P 8 8 8 8 8 10 8"],["Oláh T.","8 8 8 PN PN PN PN PN 8 8"],["Lukáč M.","8 10 8 8 8 8 8 8 8 8"],["Vašek J.","8 8 8 8 8 8 ½D 8 8 8"]];
+  const attRows=[["Zamestnanec 1","8 8 8 8 D 8 8 8 8 8"],["Zamestnanec 2","8 8 P 8 8 8 8 8 10 8"],["Zamestnanec 3","8 8 8 PN PN PN PN PN 8 8"],["Zamestnanec 4","8 10 8 8 8 8 8 8 8 8"],["Zamestnanec 5","8 8 8 8 8 8 ½D 8 8 8"]];
   const cell=(v,k)=>`<i class="c-${v==="8"||v==="10"?"w":v==="½D"?"D":v}" style="--k:${k}">${v}</i>`;
   return `<div class="ld">
   <nav class="ld-nav"><div class="ld-in"><a class="ld-logo" href="#" data-a="landTop"><span class="ld-mark" aria-hidden="true"></span><span class="ld-lt">Stavebná firma</span></a>
@@ -2242,12 +2242,12 @@ function landingHTML(){
     </div></div></header>
 
   <section class="ld-sec ld-mod"><div class="ld-in ld-two">
-    <div class="ld-copy"><div class="ld-tag">${icon("personal")}Personalistika</div><h2>Dochádzka, ktorej rozumie aj účtovníčka</h2>
-      <p>Mesiac vyklikáš za pár minút alebo ho doplníš z denných záznamov stavieb. Na konci mesiaca máš podklady pre mzdy a odhad, koľko peňazí treba pripraviť na výplaty a odvody.</p>
+    <div class="ld-copy"><div class="ld-tag">${icon("personal")}Personalistika</div><h2>Dochádzka, ktorú netreba komplikovať</h2>
+      <p>Jednoduchá klikacia schéma evidencie dochádzky s aktuálnymi prehľadmi, cestovnými príkazmi, evidenciou dovolenky a výpočtami mzdy pripraví na konci mesiaca jedným kliknutím presný podklad pre účtovníčku.</p>
       <ul><li>dovolenka, PN, OČR, priepustky a ich zostatky</li><li>podklady pre mzdy v PDF aj Exceli</li><li>služobné cesty so stravným podľa zákona</li><li>školenia s upozornením na koniec platnosti, OOPP</li></ul></div>
     <div class="ld-mock ld-att" aria-hidden="true"><div class="ld-mockbar"><b>Dochádzka</b><span>október</span></div>
       ${attRows.map(([n,r],ri)=>`<div class="ld-arow"><span>${n}</span><div>${r.split(" ").map((v,ci)=>cell(v,ci*5+ri)).join("")}</div></div>`).join("")}
-      <div class="ld-asum"><span>Na výplatu za október</span><b>9 823,59 €</b></div></div>
+      <div class="ld-asum"><span>Celková cena práce za október</span><b>9 823,59 €</b></div></div>
   </div></section>
 
   <section class="ld-sec ld-mod alt"><div class="ld-in ld-two rev">
