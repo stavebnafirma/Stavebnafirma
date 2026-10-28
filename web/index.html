@@ -2414,7 +2414,7 @@ document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="nbGo"
   render();window.scrollTo(0,0)});
 
 /* ---------- Úvodná stránka (pred prihlásením) ---------- */
-function craneSVG(W,H,cls){const r=n=>Math.round(n*10)/10,mx1=W-74,mx2=W-52,mc=(mx1+mx2)/2,jy=50,jt=36,tip=22,tipT=46,hx=r(W*.38),ht=104;
+function craneSVG(W,H,cls){const r=n=>Math.round(n*10)/10,mx1=W-74,mx2=W-52,mc=(mx1+mx2)/2,jy=50,jt=36,tip=22,tipT=46,hx=r(W*.38),ht=90;
   const topAt=x=>r(jt+(tipT-jt)*(mx1-x)/(mx1-tip));
   let mast=`M${mx1} ${H}V${jy}M${mx2} ${H}V${jy}`;let s=0;for(let y=H;y>jy+11;y-=22){mast+=`M${s%2?mx2:mx1} ${y}L${s%2?mx1:mx2} ${y-22}M${mx1} ${y-22}H${mx2}`;s++}
   let jib=`M${mx1} ${jy}H${tip}M${mx1} ${jt}L${tip} ${tipT}V${jy}M${mx2} ${jy}H${W-6}M${mx2} ${jt+2}L${W-6} ${jy-8}V${jy}`;let k=0;for(let x=mx1;x>tip+14;x-=28){const x2=Math.max(tip,x-28);jib+=k%2?`M${x} ${topAt(x)}L${x2} ${jy}`:`M${x} ${jy}L${x2} ${topAt(x2)}`;k++}
