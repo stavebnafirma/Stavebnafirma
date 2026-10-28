@@ -396,6 +396,7 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 .ld-asum{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;padding-top:10px;border-top:2px solid var(--l-line)}
 .ld-asum b{font:700 24px/1 var(--display)}
 .ld-rent2{padding:14px}
+@media (min-width:561px){.ld .nw{white-space:nowrap}.ld h2.wide{max-width:none}}
 .ld-rk{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
 .ld-rk div{border:1px solid var(--l-line);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;background:var(--l-card)}.ld-mod.alt .ld-rk div{background:var(--l-card)}
 .ld-rk span{font-size:10.5px;color:var(--l-mut)}.ld-rk b{font:700 20px/1.1 var(--display)}.ld-rk .bad b{color:#b3261e}
@@ -2362,7 +2363,7 @@ function landingHTML(){
   </div></section>
 
   <section class="ld-sec ld-mod"><div class="ld-in ld-two">
-    <div class="ld-copy"><div class="ld-tag">${icon("pozicovna")}Požičovňa</div><h2>Eviduj svoje náradie v požičovni prehľadne a efektívne</h2>
+    <div class="ld-copy"><div class="ld-tag">${icon("pozicovna")}Požičovňa</div><h2 class="wide">Eviduj svoje náradie v požičovni <span class="nw">prehľadne a efektívne</span></h2>
       <p>Inventár náradia, rezervácie a výpožičky s vlastnými podmienkami. Výpožičný list vytlačíš na mieste a nástenka ti ukáže, čo sa kedy má vrátiť.</p>
       <ul><li>výber náradia s automatickým dopĺňaním a prehľadným vyhľadávaním</li><li>výpožičný list s vlastnými podmienkami požičovne pripravený okamžite na podpis</li><li>prehľad termínov, servisov, efektivity a vyťaženosti daného náradia</li></ul></div>
     ${ldRentHTML()}
