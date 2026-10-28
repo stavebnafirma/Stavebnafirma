@@ -2233,10 +2233,10 @@ document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="nbGo"
 /* ---------- Úvodná stránka (pred prihlásením) ---------- */
 /* zjednodušený týždenný plánovač (ukážka na úvodnej stránke) */
 function ldWeekHTML(){const days=[["Po","26. 10."],["Ut","27. 10."],["St","28. 10."],["Št","29. 10."],["Pi","30. 10."]];
-  const rows=[["MAN TGS 8x4","Nákladné vozidlo · AB123CD<br>40,00 €/hod · 2,00 €/km",{0:["06:30–14:30","Lučenec, betón","Lukáč M.","ok"],1:["07:00–15:30","Tornaľa, sutina","Lukáč M.","ok"],2:["08:00–14:00","Hrachovo","Lukáč M.","warn"],3:["06:30–12:00","Fiľakovo","Lukáč M."],4:["06:00–14:00","Jesenské, recyklát","Fekete L."]}],
-    ["Škoda Octavia","Osobné vozidlo · RS123AB",{1:["07:00–15:30","Tornaľa, KD","Fekete L.","ok"],3:["13:00–15:00","Rim. Sobota, úrad","Szabó R."],4:["08:00–10:00","Rim. Sobota","Szabó R."]}],
-    ["JCB 4CX","Rýpadlo-nakladač<br>40,00 €/hod",{1:["07:00–15:30","Šrobárova 4","Vašek J."],2:["07:00–12:00","Šrobárova 4","Lukáč M.","warn"],4:["07:00–15:30","Šrobárova 4, zásyp","Vašek J."]}],
-    ["CAT 313F","Kolesové rýpadlo<br>55,00 €/hod",{0:["07:00–15:30","MŠ Hviezdosl.","Oláh T.","ok"],1:["07:00–15:30","MŠ Hviezdosl.","Oláh T.","ok"],3:["06:30–14:30","Hrachovo","Vašek J."],4:["07:00–12:00","Hrachovo","Oláh T."]}]];
+  const rows=[["MAN TGS 8x4","Nákladné vozidlo · AB123CD<br>40,00 €/hod · 2,00 €/km",{0:["06:30–14:30","Lučenec, štrkodrva 0/32","Marek D.","ok"],1:["07:00–15:30","Tornaľa, piesok 0/2","Marek D.","ok"],2:["08:00–14:00","Hrachovo, štrkodrva 0/32","Marek D.","warn"],3:["06:30–12:00","Fiľakovo, piesok 0/2","Marek D."],4:["06:00–14:00","Zvolen, štrkodrva 0/32","Michal S."]}],
+    ["Škoda Octavia","Osobné vozidlo · RS123AB",{1:["07:00–15:30","Tornaľa, KD","Michal S.","ok"],3:["13:00–15:00","Rim. Sobota, úrad","Tomáš K."],4:["08:00–10:00","Rim. Sobota","Tomáš K."]}],
+    ["JCB 4CX","Rýpadlo-nakladač<br>40,00 €/hod",{1:["07:00–15:30","Šrobárova 4","Ján V."],2:["07:00–12:00","Šrobárova 4","Marek D.","warn"],4:["07:00–15:30","Šrobárova 4, zásyp","Ján V."]}],
+    ["CAT 313F","Kolesové rýpadlo<br>55,00 €/hod",{0:["07:00–15:30","MŠ Hviezdosl.","Peter E.","ok"],1:["07:00–15:30","MŠ Hviezdosl.","Peter E.","ok"],3:["06:30–14:30","Hrachovo","Ján V."],4:["07:00–12:00","Hrachovo","Peter E."]}]];
   let n=0;const chip=c=>`<div class="ld-chip${c[3]==="warn"?" warn":""}" style="--d:${n++}"><b>${c[0]}</b><span>${c[1]}</span><small>${c[2]}</small>${c[3]==="ok"?`<em>✓ kniha jázd</em>`:c[3]==="warn"?`<em>⚠ kolízia</em>`:""}</div>`;
   return `<div class="ld-mock ld-week" aria-hidden="true">
     <div class="ld-wtop"><b>Logistika – plánovač</b><span class="ld-wnav">‹ 26. 10. – 30. 10. 2026 ›</span></div>
