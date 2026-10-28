@@ -2510,7 +2510,7 @@ document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="nbGo"
 function ldStavbaHTML(){const parts=[["SO 01 Hlavná budova","412 600 €",62,"8 420,00 €"],["SO 02 Prístavba","186 300 €",38,"4 160,00 €"],["SO 03 Spevnené plochy","74 900 €",12,"1 409,00 €"]];
   const crew=[["Murár","×4"],["Pomocník","×2"],["Tesár","×2"],["CAT 313F","8 h"],["MAN TGS","3 jazdy"]];
   return `<div class="ld-mock ld-stav" aria-hidden="true">
-    <div class="ld-wtop"><b>Rekonštrukcia MŠ Hviezdoslavova</b><span class="ld-wnav">Rim. Sobota</span></div>
+    <div class="ld-wtop"><b>Rekonštrukcia MŠ na ulici Školská</b><span class="ld-wnav">Rim. Sobota</span></div>
     <div class="ld-stabs"><i class="on">Denný záznam</i><i>Súpis prác</i><i>Kontrolné dni</i><i>Dokumentácia</i></div>
     <div class="ld-sday"><div class="ld-sdh"><b>St 28. 10. 2026</b><span>☀ 14 °C · zapísal Marek D.</span><em>uzamknuté</em></div>
       <p>Betonáž základových pásov, úsek B. Osadenie debnenia stropu nad 1. NP.</p>
@@ -2518,7 +2518,7 @@ function ldStavbaHTML(){const parts=[["SO 01 Hlavná budova","412 600 €",62,"8
     <div class="ld-ssup"><div class="ld-sdh"><b>Súpis vykonaných prác č. 4 · október</b><span>aktuálne obdobie</span></div>
       ${parts.map(([n,b,p,c],i)=>`<div class="ld-spart" style="--p:${p}%;--d:${i}"><div><b>${n}</b><span>rozpočet ${b}</span></div><div class="ld-sbar"><i></i></div><span class="ld-spct">${p} %</span><b class="ld-scur">${c}</b></div>`).join("")}
       <div class="ld-stot"><span>Spolu bez DPH</span><b>13 989,00 €</b></div>
-      <div class="ld-sflow"><span class="s1">Rozpracované</span><span class="s2">Odoslané dozoru</span><span class="s3">Odsúhlasené</span><i class="ld-sline"></i></div>
+      <div class="ld-sflow"><span class="s1">Rozpracované</span><span class="s2">Odoslané stavebnému dozoru</span><span class="s3">Odsúhlasené</span><i class="ld-sline"></i></div>
       <div class="ld-stamp"><b>Odsúhlasené</b><span>Ing. Eva T., stavebný dozor · 28. 10. 2026 18:17</span></div></div></div>`}
 /* ukážka inventára požičovne (úvodná stránka) */
 function ldRentHTML(){const items=[["Búracie kladivo Hilti TE 1000","P-001","out","do 30. 10.",78],["Vibračná doska 90 kg","P-020","free","",64],["Elektrocentrála 5 kW","P-030","late","mala sa vrátiť 27. 10.",91],["Miešačka na betón 160 l","P-010","rez","od 2. 11.",42],["Uhlová brúska 230 mm","P-050","free","",27]];
