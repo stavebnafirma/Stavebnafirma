@@ -2221,7 +2221,7 @@ function craneSVG(W,H,cls){const r=n=>Math.round(n*10)/10,mx1=W-74,mx2=W-52,mc=(
   const hook=`M${hx-11} ${jy}h22v7h-22zM${hx-4} ${jy+7}V${ht}M${hx+4} ${jy+7}V${ht}M${hx-9} ${ht}h18v10h-18zM${hx} ${ht+10}v6a6 6 0 1 1-9 5`;
   return `<svg class="ld-crane ${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax meet" aria-hidden="true"><path pathLength="1" class="d1" d="${mast}"/><path pathLength="1" class="d2" d="${jib}"/><path pathLength="1" class="d3" d="${apex}"/><path pathLength="1" class="d4 fillp" d="${cab}"/><path pathLength="1" class="d5 fillp" d="${hook}"/></svg>`}
 function landingHTML(){
-  const floors=[["firma","Firma","Všetko pod jednou strechou"],["stavba","Stavba","Stavebný denník, fakturácia, čerpanie, dokumentácia"],["personal","Personalistika","Dochádzka, mzdy, OOPP, povinné formuláre a školenia"],["pozicovna","Požičovňa","Evidencia strojov a náradia, prehľady a exporty"],["doprava","Doprava a logistika","Mechanizácia, vozový park, pracovné tímy, plánovanie, prehľady"]];
+  const floors=[["firma","Firma","Všetko pod jednou strechou"],["stavba","Stavba","Stavebný denník, fakturácia, čerpanie, dokumentácia"],["pozicovna","Požičovňa","Evidencia strojov a náradia, prehľady a exporty"],["personal","Personalistika","Dochádzka, mzdy, OOPP, povinné formuláre a školenia"],["doprava","Doprava a logistika","Mechanizácia, vozový park, pracovné tímy, plánovanie, prehľady"]];
   const attRows=[["Fekete L.","8 8 8 8 D 8 8 8 8 8"],["Szabó R.","8 8 P 8 8 8 8 8 10 8"],["Oláh T.","8 8 8 PN PN PN PN PN 8 8"],["Lukáč M.","8 10 8 8 8 8 8 8 8 8"],["Vašek J.","8 8 8 8 8 8 ½D 8 8 8"]];
   const cell=(v,k)=>`<i class="c-${v==="8"||v==="10"?"w":v==="½D"?"D":v}" style="--k:${k}">${v}</i>`;
   return `<div class="ld">
@@ -2237,7 +2237,7 @@ function landingHTML(){
     </div>
     <div class="ld-build" aria-label="Aplikácia sa skladá z piatich častí: Firma, Personalistika, Doprava a logistika, Požičovňa a Stavba">
       ${craneSVG(500,500,"wide")}${craneSVG(300,500,"tall")}
-      <div class="ld-floors">${floors.map(([k,l,d],i)=>`<div class="ld-floor f${i}${k==="firma"?" base":""}" style="--i:${4-i}"><b>${icon(k==="stavba"?"home":k)}${l}</b><span>${d}</span></div>`).join("")}</div>
+      <div class="ld-floors">${floors.map(([k,l,d],i)=>`<div class="ld-floor f${i}${k==="firma"?" base":""}" style="--i:${4-i}"><b>${l}</b><span>${d}</span></div>`).join("")}</div>
       <div class="ld-ground" aria-hidden="true"></div>
     </div></div></header>
 
