@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="description" content="Stavebná firma – firma, personalistika, doprava a logistika, požičovňa a stavby na jednom mieste.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Cpath d=%27M10.4 2.6h3.2l5.2 16.4H5.2z%27 fill=%27%23e8792f%27/%3E%3Cpath d=%27M8.64 8h6.72l.78 2.5H7.86zM6.92 13.5h10.16l.78 2.5H6.14z%27 fill=%27%23fff%27/%3E%3Crect x=%272.5%27 y=%2718.6%27 width=%2719%27 height=%273%27 rx=%271.2%27 fill=%27%232b2f33%27/%3E%3C/svg%3E">
 <title>Stavebná firma</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&family=Barlow+Condensed:wght@600;700&display=swap">
@@ -35,7 +36,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--brand)}
 header.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--brand);color:var(--brand-fg);box-shadow:0 1px 0 var(--line),0 6px 18px -14px rgba(0,0,0,.35)}
 .brand{font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.02em;display:flex;align-items:center;gap:8px}
-.brand i{width:16px;height:16px;background:repeating-linear-gradient(45deg,var(--brand-hi) 0 3px,transparent 3px 6px);border:2px solid var(--brand-hi);display:inline-block;border-radius:3px;flex:none}
+.brand .cone{width:24px;height:24px;flex:none;color:var(--brand-fg);margin-top:-3px}
 .who b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:.01em;text-wrap:balance;margin:0}
 h1{font-size:32px;line-height:1.1;color:var(--fg)}
@@ -344,7 +345,7 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 .ld-nav{position:sticky;top:0;z-index:6;background:color-mix(in srgb,var(--l-card) 92%,transparent);backdrop-filter:blur(8px);color:var(--l-ink);border-bottom:1px solid var(--l-line)}
 .ld-nav .ld-in{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px}
 .ld-logo{display:flex;align-items:center;gap:10px;font:700 24px/1 var(--display);color:var(--l-ink);text-decoration:none;letter-spacing:.01em}
-.ld-mark{width:26px;height:26px;border-radius:5px;background:repeating-linear-gradient(-45deg,var(--l-sig) 0 5px,var(--l-deep) 5px 10px);box-shadow:inset 0 0 0 2px var(--l-sig)}
+.ld-mark{width:30px;height:30px;display:inline-flex;color:var(--l-ink)}.ld-mark svg{width:100%;height:100%;margin-top:-3px}
 .ld-navbtn{display:flex;gap:8px}
 .ld-btn{border:0;border-radius:8px;padding:9px 16px;font-weight:600;font-size:15px;cursor:pointer;white-space:nowrap}
 .ld-btn.big{padding:13px 22px;font-size:16px}
@@ -2577,7 +2578,7 @@ function landingHTML(){
   const attRows=[["Zamestnanec 1","8 8 8 8 D 8 8 8 8 8"],["Zamestnanec 2","8 8 P 8 8 8 8 8 10 8"],["Zamestnanec 3","8 8 8 PN PN PN PN PN 8 8"],["Zamestnanec 4","8 10 8 8 8 8 8 8 8 8"],["Zamestnanec 5","8 8 8 8 8 8 ½D 8 8 8"]];
   const cell=(v,k)=>`<i class="c-${v==="8"||v==="10"?"w":v==="½D"?"D":v}" style="--k:${k}">${v}</i>`;
   return `<div class="ld">
-  <nav class="ld-nav"><div class="ld-in"><a class="ld-logo" href="#" data-a="landTop"><span class="ld-mark" aria-hidden="true"></span><span class="ld-lt">Stavebná firma</span></a>
+  <nav class="ld-nav"><div class="ld-in"><a class="ld-logo" href="#" data-a="landTop"><span class="ld-mark"><svg viewBox="0 0 24 24" aria-hidden="true" class="cone"><path d="M10.4 2.6h3.2l5.2 16.4H5.2z" fill="#e8792f"/><path d="M8.64 8h6.72l.78 2.5H7.86zM6.92 13.5h10.16l.78 2.5H6.14z" fill="#fff"/><rect x="2.5" y="18.6" width="19" height="3" rx="1.2" fill="currentColor"/></svg></span><span class="ld-lt">Stavebná firma</span></a>
     <div class="ld-navbtn"><button class="ld-btn ghost" data-a="landGo" data-to="login">Prihlásiť sa</button><button class="ld-btn sig" data-a="landGo" data-to="register">Zaregistrovať sa</button></div></div></nav>
 
   <header class="ld-hero"><div class="ld-in ld-herogrid">
@@ -3852,7 +3853,7 @@ function renderBar(){
   const F=me?S.firm||{}:{};
   const sn=subnavHTML();const se=$("#subnav");se.innerHTML=sn;se.hidden=!sn;
   (se.querySelectorAll?se.querySelectorAll(".sub-in"):[]).forEach(si=>{const ss=si.querySelector('[aria-selected="true"]');if(ss&&si.scrollWidth>si.clientWidth){const r=ss.offsetLeft+ss.offsetWidth-si.clientWidth;si.scrollLeft=r>0?r+16:0}});
-  $("#bar").innerHTML=navHTML()+`<div class="brand"><i></i><span class="bname">Stavebná firma</span></div>`+(me?`<div class="acct"><button type="button" class="who" data-a="profile" title="Môj profil">${F.logo?`<span class="blogo"><img src="${F.logo.data}" alt=""></span>`:""}<span class="wtext"><b>${esc(me.name)}</b><span class="wmail">${esc(F.name||S.company||me.email)}</span></span></button><span class="saveind" id="saveInd" hidden>Ukladám…</span>${myTenants.length>1?`<button class="logout" data-a="switchTenant" title="Prepnúť firmu">Firmy</button>`:""}<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");
+  $("#bar").innerHTML=navHTML()+`<div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true" class="cone"><path d="M10.4 2.6h3.2l5.2 16.4H5.2z" fill="#e8792f"/><path d="M8.64 8h6.72l.78 2.5H7.86zM6.92 13.5h10.16l.78 2.5H6.14z" fill="#fff"/><rect x="2.5" y="18.6" width="19" height="3" rx="1.2" fill="currentColor"/></svg><span class="bname">Stavebná firma</span></div>`+(me?`<div class="acct"><button type="button" class="who" data-a="profile" title="Môj profil">${F.logo?`<span class="blogo"><img src="${F.logo.data}" alt=""></span>`:""}<span class="wtext"><b>${esc(me.name)}</b><span class="wmail">${esc(F.name||S.company||me.email)}</span></span></button><span class="saveind" id="saveInd" hidden>Ukladám…</span>${myTenants.length>1?`<button class="logout" data-a="switchTenant" title="Prepnúť firmu">Firmy</button>`:""}<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");
 }
 function rolePill(r){return `<span class="pill r-${r}">${ROLES[r]}</span>`}
 

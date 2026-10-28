@@ -85,6 +85,7 @@ rep('<meta name="claude:viewport-fit-sides" content="cover">\n', '')
 head_end = s.index('<header class="bar">')
 s = ('<!doctype html>\n<html lang="sk">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n'
      '<meta name="description" content="Stavebná firma – firma, personalistika, doprava a logistika, požičovňa a stavby na jednom mieste.">\n'
+     '<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Cpath d=%27M10.4 2.6h3.2l5.2 16.4H5.2z%27 fill=%27%23e8792f%27/%3E%3Cpath d=%27M8.64 8h6.72l.78 2.5H7.86zM6.92 13.5h10.16l.78 2.5H6.14z%27 fill=%27%23fff%27/%3E%3Crect x=%272.5%27 y=%2718.6%27 width=%2719%27 height=%273%27 rx=%271.2%27 fill=%27%232b2f33%27/%3E%3C/svg%3E">\n'
      + s[:head_end] + '</head>\n<body>\n' + s[head_end:] + '\n</body>\n</html>\n')
 
 # kontrola: v ostrej verzii nesmú ostať odkazy na úložisko prototypu
