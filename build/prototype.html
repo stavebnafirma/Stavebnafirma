@@ -2233,17 +2233,17 @@ document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="nbGo"
 /* ---------- Úvodná stránka (pred prihlásením) ---------- */
 /* zjednodušený týždenný plánovač (ukážka na úvodnej stránke) */
 function ldWeekHTML(){const days=[["Po","26. 10."],["Ut","27. 10."],["St","28. 10."],["Št","29. 10."],["Pi","30. 10."]];
-  const rows=[["Tatra 815","Nákladné vozidlo · RS908CC",{1:["07:00–15:30","Tornaľa, sutina","Lukáč M.","ok"],2:["08:00–14:00","Hrachovo","Lukáč M.","warn"],3:["06:30–12:00","Jesenské","Lukáč M."]}],
-    ["Škoda Octavia","Osobné vozidlo · RS123AB",{1:["07:00–15:30","Tornaľa, KD","Fekete L.","ok"],4:["08:00–10:00","Rim. Sobota","Szabó R."]}],
-    ["Kubota KX057","Stavebný stroj · 35 €/h",{2:["07:00–12:00","Šrobárova 4","Lukáč M.","warn"],4:["07:00–15:30","Šrobárova 4","Vašek J."]}],
-    ["JCB 3CX","Stavebný stroj · 42 €/h",{0:["07:00–15:30","MŠ Hviezdosl.","Oláh T.","ok"],3:["06:30–14:30","Hrachovo","Vašek J."]}]];
+  const rows=[["MAN TGS 8x4","Nákladné vozidlo · AB123CD<br>40,00 €/hod · 2,00 €/km",{0:["06:30–14:30","Lučenec, betón","Lukáč M.","ok"],1:["07:00–15:30","Tornaľa, sutina","Lukáč M.","ok"],2:["08:00–14:00","Hrachovo","Lukáč M.","warn"],3:["06:30–12:00","Fiľakovo","Lukáč M."],4:["06:00–14:00","Jesenské, recyklát","Fekete L."]}],
+    ["Škoda Octavia","Osobné vozidlo · RS123AB",{1:["07:00–15:30","Tornaľa, KD","Fekete L.","ok"],3:["13:00–15:00","Rim. Sobota, úrad","Szabó R."],4:["08:00–10:00","Rim. Sobota","Szabó R."]}],
+    ["JCB 4CX","Rýpadlo-nakladač<br>40,00 €/hod",{1:["07:00–15:30","Šrobárova 4","Vašek J."],2:["07:00–12:00","Šrobárova 4","Lukáč M.","warn"],4:["07:00–15:30","Šrobárova 4, zásyp","Vašek J."]}],
+    ["CAT 313F","Kolesové rýpadlo<br>55,00 €/hod",{0:["07:00–15:30","MŠ Hviezdosl.","Oláh T.","ok"],1:["07:00–15:30","MŠ Hviezdosl.","Oláh T.","ok"],3:["06:30–14:30","Hrachovo","Vašek J."],4:["07:00–12:00","Hrachovo","Oláh T."]}]];
   let n=0;const chip=c=>`<div class="ld-chip${c[3]==="warn"?" warn":""}" style="--d:${n++}"><b>${c[0]}</b><span>${c[1]}</span><small>${c[2]}</small>${c[3]==="ok"?`<em>✓ kniha jázd</em>`:c[3]==="warn"?`<em>⚠ kolízia</em>`:""}</div>`;
   return `<div class="ld-mock ld-week" aria-hidden="true">
     <div class="ld-wtop"><b>Logistika – plánovač</b><span class="ld-wnav">‹ 26. 10. – 30. 10. 2026 ›</span></div>
     <div class="ld-wtool"><span class="ld-seg"><i class="on">Stroje a vozidlá</i><i>Zamestnanci</i></span><span class="ld-wadd">+ Naplánovať úlohu</span></div>
     <div class="ld-wgrid"><div class="ld-wh first">Stroj / vozidlo</div>${days.map(([d,t],k)=>`<div class="ld-wh d${k}${k===2?" today":""}">${d} <b>${t}</b></div>`).join("")}
       ${rows.map(([m,s,c])=>`<div class="ld-wm"><b>${m}</b><span>${s}</span></div>${days.map((_,k)=>`<div class="ld-wc d${k}${k===2?" today":""}">${c[k]?chip(c[k]):""}</div>`).join("")}`).join("")}</div>
-    <div class="ld-wfoot"><span>8 úloh v týždni · spolu 2 846,50 € bez DPH</span><span class="ld-wbtns"><i>Kniha jázd</i><i>Súpis pre fakturáciu</i></span></div></div>`}
+    <div class="ld-wfoot"><span>15 úloh v týždni · spolu 6 184,00 € bez DPH</span><span class="ld-wbtns"><i>Kniha jázd</i><i>Súpis pre fakturáciu</i></span></div></div>`}
 function craneSVG(W,H,cls){const r=n=>Math.round(n*10)/10,mx1=W-74,mx2=W-52,mc=(mx1+mx2)/2,jy=50,jt=36,tip=22,tipT=46,hx=r(W*.38),ht=90;
   const topAt=x=>r(jt+(tipT-jt)*(mx1-x)/(mx1-tip));
   let mast=`M${mx1} ${H}V${jy}M${mx2} ${H}V${jy}`;let s=0;for(let y=H;y>jy+11;y-=22){mast+=`M${s%2?mx2:mx1} ${y}L${s%2?mx1:mx2} ${y-22}M${mx1} ${y-22}H${mx2}`;s++}
