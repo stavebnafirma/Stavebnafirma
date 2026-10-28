@@ -411,7 +411,7 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 .ld-sflow{position:relative;display:flex;justify-content:space-between;margin-top:12px;padding-top:14px;font-size:10.5px;color:var(--l-mut)}
 .ld-sflow::before{content:"";position:absolute;left:6px;right:6px;top:4px;height:3px;border-radius:2px;background:var(--l-line)}
 .ld-sline{position:absolute;left:6px;top:4px;height:3px;border-radius:2px;background:#1d7a4a;width:calc(100% - 12px)}
-.ld-sflow span{position:relative}.ld-sflow span::before{content:"";position:absolute;top:-14px;width:11px;height:11px;border-radius:50%;background:#1d7a4a;box-shadow:0 0 0 3px var(--l-card)}
+.ld-sflow span{position:relative;max-width:32%;line-height:1.25}.ld-sflow .s3{text-align:right}.ld-sflow span::before{content:"";position:absolute;top:-14px;width:11px;height:11px;border-radius:50%;background:#1d7a4a;box-shadow:0 0 0 3px var(--l-card)}
 .ld-sflow .s1::before{left:0}.ld-sflow .s2{text-align:center}.ld-sflow .s2::before{left:calc(50% - 5px)}.ld-sflow .s3{font-weight:600;color:#1d7a4a}.ld-sflow .s3::before{right:0}
 .ld-stav .ld-stamp{position:relative;left:auto;bottom:auto;width:max-content;margin:14px 6px 2px auto;padding:5px 10px}.ld-stav .ld-stamp b{font-size:20px}.ld-stav .ld-stamp span{font-size:9.5px}
 @media (max-width:560px){.ld-spart{grid-template-columns:minmax(0,1fr) 60px 30px}.ld-scur{display:none}.ld-stabs i:nth-child(n+3){display:none}.ld-stav .ld-stamp{margin-right:auto}}
