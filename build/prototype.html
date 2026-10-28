@@ -2251,12 +2251,12 @@ function landingHTML(){
   </div></section>
 
   <section class="ld-sec ld-mod alt"><div class="ld-in ld-two rev">
-    <div class="ld-copy"><div class="ld-tag">${icon("doprava")}Doprava a logistika</div><h2>Stroje, autá a zákazky na jednom pláne</h2>
-      <p>Vidíš, ktorý stroj je kde a kto ho vedie. Aplikácia upozorní na STK, poistenie aj servis, z knihy jázd spočíta hodiny a kilometre a pripraví súpis pre fakturáciu.</p>
-      <ul><li>plánovač zákaziek s upozornením na súbeh</li><li>údržba a servis s termínmi</li><li>váženie s vážnym lístkom a štatistikou</li><li>tímy a personál na zákazkách</li></ul></div>
+    <div class="ld-copy"><div class="ld-tag">${icon("doprava")}Doprava a logistika</div><h2>Plánovanie tímov, dopravy a práce na jednom mieste</h2>
+      <p>Jednoduchý plánovač akcií, zákaziek, výjazdov a pracovného nasadenia so všetkými potrebnými detailami. Vygeneruj knihu jázd, súpisy s cenami a priprav podklad k fakturácii za vybrané obdobie jedným kliknutím.</p>
+      <ul><li>prehľadný plánovač s upozornením na kolíziu termínov</li><li>organizácia jednotlivcov alebo navolených tímov s priradeným vozidlom a náradím</li><li>logistika nákladnej dopravy a mechanizácie</li><li>systém váženia materiálov pre strediská, s generovaním vážnych lístkov</li></ul></div>
     <div class="ld-mock ld-plan" aria-hidden="true"><div class="ld-mockbar"><b>Plánovač</b><span>utorok</span></div>
       <div class="ld-hours"><span>7:00</span><span>10:00</span><span>13:00</span><span>16:00</span></div>
-      ${[["Tatra 815","Odvoz sutiny – Tornaľa",0,55],["Kubota KX057","Výkop prípojky",15,50],["JCB 3CX","Terénne úpravy MŠ",35,60],["Octavia","Kontrolný deň",60,22]].map(([m,j,s,w],i)=>`<div class="ld-prow"><span>${m}</span><div><i style="--s:${s}%;--w:${w}%;--d:${i}">${j}</i></div></div>`).join("")}
+      ${[["Tatra 815","Odvoz sutiny – Tornaľa",0,55],["Kubota KX057","Výkop prípojky",15,50],["JCB 3CX","Terénne úpravy MŠ",35,60],["Octavia","Kontrolný deň",58,42]].map(([m,j,s,w],i)=>`<div class="ld-prow"><span>${m}</span><div><i style="--s:${s}%;--w:${w}%;--d:${i}">${j}</i></div></div>`).join("")}
       <div class="ld-ticket"><span>Vážny lístok č. 26102703</span><b>Netto 14 280 kg</b><span>Betónová drvina · Príjem</span></div></div>
   </div></section>
 
