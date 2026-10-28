@@ -358,16 +358,16 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 .ld-cta{display:flex;flex-wrap:wrap;gap:10px}
 .ld-hero .ld-small{font-size:14px;margin:16px 0 0;color:var(--l-mut)}
 .ld-build{position:relative;height:440px;align-self:end}
-.ld-crane{position:absolute;right:0;bottom:0;width:74%;height:100%;fill:none;stroke:var(--l-sig);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
-.ld-crane path{stroke-dasharray:420;stroke-dashoffset:0}
-.ld-floors{position:absolute;left:0;bottom:16px;width:72%;display:flex;flex-direction:column;align-items:flex-start;gap:4px}
-.ld-floor{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;background:var(--l-paper);color:var(--l-ink);border:1px solid var(--l-line);border-radius:4px;padding:10px 14px;box-shadow:0 10px 18px -14px rgba(0,0,0,.35)}
+.ld-crane{position:absolute;left:0;bottom:0;width:100%;height:100%;fill:none;stroke:var(--l-sig);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.ld-crane path{stroke-dasharray:1;stroke-dashoffset:0;vector-effect:non-scaling-stroke}
+.ld-floors{position:absolute;left:0;bottom:16px;width:76%;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ld-floor{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;background:var(--l-paper);color:var(--l-ink);border:1px solid var(--l-line);border-radius:4px;padding:8px 12px;box-shadow:0 10px 18px -14px rgba(0,0,0,.35)}
 .ld-floor svg{width:24px;height:24px;grid-row:1/3;color:#c4560f}
-.ld-floor b{font:700 20px/1.05 var(--display);letter-spacing:.01em}.ld-floor span{font-size:12.5px;color:var(--l-mut)}
-.ld-floor.f0{width:74%;border-top:5px solid var(--l-sig)}.ld-floor.f1{width:82%}.ld-floor.f2{width:90%}.ld-floor.f3{width:96%}
-.ld-floor.base{width:100%;background:var(--l-sig);color:var(--l-sig-ink)}.ld-floor.base svg{color:var(--l-sig-ink)}.ld-floor.base span{color:#3a2412}
+.ld-floor b{font:700 20px/1.05 var(--display);letter-spacing:.01em}.ld-floor span{font-size:12.5px;line-height:1.3;color:var(--l-mut)}
+.ld-floor.f0{width:50%}.ld-floor.f1{width:63%}.ld-floor.f2{width:76%}.ld-floor.f3{width:88%}.ld-floor.f4{width:100%}
+.ld-floor.base{background:var(--l-sig);color:var(--l-sig-ink)}.ld-floor.base svg{color:var(--l-sig-ink)}.ld-floor.base span{color:#3a2412}
 .ld-ground{position:absolute;left:-40px;right:-40px;bottom:0;height:16px;background:repeating-linear-gradient(-45deg,var(--l-sig) 0 14px,#1b1b14 14px 28px)}
-@media (max-width:860px){.ld-herogrid{grid-template-columns:1fr}.ld-herotext{padding-bottom:0}.ld-build{height:380px}.ld-floors{width:86%}}
+@media (max-width:860px){.ld-herogrid{grid-template-columns:1fr}.ld-herotext{padding-bottom:0}.ld-build{height:auto;padding:96px 0 16px}.ld-floors{position:relative;bottom:auto}.ld-floor.f0{width:66%}.ld-floor.f1{width:75%}.ld-floor.f2{width:84%}.ld-floor.f3{width:92%}}
 
 .ld-sec{padding:84px 0}
 .ld-mod.alt{background:var(--l-card)}
@@ -426,7 +426,7 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 
 /* pohyb: stavba sa poskladá pri načítaní, ukážky modulov sa rozbehnú pri zobrazení */
 @media (prefers-reduced-motion:no-preference){
-  .ld .ld-crane path{stroke-dashoffset:420}
+  .ld .ld-crane path{stroke-dashoffset:1}
   .ld.go .ld-crane path{animation:ldDraw 1s cubic-bezier(.6,0,.3,1) forwards}
   .ld.go .ld-crane .d2{animation-delay:.35s}.ld.go .ld-crane .d3{animation-delay:.55s}.ld.go .ld-crane .d4{animation-delay:.7s}.ld.go .ld-crane .d5{animation-delay:.85s}
   .ld .ld-floor{opacity:0}
@@ -2210,7 +2210,7 @@ document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="nbGo"
 
 /* ---------- Úvodná stránka (pred prihlásením) ---------- */
 function landingHTML(){
-  const floors=[["stavba","Stavba","denník, súpisy, dozor"],["pozicovna","Požičovňa","náradie a výpožičky"],["doprava","Doprava a logistika","stroje, zákazky, váženie"],["personal","Personalistika","dochádzka a mzdy"],["firma","Firma","základ zadarmo"]];
+  const floors=[["firma","Firma","Všetko pod jednou strechou"],["stavba","Stavba","Stavebný denník, fakturácia, čerpanie, dokumentácia"],["personal","Personalistika","Dochádzka, mzdy, OOPP, povinné formuláre a školenia"],["pozicovna","Požičovňa","Evidencia strojov a náradia, prehľady a exporty"],["doprava","Doprava a logistika","Mechanizácia, vozový park, pracovné tímy, plánovanie, prehľady"]];
   const attRows=[["Fekete L.","8 8 8 8 D 8 8 8 8 8"],["Szabó R.","8 8 P 8 8 8 8 8 10 8"],["Oláh T.","8 8 8 PN PN PN PN PN 8 8"],["Lukáč M.","8 10 8 8 8 8 8 8 8 8"],["Vašek J.","8 8 8 8 8 8 ½D 8 8 8"]];
   const cell=(v,k)=>`<i class="c-${v==="8"||v==="10"?"w":v==="½D"?"D":v}" style="--k:${k}">${v}</i>`;
   return `<div class="ld">
@@ -2220,12 +2220,12 @@ function landingHTML(){
   <header class="ld-hero"><div class="ld-in ld-herogrid">
     <div class="ld-herotext">
       <h1>Celá stavebná firma v&nbsp;jednej aplikácii</h1>
-      <p>Dochádzka a podklady pre mzdy, stroje a vozidlá, váženie, požičovňa náradia aj stavebný denník. Kolegovia zapisujú v teréne, ty vidíš všetko na jednej nástenke.</p>
+      <p>Riadenie celej firmy na jednom mieste. Od základnej evidencie dochádzky, cez plánovanie a logistiku dopravy, až po generovanie prehľadov, tlačív a formulárov pripravených na podpis.</p>
       <div class="ld-cta"><button class="ld-btn sig big" data-a="landGo" data-to="register">Vyskúšať 14 dní zadarmo</button><button class="ld-btn line big" data-a="landGo" data-to="login">Mám účet – prihlásiť sa</button></div>
-      <p class="ld-small">Platíš len moduly, ktoré používaš. Karta Firma je zadarmo.</p>
+      <p class="ld-small">Pracuj s modulmi, ktoré potrebuješ, a ušetri svoj čas.</p>
     </div>
     <div class="ld-build" aria-label="Aplikácia sa skladá z piatich častí: Firma, Personalistika, Doprava a logistika, Požičovňa a Stavba">
-      <svg class="ld-crane" viewBox="0 0 400 440" preserveAspectRatio="xMaxYMax meet" aria-hidden="true"><path class="d1" d="M352 440V14M368 440V14M352 400l16-30M352 330l16-30M352 260l16-30M352 190l16-30M352 120l16-30"/><path class="d2" d="M20 46H398M20 58H352M360 14L20 46M360 14L398 46"/><path class="d3" d="M376 58v22h22v-22"/><path class="d4" d="M80 58v40"/><path class="d5" d="M72 98h16v8h-16zM80 106v8a6 6 0 0 1-8 4"/></svg>
+      <svg class="ld-crane" viewBox="0 0 1000 440" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" class="d1" d="M905 440V14M930 440V14M905 400l25-30M905 330l25-30M905 260l25-30M905 190l25-30M905 120l25-30"/><path pathLength="1" class="d2" d="M60 46H995M60 58H905M917 14L60 46M917 14L995 46"/><path pathLength="1" class="d3" d="M955 58v22h36v-22"/><path pathLength="1" class="d4" d="M380 58v22"/><path pathLength="1" class="d5" d="M368 80h24v7h-24zM380 87v7a7 7 0 0 1-12 4"/></svg>
       <div class="ld-floors">${floors.map(([k,l,d],i)=>`<div class="ld-floor f${i}${k==="firma"?" base":""}" style="--i:${4-i}">${icon(k==="stavba"?"home":k)}<b>${l}</b><span>${d}</span></div>`).join("")}</div>
       <div class="ld-ground" aria-hidden="true"></div>
     </div></div></header>
