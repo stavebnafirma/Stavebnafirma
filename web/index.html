@@ -400,6 +400,26 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 .ld-arow i.c-D{background:#dceaf5;color:#2f6f9e}.ld-arow i.c-PN{background:#f8dedb;color:#a1261d}.ld-arow i.c-P{background:#ebe3f6;color:#6b4fa3}
 .ld-asum{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;padding-top:10px;border-top:2px solid var(--l-line)}
 .ld-asum b{font:700 24px/1 var(--display)}
+.ld-stav{padding:14px}
+.ld-stabs{display:flex;gap:4px;border-bottom:1px solid var(--l-line);margin-bottom:10px;overflow:hidden}
+.ld-stabs i{font-style:normal;font-size:11.5px;font-weight:600;color:var(--l-mut);padding:5px 9px;border:1px solid var(--l-line);border-bottom:0;border-radius:7px 7px 0 0;white-space:nowrap}.ld-stabs i.on{color:#b8500d;box-shadow:inset 0 3px 0 #e8792f;background:var(--l-card)}
+.ld-sday,.ld-ssup{border:1px solid var(--l-line);border-radius:9px;padding:10px 12px;background:var(--l-card);position:relative}
+.ld-ssup{margin-top:10px}
+.ld-sdh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.ld-sdh b{font-size:12.5px}.ld-sdh span{font-size:11px;color:var(--l-mut)}.ld-sdh em{margin-left:auto;font-style:normal;font-size:10.5px;font-weight:600;background:var(--l-paper);border:1px solid var(--l-line);border-radius:999px;padding:1px 8px;color:var(--l-mut)}
+.ld-sday p{font-size:12px;margin:5px 0 7px;color:var(--l-ink)}
+.ld-screw{display:flex;flex-wrap:wrap;gap:5px}.ld-screw i{font-style:normal;font-size:11px;border-radius:999px;padding:2px 9px;background:var(--l-warm);color:var(--l-ink)}.ld-screw b{color:#b8500d}
+.ld-spart{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 34px 74px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--l-line);font-size:12px}
+.ld-spart div:first-child{display:flex;flex-direction:column;min-width:0}.ld-spart div:first-child b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ld-spart div:first-child span{font-size:10.5px;color:var(--l-mut)}
+.ld-sbar{height:7px;border-radius:4px;background:var(--l-line);overflow:hidden}.ld-sbar i{display:block;height:100%;width:var(--p);background:linear-gradient(90deg,#e8792f,#c4560f);border-radius:4px}
+.ld-spct{font-size:11px;color:var(--l-mut);text-align:right}.ld-scur{text-align:right;font-weight:600}
+.ld-ssup .ld-stot{display:flex;justify-content:space-between;align-items:baseline;padding-top:8px}.ld-ssup .ld-stot b{font:700 22px/1 var(--display)}
+.ld-sflow{position:relative;display:flex;justify-content:space-between;margin-top:12px;padding-top:14px;font-size:10.5px;color:var(--l-mut)}
+.ld-sflow::before{content:"";position:absolute;left:6px;right:6px;top:4px;height:3px;border-radius:2px;background:var(--l-line)}
+.ld-sline{position:absolute;left:6px;top:4px;height:3px;border-radius:2px;background:#1d7a4a;width:calc(100% - 12px)}
+.ld-sflow span{position:relative}.ld-sflow span::before{content:"";position:absolute;top:-14px;width:11px;height:11px;border-radius:50%;background:#1d7a4a;box-shadow:0 0 0 3px var(--l-card)}
+.ld-sflow .s1::before{left:0}.ld-sflow .s2{text-align:center}.ld-sflow .s2::before{left:calc(50% - 5px)}.ld-sflow .s3{font-weight:600;color:#1d7a4a}.ld-sflow .s3::before{right:0}
+.ld-stav .ld-stamp{position:relative;left:auto;bottom:auto;width:max-content;margin:14px 6px 2px auto;padding:5px 10px}.ld-stav .ld-stamp b{font-size:20px}.ld-stav .ld-stamp span{font-size:9.5px}
+@media (max-width:560px){.ld-spart{grid-template-columns:minmax(0,1fr) 60px 30px}.ld-scur{display:none}.ld-stabs i:nth-child(n+3){display:none}.ld-stav .ld-stamp{margin-right:auto}}
 .ld-rent2{padding:14px}
 @media (min-width:561px){.ld .nw{white-space:nowrap}.ld h2.wide{max-width:none}}
 .ld-rk{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
@@ -502,6 +522,13 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
   .ld-plan:not(.in) .ld-ticket{opacity:0}.ld-plan.in .ld-ticket{animation:ldPrint .8s ease-out both;animation-delay:1.1s}
   .ld-rent:not(.in) .ld-ritem{opacity:0}.ld-rent.in .ld-ritem{animation:ldSlide .45s ease-out both;animation-delay:calc(var(--d) * .14s)}
   .ld-rent.in .ld-ritem em{animation:ldPop .35s ease-out both;animation-delay:calc(.35s + var(--d) * .14s)}
+  .ld-stav:not(.in) .ld-screw i{opacity:0;transform:scale(.6)}.ld-stav.in .ld-screw i{animation:ldPop .35s ease-out both;animation-delay:calc(.2s + var(--d) * .1s)}
+  .ld-stav:not(.in) .ld-sbar i{width:0}.ld-stav.in .ld-sbar i{transition:width 1s cubic-bezier(.3,0,.2,1);transition-delay:calc(.8s + var(--d) * .15s)}
+  .ld-stav:not(.in) .ld-scur{opacity:0}.ld-stav.in .ld-scur{animation:ldRise .4s ease-out both;animation-delay:calc(1.1s + var(--d) * .15s)}
+  .ld-stav:not(.in) .ld-sline{width:0}.ld-stav.in .ld-sline{transition:width 1.4s ease-in-out 1.8s}
+  .ld-stav:not(.in) .ld-sflow span::before{background:var(--l-line)}.ld-stav.in .ld-sflow span::before{transition:background .2s}.ld-stav.in .ld-sflow .s1::before{transition-delay:1.8s}.ld-stav.in .ld-sflow .s2::before{transition-delay:2.5s}.ld-stav.in .ld-sflow .s3::before{transition-delay:3.2s}
+  .ld-stav:not(.in) .ld-sflow .s3{color:var(--l-mut)}.ld-stav.in .ld-sflow .s3{transition:color .2s 3.2s}
+  .ld-stav:not(.in) .ld-stamp{opacity:0}.ld-stav.in .ld-stamp{animation:ldStamp .5s cubic-bezier(.2,1.6,.4,1) both;animation-delay:3.4s}
   .ld-rent2:not(.in) .ld-type{width:0}.ld-rent2.in .ld-type{animation:ldTypeIn .9s steps(4) both;animation-delay:.3s}
   .ld-rent2:not(.in) .ld-rdrop{opacity:0;transform:translateY(-6px)}.ld-rent2.in .ld-rdrop{animation:ldDrop2 .35s ease-out both;animation-delay:1.25s}
   .ld-rent2:not(.in) .ld-rlist li{opacity:0}.ld-rent2.in .ld-rlist li{animation:ldSlide .45s ease-out both;animation-delay:calc(.2s + var(--d) * .12s)}
@@ -2479,6 +2506,20 @@ document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="nbGo"
   render();window.scrollTo(0,0)});
 
 /* ---------- Úvodná stránka (pred prihlásením) ---------- */
+/* ukážka stavby: denný záznam → súpis po častiach → odsúhlasenie dozorom (úvodná stránka) */
+function ldStavbaHTML(){const parts=[["SO 01 Hlavná budova","412 600 €",62,"8 420,00 €"],["SO 02 Prístavba","186 300 €",38,"4 160,00 €"],["SO 03 Spevnené plochy","74 900 €",12,"1 409,00 €"]];
+  const crew=[["Murár","×4"],["Pomocník","×2"],["Tesár","×2"],["CAT 313F","8 h"],["MAN TGS","3 jazdy"]];
+  return `<div class="ld-mock ld-stav" aria-hidden="true">
+    <div class="ld-wtop"><b>Rekonštrukcia MŠ Hviezdoslavova</b><span class="ld-wnav">Rim. Sobota</span></div>
+    <div class="ld-stabs"><i class="on">Denný záznam</i><i>Súpis prác</i><i>Kontrolné dni</i><i>Dokumentácia</i></div>
+    <div class="ld-sday"><div class="ld-sdh"><b>St 28. 10. 2026</b><span>☀ 14 °C · zapísal Marek D.</span><em>uzamknuté</em></div>
+      <p>Betonáž základových pásov, úsek B. Osadenie debnenia stropu nad 1. NP.</p>
+      <div class="ld-screw">${crew.map(([a,b],i)=>`<i style="--d:${i}">${a} <b>${b}</b></i>`).join("")}</div></div>
+    <div class="ld-ssup"><div class="ld-sdh"><b>Súpis vykonaných prác č. 4 · október</b><span>aktuálne obdobie</span></div>
+      ${parts.map(([n,b,p,c],i)=>`<div class="ld-spart" style="--p:${p}%;--d:${i}"><div><b>${n}</b><span>rozpočet ${b}</span></div><div class="ld-sbar"><i></i></div><span class="ld-spct">${p} %</span><b class="ld-scur">${c}</b></div>`).join("")}
+      <div class="ld-stot"><span>Spolu bez DPH</span><b>13 989,00 €</b></div>
+      <div class="ld-sflow"><span class="s1">Rozpracované</span><span class="s2">Odoslané dozoru</span><span class="s3">Odsúhlasené</span><i class="ld-sline"></i></div>
+      <div class="ld-stamp"><b>Odsúhlasené</b><span>Ing. Eva T., stavebný dozor · 28. 10. 2026 18:17</span></div></div></div>`}
 /* ukážka inventára požičovne (úvodná stránka) */
 function ldRentHTML(){const items=[["Búracie kladivo Hilti TE 1000","P-001","out","do 30. 10.",78],["Vibračná doska 90 kg","P-020","free","",64],["Elektrocentrála 5 kW","P-030","late","mala sa vrátiť 27. 10.",91],["Miešačka na betón 160 l","P-010","rez","od 2. 11.",42],["Uhlová brúska 230 mm","P-050","free","",27]];
   const st={free:["k dispozícii","free"],out:["vypožičané","out"],rez:["rezervované","rez"],late:["po termíne","late"]};
@@ -2573,13 +2614,10 @@ function landingHTML(){
   </div></section>
 
   <section class="ld-sec ld-mod alt"><div class="ld-in ld-two rev">
-    <div class="ld-copy"><div class="ld-tag">${icon("home")}Stavba</div><h2>Stavebný denník, súpis prác, fakturácia v okamžitom prehľade</h2>
+    <div class="ld-copy"><div class="ld-tag">${icon("home")}Stavba</div><h2>Stavebný denník a stavba v okamžitom prehľade</h2>
       <p>Vedenie elektronického denníka, rozdelenie práv pre jednotlivých účastníkov stavby, možnosť evidencie konkrétnych zamestnancov a strojov na stavbe. Priprav súpis prác a odošli ho na schválenie. Stavebný dozor ho skontroluje a odsúhlasí priamo v aplikácii – rýchlo, efektívne, bez prestojov a naťahovania času fakturácie.</p>
       <ul><li>import rozpočtov z ľubovoľných programov</li><li>kontrolné dni s pozvánkami, prezenčnou listinou a zápismi</li><li>export stavebného denníka kedykoľvek v priebehu stavby</li></ul></div>
-    <div class="ld-mock ld-supis" aria-hidden="true"><div class="ld-mockbar"><b>Súpis vykonaných prác č. 4</b><span>október</span></div>
-      ${[["Výkop jamy do 1000 m³","124,00 m³","2 108,00 €"],["Betón základových pásov C25/30","38,50 m³","5 005,00 €"],["Murivo z tvárnic hr. 300","96,00 m²","4 320,00 €"],["Hydroizolácia spodnej stavby","142,00 m²","2 556,00 €"]].map(r=>`<div class="ld-srow"><span>${r[0]}</span><span>${r[1]}</span><b>${r[2]}</b></div>`).join("")}
-      <div class="ld-stot"><span>Spolu bez DPH</span><b>13 989,00 €</b></div>
-      <div class="ld-stamp"><b>Odsúhlasené</b><span>Ing. Eva Tóthová, stavebný dozor</span></div></div>
+    ${ldStavbaHTML()}
   </div></section>
 
   <section class="ld-sec ld-start"><div class="ld-in">
