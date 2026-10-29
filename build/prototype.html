@@ -2704,17 +2704,17 @@ function landingHTML(){
 
   <section class="ld-sec ld-price" id="cennik"><div class="ld-in">
     <h2 class="ld-center">Cenník</h2>
-    <p class="ld-lead">Platíš len za moduly, ktoré používaš. Karta Firma je vždy zadarmo a prvých 14 dní si vyskúšaš všetko bez platby.</p>
+    <p class="ld-lead">Vyskúšaj si celú stavebnú firmu v skúšobnej dobe a vyber si moduly, ktoré budú pre teba dôležité.</p>
     <div class="ld-per" role="group" aria-label="Spôsob platby"><button class="on" data-a="ldPer" data-p="m" aria-pressed="true">Mesačne</button><button data-a="ldPer" data-p="y" aria-pressed="false">Ročne <small>2 mesiace zadarmo</small></button></div>
     <div class="ld-pgrid">
+      <div class="ld-pcard free"><div class="ld-ptop">${icon("firma")}<b>Firma</b></div><div class="ld-pprice"><b>0 €</b></div><div class="ld-pvat">vždy zadarmo</div>
+        <div class="ld-plim">súčasť každého predplatného</div><ul><li>profil firmy</li><li>evidencia zamestnancov a vozového parku</li><li>nástenka a úlohy užívateľom</li></ul></div>
       ${[["home","Stavba","do 10 aktívnych stavieb","bez obmedzenia počtu účastníkov stavby",["stavebný denník a kontrolné dni","rozpočet po častiach, súpisy a fakturácia","odsúhlasenie stavebným dozorom","dokumentácia a výkresy"]],
         ["personal","Personalistika","do 20 zamestnancov","",["dochádzka a podklady pre mzdy","dovolenky, priepustky, PN","služobné cesty a školenia","OOPP a povinné formuláre"]],
         ["doprava","Doprava a logistika","do 20 strojov a vozidiel","",["plánovač s upozornením na kolízie","kniha jázd a import z GPS","súpisy pre fakturáciu","váženie a štatistiky"]],
         ["pozicovna","Požičovňa","celý inventár požičovne","",["evidencia náradia a strojov","rezervácie a výpožičky","výpožičný list na podpis","vyťaženosť a prehľady"]]].map(([ic,n,lim,lim2,f])=>`<div class="ld-pcard"><div class="ld-ptop">${icon(ic)}<b>${n}</b></div>
         <div class="ld-pprice"><span class="pm"><b>49 €</b> / mesiac</span><span class="py"><b>490 €</b> / rok</span></div><div class="ld-pvat">bez DPH</div>
         <div class="ld-plim">${lim}${lim2?`<br><small>${lim2}</small>`:""}</div><ul>${f.map(x=>`<li>${x}</li>`).join("")}</ul></div>`).join("")}
-      <div class="ld-pcard free"><div class="ld-ptop">${icon("firma")}<b>Firma</b></div><div class="ld-pprice"><b>0 €</b></div><div class="ld-pvat">vždy zadarmo</div>
-        <div class="ld-plim">súčasť každého predplatného</div><ul><li>údaje o firme, logo a pečiatka</li><li>zamestnanci, stroje a vozidlá</li><li>používatelia a prístupy</li><li>nástenka a úlohy</li></ul></div>
     </div>
     <p class="ld-pnote">Potrebuješ viac zamestnancov, vozidiel alebo stavieb? <button class="ld-link" data-a="landScroll" data-to="kontakt">Napíš nám</button> a pripravíme ti ponuku na mieru.</p>
   </div></section>
