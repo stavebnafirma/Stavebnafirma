@@ -124,6 +124,13 @@ table.budget td.code{font-size:12px;color:var(--muted)}
 @media(max-width:620px){.eclist li{grid-template-columns:auto minmax(0,1fr) auto}.eclist .docbtn{grid-column:1/-1}}
 .ectag{font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;background:var(--surface2,#eef0f2);white-space:nowrap}
 .ectag.c-mat{background:#e8f0fb;color:#1f4f8f}.ectag.c-sub{background:#f3ecfa;color:#5b2d86}.ectag.c-phm{background:#fdf0e3;color:#8a4a0c}.ectag.c-pers{background:#e6f5ec;color:#1d6b41}.ectag.c-dop{background:#fff4d6;color:#7a5a00}
+.gtl{list-style:none;margin:0;padding:0}.gtl li{display:grid;grid-template-columns:92px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0}
+.gstop{border-left:3px solid var(--accent);padding-left:10px!important;background:color-mix(in srgb,var(--accent) 5%,transparent);border-radius:0 8px 8px 0}.gstop.known{border-left-color:var(--ok)}
+.gtime{display:flex;flex-direction:column;font-size:14px;font-weight:600}.gtime .muted{font-weight:400;font-size:12px}
+.gfields{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);gap:6px}.gfields input,.gfields select{min-width:0}
+.gmap{font-size:12px;color:var(--muted);white-space:nowrap}.gseg{padding-left:13px!important;color:var(--ink)}.gseg .gtime{font-weight:400;color:var(--muted)}
+.gsegm{display:flex;gap:12px;align-items:center;flex-wrap:wrap;grid-column:2/-1}.gsegm select{max-width:100%;flex:1 1 220px}
+@media(max-width:700px){.gtl li{grid-template-columns:70px minmax(0,1fr);align-items:start}.gfields{grid-template-columns:1fr}.gmap{grid-column:2}}
 .seenline{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ok);font-weight:600}.dexp summary{cursor:pointer}
 .bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
 table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
@@ -1299,7 +1306,153 @@ function dopravaHTML(){
   if(m)return vehDetailHTML(m);
   const t=view.dTab||"park";const al=fleetAlerts();
   const tabs="";
-  return `<div class="stack"><div><div class="eyebrow">Doprava a logistika</div><h1>${t==="logi"?"Logistika – plánovač":t==="pers"?"Personál – tímy a plánovač":t==="export"?"Export – súpis pre fakturáciu":t==="vazenie"?"Váženie":t==="stat"?"Štatistika":t==="terminy"?"Údržba a servis":"Strojový a vozový park"}</h1></div>${tabs}${t==="terminy"?termsOverviewHTML():t==="logi"?logiHTML():t==="pers"?teamsPlanHTML():t==="export"?dxHTML():t==="vazenie"?weighHTML():t==="stat"?statsHTML():parkHTML()}</div>`}
+  return `<div class="stack"><div><div class="eyebrow">Doprava a logistika</div><h1>${t==="logi"?"Logistika – plánovač":t==="pers"?"Personál – tímy a plánovač":t==="export"?"Export – súpis pre fakturáciu":t==="gps"?"Import jázd z GPS":t==="vazenie"?"Váženie":t==="stat"?"Štatistika":t==="terminy"?"Údržba a servis":"Strojový a vozový park"}</h1></div>${tabs}${t==="terminy"?termsOverviewHTML():t==="logi"?logiHTML():t==="pers"?teamsPlanHTML():t==="export"?dxHTML():t==="gps"?gpsHTML():t==="vazenie"?weighHTML():t==="stat"?statsHTML():parkHTML()}</div>`}
+/* GPS_CORE-START */
+/* ---------- Doprava: import z GPS (Commander a iné KML) – rozdelenie jazdy na úseky podľa zastávok ---------- */
+const GPS_DEF={minStop:5,speed:3,mergeM:300,minKm:0.5};
+const gpsCfg=()=>{let c={};try{c=JSON.parse(localStorage.getItem("sf-gps-cfg")||"{}")}catch(e){}return {...GPS_DEF,...c}};
+function hav(a,b){const R=6371,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lon-a.lon)*r,x=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.min(1,Math.sqrt(x)))}
+const gpsTime=s=>{const m=String(s||"").match(/(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);if(!m)return null;const z=n=>String(n).padStart(2,"0");return `${m[3]}-${z(m[2])}-${z(m[1])}T${z(m[4])}:${m[5]}:${m[6]||"00"}`};
+const tsec=iso=>{const [d,t]=iso.split("T"),[Y,M,D]=d.split("-").map(Number),[h,mi,s]=t.split(":").map(Number);return Date.UTC(Y,M-1,D,h,mi,s||0)/1000};
+const hhmm=iso=>iso?iso.slice(11,16):"";
+const xmlTxt=s=>String(s||"").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,"$1").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,"&").trim();
+const tagIn=(s,t)=>{const m=s.match(new RegExp(`<${t}[^>]*>([\\s\\S]*?)</${t}>`));return m?xmlTxt(m[1]):""};
+/* KML → vozidlá → jazdy (zapnutý motor) → body {t,lat,lon,v} */
+function gpsParseKML(txt){const out=[];
+  const blocks=txt.split(/<Folder\b/).slice(1);let veh=null;
+  blocks.forEach(b=>{const name=tagIn(b,"name"),body=b;const pms=body.split(/<Placemark\b/).slice(1);
+    if(!pms.length||!/<Placemark/.test(b)){veh={name,trips:[]};out.push(veh);return}
+    if(!veh){veh={name:"",trips:[]};out.push(veh)}
+    const head=body.split(/<Placemark\b/)[0],desc=tagIn(head,"description"),tt=desc.split("->").map(gpsTime),nm=name.split("->");
+    const tr={from:(nm[0]||"").trim(),to:(nm[1]||"").trim(),t0:tt[0],t1:tt[1],pts:[],marks:[]};
+    pms.forEach(pm=>{const d=tagIn(pm,"description"),v=+((d.match(/Rýchlos[ťt][^<]*<\/b><\/td><td>\s*([\d.,]+)/)||[])[1]||"0").replace(",","."),t=gpsTime((d.match(/Čas:?<\/b><\/td><td>([^<]+)/)||[])[1]);
+      const cs=tagIn(pm,"coordinates").split(/\s+/).filter(Boolean).map(c=>{const [lo,la]=c.split(",").map(Number);return {lat:la,lon:lo}}).filter(c=>isFinite(c.lat)&&isFinite(c.lon));
+      if(/<Point/.test(pm)){const nmP=tagIn(pm,"name");if(cs[0])tr.marks.push({...cs[0],name:nmP,t});return}
+      cs.forEach((c,i)=>{if(i===0&&tr.pts.length)return;tr.pts.push({...c,v,t:t||tr.t0})})});
+    if(!tr.pts.length&&tr.marks.length)tr.pts=tr.marks.map(m=>({lat:m.lat,lon:m.lon,v:0,t:m.t||tr.t0}));
+    if(tr.marks.length>1){tr.from=tr.marks[0].name||tr.from;tr.to=tr.marks[tr.marks.length-1].name||tr.to}veh.trips.push(tr)});
+  return out.filter(v=>v.trips.length)}
+/* Excel z Commandera (Prehľad jázd / Kniha jázd): riadky jázd s presnými km a vodičom */
+function gpsParseRows(aoa){const hi=aoa.findIndex(r=>r&&r.some(c=>String(c).trim()==="Začiatok")&&r.some(c=>/Vzdialenos/.test(String(c))));if(hi<0)return [];
+  const H=aoa[hi].map(c=>String(c||"").trim()),col=re=>H.findIndex(h=>re.test(h));
+  const cOd=col(/^Od$/),cZ=col(/^Začiatok$/),cDo=col(/^Do$/),cK=col(/^Koniec$/),cKm=col(/^Vzdialenos/),cV=col(/^Vodič/),cT0=col(/^Tacho.*zač/i),cT1=col(/^Tacho.*kon/i),cLa0=col(/šírka Začiatok/),cLo0=col(/dĺžka Začiatok/),cLa1=col(/šírka Koniec/),cLo1=col(/dĺžka Koniec/);
+  const asIso=v=>{if(v instanceof Date){const z=n=>String(n).padStart(2,"0");return `${v.getFullYear()}-${z(v.getMonth()+1)}-${z(v.getDate())}T${z(v.getHours())}:${z(v.getMinutes())}:${z(v.getSeconds())}`}
+    if(typeof v==="number"){const d=new Date(Math.round((v-25569)*86400000));return d.toISOString().slice(0,19)}return gpsTime(v)};
+  return aoa.slice(hi+1).filter(r=>r&&asIso(r[cOd])).map(r=>({t0:asIso(r[cOd]),t1:asIso(r[cDo]),from:String(r[cZ]||""),to:String(r[cK]||""),km:+String(r[cKm]??"").replace(",",".")||0,driver:cV>=0?String(r[cV]||""):"",tacho0:cT0>=0?r[cT0]:"",tacho1:cT1>=0?r[cT1]:"",lat0:+r[cLa0]||null,lon0:+r[cLo0]||null,lat1:+r[cLa1]||null,lon1:+r[cLo1]||null}))}
+/* bez KML: jazdy len z Excelu (bez delenia na zastávky) */
+function gpsVehFromRows(rows,name){return {name,trips:rows.filter(r=>r.lat0&&r.lat1).map(r=>({from:r.from,to:r.to,t0:r.t0,t1:r.t1,marks:[],pts:[{lat:r.lat0,lon:r.lon0,v:0,t:r.t0},{lat:r.lat1,lon:r.lon1,v:0,t:r.t1}]}))}}
+/* zastávky v rámci jazdy: súvislý úsek s rýchlosťou pod hranicou alebo bez pohybu aspoň minStop minút */
+function gpsStops(tr,C){const P=tr.pts,st=[];let i=0;
+  while(i<P.length){if(P[i].v<C.speed){let j=i;while(j+1<P.length&&(P[j+1].v<C.speed||hav(P[i],P[j+1])<0.08))j++;
+      const dur=(tsec(P[j].t)-tsec(P[i].t))/60;if(dur>=C.minStop&&i>0&&j<P.length-1)st.push({i,j,t0:P[i].t,t1:P[j].t,lat:P[i].lat,lon:P[i].lon});i=j+1}
+    else{if(i+1<P.length){const gap=(tsec(P[i+1].t)-tsec(P[i].t))/60;if(gap>=C.minStop&&hav(P[i],P[i+1])<0.2)st.push({i,j:i+1,t0:P[i].t,t1:P[i+1].t,lat:P[i].lat,lon:P[i].lon})}i++}}
+  return st}
+const pathKm=(P,a,b)=>{let s=0;for(let k=a;k<b;k++)s+=hav(P[k],P[k+1]);return s};
+/* celý deň vozidla → body zastávok (začiatok, zastávky, konce jázd) a úseky medzi nimi */
+function gpsSplit(veh,rows,C){C=C||gpsCfg();const stops=[],segs=[];
+  veh.trips.forEach((tr,ti)=>{const P=tr.pts;if(!P.length)return;const row=(rows||[]).find(r=>Math.abs(tsec(r.t0)-tsec(tr.t0||P[0].t))<=120);
+    const ss=gpsStops(tr,C),nodes=[{k:0,t0:tr.t0||P[0].t,t1:tr.t0||P[0].t,lat:P[0].lat,lon:P[0].lon,addr:tr.from}];
+    ss.forEach(s=>nodes.push({k:s.i,k2:s.j,t0:s.t0,t1:s.t1,lat:s.lat,lon:s.lon}));
+    const last=P[P.length-1];nodes.push({k:P.length-1,t0:tr.t1||last.t,t1:tr.t1||last.t,lat:last.lat,lon:last.lon,addr:tr.to,end:true});
+    const raw=[];for(let n=0;n+1<nodes.length;n++){const a=nodes[n],b=nodes[n+1];raw.push({km:pathKm(P,a.k2??a.k,b.k),dep:a.t1,arr:b.t0})}
+    const gpsKm=raw.reduce((s,r)=>s+r.km,0),f=row&&row.km&&gpsKm>0?row.km/gpsKm:1;
+    nodes.forEach((nd,n)=>{if(n===0){const prev=stops[stops.length-1];
+        if(prev&&prev.end&&hav(prev,nd)<C.mergeM/1000){prev.t1=nd.t1;prev.end=false;prev.addr=prev.addr||nd.addr;return}
+        stops.push({...nd,trip:ti});return}
+      const r=raw[n-1];segs.push({km:r.km*f,dep:r.dep,arr:r.arr,trip:ti,driver:row?row.driver:""});stops.push({...nd,trip:ti})})});
+  /* krátke presuny po stavenisku (pod minKm a do mergeM) zlúčiť so zastávkou */
+  for(let s=0;s<segs.length;s++){const a=stops[s],b=stops[s+1];if(segs[s].km<C.minKm&&hav(a,b)<Math.max(C.mergeM/1000,C.minKm)){a.t1=b.t1;a.addr=a.addr||b.addr;a.end=b.end;if(segs[s+1])segs[s+1].km+=segs[s].km;else if(segs[s-1])segs[s-1].km+=segs[s].km;stops.splice(s+1,1);segs.splice(s,1);s--}}
+  stops.forEach(s=>{s.min=Math.round((tsec(s.t1)-tsec(s.t0))/60)});
+  return {stops,segs}}
+/* GPS_CORE-END */
+const GPS_TYPES=["","Nakládka","Vykládka","Čakanie / prestávka","Garáž / parkovisko","Tankovanie","Iné"];
+const gpsPlaceAt=pt=>{let best=null,bd=1e9;(S.gpsPlaces||[]).forEach(p=>{const d=hav(pt,p);if(d<(p.r||250)/1000&&d<bd){bd=d;best=p}});return best};
+const gpsShortAddr=a=>{const s=String(a||"").replace(/,\s*Slovensko$/,"");const m=s.match(/\d{3}\s?\d{2}\s+(.+)$/);const town=m?m[1].trim():s;const street=s.split(",")[0].trim();return street&&town&&street!==town&&!/^\d{3}\s?\d{2}/.test(street)?`${town}, ${street}`:town};
+const gpsVeh=()=>(S.machines||[]).filter(x=>NEEDS_DRIVER.includes(x.cat));
+function gpsDriverFor(name,m){const n=normText(name);if(n){const w=(S.workers||[]).find(w=>{const f=normText(fullName(w));return f&&(f===n||n.split(" ").every(x=>f.includes(x)))});if(w)return w.id}return m&&m.resp||""}
+function gpsJobsFor(date,mid){return (S.jobs||[]).filter(j=>j.date===date&&(j.machines||[]).some(x=>x.machineId===mid)).sort((a,b)=>a.from.localeCompare(b.from))}
+function gpsGuessJob(seg,mid){const d=seg.dep.slice(0,10),js=gpsJobsFor(d,mid);if(js.length===1)return js[0].id;const t=hhmm(seg.dep);const j=js.find(j=>t>=j.from&&t<=j.to);return j?j.id:(js.length?"":"__new")}
+async function gpsLoad(){const G=view.gps,mid=$("#gpsM").value,fk=$("#gpsKml").files[0],fx=$("#gpsXls").files[0];
+  if(!mid){toast("Vyber vozidlo alebo stroj");return}if(!fk&&!fx){toast("Vyber súbor KML alebo Excel z GPS");return}
+  let veh=null,rows=[];
+  try{if(fx){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.");return}const wb=XLSX.read(await fx.arrayBuffer(),{type:"array",cellDates:true});
+      wb.SheetNames.forEach(n=>{if(!rows.length)rows=gpsParseRows(XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true}))})}
+    if(fk){const vs=gpsParseKML(await fk.text());veh=vs[0]||null;if(vs.length>1)toast(`V súbore je ${vs.length} vozidiel, načítavam prvé: ${vs[0].name}`)}
+    else veh=gpsVehFromRows(rows,"");}
+  catch(e){console.error(e);toast("Súbor sa nepodarilo prečítať: "+(e.message||e));return}
+  if(!veh||!veh.trips.length){toast("V súbore sa nenašli žiadne jazdy s polohou");return}
+  veh.trips.sort((a,b)=>(a.t0||"").localeCompare(b.t0||""));
+  const C=gpsCfg(),R=gpsSplit(veh,rows,C),m=machine(mid);
+  R.stops.forEach(s=>{const kp=gpsPlaceAt(s);s.name=kp?kp.name:(s.addr?gpsShortAddr(s.addr):"");s.known=!!kp;s.type=kp&&kp.type||"";s.mat=kp&&kp.mat||""});
+  R.segs.forEach(g=>{g.jobId=gpsGuessJob(g,mid);g.driverId=gpsDriverFor(g.driver,m)});
+  Object.assign(G,{step:2,mid,src:[fk&&fk.name,fx&&fx.name].filter(Boolean).join(" + "),vehName:veh.name,stops:R.stops,segs:R.segs,hasKml:!!fk,rowKm:rows.reduce((s,r)=>s+r.km,0)});render()}
+function gpsRead(){const G=view.gps;if(!G||G.step!==2)return;document.querySelectorAll("[data-gs]").forEach(el=>{const s=G.stops[+el.dataset.gs];if(s)s[el.dataset.k]=el.value});
+  document.querySelectorAll("[data-gg]").forEach(el=>{const g=G.segs[+el.dataset.gg];if(g)g[el.dataset.k]=el.value})}
+function gpsHTML(){const G=view.gps||(view.gps={step:1});const vs=gpsVeh(),C=gpsCfg(),ed=canEdit("doprava");
+  if(!ed)return `<div class="card muted">Import z GPS môže robiť používateľ s právom upravovať Dopravu.</div>`;
+  if(G.step!==2)return `<div class="stack"><form class="card stack" id="gpsForm"><div class="entry-head"><h3>Import jázd z GPS</h3></div>
+      <div class="muted" style="font-size:14px">GPS jednotky zapíšu celý deň so zapnutým motorom ako jednu jazdu. Aplikácia z trasy nájde zastávky (nakládky, vykládky, čakanie) a rozdelí deň na jednotlivé jazdy. Kilometre a časy sedia s GPS.</div>
+      <label>Vozidlo alebo stroj<select id="gpsM">${vs.map(v=>`<option value="${v.id}" ${G.mid===v.id?"selected":""}>${esc(v.name)}${v.ecv?" · "+esc(v.ecv):""}</option>`).join("")}</select></label>
+      <div class="grid2"><label class="docdrop"><input type="file" id="gpsKml" accept=".kml,application/vnd.google-earth.kml+xml"><span>Trasa (KML) – body trasy s rýchlosťou a časom</span></label>
+        <label class="docdrop"><input type="file" id="gpsXls" accept=".xlsx,.xls"><span>Prehľad alebo kniha jázd (Excel) – nepovinné, spresní km a vodiča</span></label></div>
+      <div class="muted" style="font-size:13px">Commander: Prehľad jázd → Export do KML (trasa) a Export do Excelu. Ak nahráš len Excel, jazdy sa prenesú bez delenia na zastávky.</div>
+      <details><summary>Nastavenie rozpoznávania zastávok</summary><div class="grid2" style="margin-top:8px">
+        <label>Zastávka trvá aspoň (min)<input id="gpsMin" inputmode="numeric" value="${C.minStop}"></label><label>Stojí, ak je rýchlosť pod (km/h)<input id="gpsSpd" inputmode="numeric" value="${C.speed}"></label>
+        <label>Zlúčiť zastávky bližšie ako (m)<input id="gpsMer" inputmode="numeric" value="${C.mergeM}"></label><label>Presun po stavenisku do (km)<input id="gpsKmin" inputmode="decimal" value="${String(C.minKm).replace(".",",")}"></label></div></details>
+      <div class="row"><button class="btn primary" type="submit">Načítať a rozdeliť</button></div></form>
+    ${(S.gpsPlaces||[]).length?`<div class="card stack"><b>Zapamätané miesta <span class="num muted">${S.gpsPlaces.length}</span></b><ul class="doclist">${S.gpsPlaces.map(p=>`<li><span class="ectag">${esc(p.type||"miesto")}</span><div class="docmain"><b>${esc(p.name)}</b><span class="muted">${p.mat?esc(p.mat)+" · ":""}${p.lat.toFixed(4)}, ${p.lon.toFixed(4)}</span></div><div class="docbtn"><button class="btn small ghost" data-a="gpsPlDel" data-id="${p.id}">Zabudnúť</button></div></li>`).join("")}</ul></div>`:""}</div>`;
+  const m=machine(G.mid),days=[...new Set(G.stops.map(s=>s.t0.slice(0,10)))],mats=[...new Set([...wMats(),...(S.gpsPlaces||[]).map(p=>p.mat).filter(Boolean)])];
+  const tk=G.segs.reduce((s,g)=>s+g.km,0),th=G.segs.reduce((s,g)=>s+(tsec(g.arr)-tsec(g.dep))/3600,0);
+  const jobOpts=(d,sel)=>{const js=gpsJobsFor(d,G.mid);return `<option value="__new" ${sel==="__new"?"selected":""}>+ nová úloha v plánovači</option>${js.map(j=>`<option value="${j.id}" ${sel===j.id?"selected":""}>${esc(j.from)}–${esc(j.to)} ${esc(j.client||"")}${j.desc?" – "+esc(j.desc):""}</option>`).join("")}<option value="" ${sel===""?"selected":""}>neukladať</option>`};
+  const stopRow=(s,i)=>`<li class="gstop${s.known?" known":""}"><div class="gtime num">${hhmm(s.t0)}${s.t1!==s.t0?`–${hhmm(s.t1)}`:""}${s.min?`<span class="muted">${s.min} min</span>`:""}</div>
+      <div class="gfields"><input data-gs="${i}" data-k="name" value="${esc(s.name)}" list="gpsPlL" placeholder="pomenuj miesto, napr. Lom Gortva" aria-label="Miesto">
+        <select data-gs="${i}" data-k="type" aria-label="Čo sa tu dialo">${GPS_TYPES.map(t=>`<option value="${t}" ${s.type===t?"selected":""}>${t||"– zastávka –"}</option>`).join("")}</select>
+        <input data-gs="${i}" data-k="mat" value="${esc(s.mat)}" list="gpsMatL" placeholder="materiál" aria-label="Materiál"></div>
+      <a class="gmap" href="https://mapy.cz/zakladni?q=${s.lat.toFixed(6)},${s.lon.toFixed(6)}" target="_blank" rel="noopener" title="Ukázať na mape">${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}</a></li>`;
+  const segRow=(g,i)=>`<li class="gseg"><div class="gtime num">${hhmm(g.dep)}–${hhmm(g.arr)}</div><div class="gsegm"><b class="num">${nf1(Math.round(g.km*10)/10)} km</b><span class="muted num">${nf1(Math.round((tsec(g.arr)-tsec(g.dep))/360)/10)} h</span>
+      <select data-gg="${i}" data-k="jobId" aria-label="Zákazka">${jobOpts(g.dep.slice(0,10),g.jobId)}</select></div></li>`;
+  return `<div class="stack"><div class="card stack"><div class="entry-head"><div><h3>${esc(m?m.name:"")} · ${days.map(d2).join(", ")}</h3><div class="muted" style="font-size:13px">${esc(G.src)} · ${G.segs.length} ${pl(G.segs.length,"jazda","jazdy","jázd")} · ${nf1(Math.round(tk*10)/10)} km · ${nf1(Math.round(th*10)/10)} h jazdy${G.rowKm?` · podľa tachografu GPS ${nf1(Math.round(G.rowKm*10)/10)} km`:""}</div></div>
+      <button class="btn small ghost" data-a="gpsBack">Iný súbor</button></div>
+      <div class="muted" style="font-size:13px">Pomenuj zastávky a vyber, čo sa na nich dialo – miesta si aplikácia zapamätá a nabudúce ich doplní sama. Každú jazdu prirad k úlohe v plánovači; uloží sa do jej knihy jázd.</div>
+      <div class="row"><button class="btn small" data-a="gpsOsm">Doplniť názvy obcí z mapy</button><span class="muted" style="font-size:12px">OpenStreetMap, len pre nepomenované zastávky</span></div></div>
+    <datalist id="gpsPlL">${(S.gpsPlaces||[]).map(p=>`<option value="${esc(p.name)}">`).join("")}</datalist><datalist id="gpsMatL">${mats.map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
+    ${days.map(d=>`<div class="card stack"><div class="eyebrow">${esc(fmtDate(d))}</div><ol class="gtl">${G.stops.map((s,i)=>s.t0.slice(0,10)!==d?"":stopRow(s,i)+(G.segs[i]?segRow(G.segs[i],i):"")).join("")}</ol></div>`).join("")}
+    <div class="card row"><button class="btn primary" data-a="gpsSave">Uložiť do knihy jázd</button><span class="muted" style="font-size:13px">Existujúca kniha jázd tohto vozidla na vybraných úlohách sa nahradí.</span></div></div>`}
+function gpsSaveAll(){const G=view.gps;gpsRead();const m=machine(G.mid);if(!m)return;
+  const nm=s=>(s.name||"").trim()||`${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}`;
+  /* zapamätať pomenované miesta */
+  S.gpsPlaces=S.gpsPlaces||[];G.stops.forEach(s=>{const n=(s.name||"").trim();if(!n||/^\d+\.\d+, \d+\.\d+$/.test(n))return;const kp=gpsPlaceAt(s);
+    if(kp){if(kp.name===n){if(s.type)kp.type=s.type;if(s.mat)kp.mat=s.mat}return}if(s.addr&&n===gpsShortAddr(s.addr)&&!s.type)return;
+    S.gpsPlaces.push({id:uid("gp"),name:n,lat:+s.lat.toFixed(6),lon:+s.lon.toFixed(6),r:250,type:s.type||"",mat:s.mat||""})});
+  const by=new Map();G.segs.forEach((g,i)=>{if(!g.jobId)return;const k=g.jobId==="__new"?"__new|"+g.dep.slice(0,10):g.jobId;if(!by.has(k))by.set(k,[]);by.get(k).push(i)});
+  let nj=0,nr=0;S.jobs=S.jobs||[];
+  by.forEach((idx,k)=>{let j;if(k.startsWith("__new|")){const d=k.slice(6),f=G.segs[idx[0]],l=G.segs[idx[idx.length-1]];
+      const mats=[...new Set(idx.map(i=>G.stops[i+1].mat).filter(Boolean))];
+      j={id:uid("jb"),status:"planned",date:d,from:hhmm(f.dep),to:hhmm(l.arr)>hhmm(f.dep)?hhmm(l.arr):"23:59",client:"",projectId:"",own:false,place:nm(G.stops[idx[idx.length-1]+1]),desc:mats.length?"Doprava – "+mats.join(", "):"Doprava podľa GPS",
+        machines:[{machineId:m.id,driverId:f.driverId||m.resp||""}],workers:[],priceMode:"cennik",price:"",note:"Vytvorené z importu GPS – doplň objednávateľa."};S.jobs.push(j);nj++}
+    else j=S.jobs.find(x=>x.id===k);if(!j)return;
+    if(!(j.machines||[]).some(x=>x.machineId===m.id))(j.machines=j.machines||[]).push({machineId:m.id,driverId:G.segs[idx[0]].driverId||m.resp||""});
+    (j.log=j.log||{})[m.id]=idx.map(i=>{const g=G.segs[i],a=G.stops[i],b=G.stops[i+1];nr++;
+      return {from:nm(a),to:nm(b),km:String(Math.round(g.km*10)/10).replace(".",","),h:String(Math.round((tsec(g.arr)-tsec(g.dep))/360)/10).replace(".",","),note:[`${hhmm(g.dep)}–${hhmm(g.arr)}`,b.type&&!/Garáž|^$/.test(b.type)?b.type.toLowerCase():"",b.mat].filter(Boolean).join(" · "),gps:true}})});
+  view.gps={step:1,mid:G.mid};save();toast(`Uložené: ${nr} ${pl(nr,"jazda","jazdy","jázd")} do knihy jázd${nj?` · ${nj} ${pl(nj,"nová úloha","nové úlohy","nových úloh")} v plánovači (doplň objednávateľa)`:""}`);render()}
+async function gpsOsm(){const G=view.gps;gpsRead();const todo=G.stops.filter(s=>!(s.name||"").trim());if(!todo.length){toast("Všetky zastávky už majú názov");return}
+  let ok=0;for(const s of todo){try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&accept-language=sk&lat=${s.lat}&lon=${s.lon}`,{headers:{Accept:"application/json"}});
+      const j=await r.json(),a=j.address||{};const n=a.village||a.town||a.city||a.municipality||a.hamlet||"";if(n){s.name=[n,a.road].filter(Boolean).join(", ");ok++}}catch(e){toast("Mapa nie je dostupná – názvy doplň ručne");break}
+    await new Promise(r=>setTimeout(r,1100))}
+  if(ok)toast(`Doplnené názvy: ${ok}`);render()}
+document.addEventListener("submit",ev=>{if(ev.target.id!=="gpsForm"||!me)return;ev.preventDefault();if(!canEdit("doprava"))return;
+  const c={minStop:Math.max(1,+$("#gpsMin").value||GPS_DEF.minStop),speed:Math.max(0,+$("#gpsSpd").value||GPS_DEF.speed),mergeM:Math.max(0,+$("#gpsMer").value||GPS_DEF.mergeM),minKm:Math.max(0,numIn($("#gpsKmin").value)||GPS_DEF.minKm)};
+  try{localStorage.setItem("sf-gps-cfg",JSON.stringify(c))}catch(e){}view.gps={...(view.gps||{}),mid:$("#gpsM").value};gpsLoad()});
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;if(!/^gps/.test(a)||!canEdit("doprava"))return;
+  if(a==="gpsBack"){view.gps={step:1,mid:view.gps.mid};render()}else if(a==="gpsSave")gpsSaveAll();else if(a==="gpsOsm")gpsOsm();
+  else if(a==="gpsPlDel"){S.gpsPlaces=(S.gpsPlaces||[]).filter(p=>p.id!==b.dataset.id);save();render()}});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me)return;
+  if(t.id==="gpsKml"||t.id==="gpsXls"){const z=t.closest(".docdrop");if(z&&t.files[0])z.querySelector("span").textContent=t.files[0].name}
+  else if(t.dataset&&(t.dataset.gs!==undefined||t.dataset.gg!==undefined)){gpsRead();
+    const G=view.gps;if(t.dataset.gs!==undefined){const s=G.stops[+t.dataset.gs];if(!s)return;
+      if(t.dataset.k==="name"){const kp=(S.gpsPlaces||[]).find(p=>p.name===t.value);if(kp){if(!s.type)s.type=kp.type||"";if(!s.mat)s.mat=kp.mat||""}}
+      /* rovnaké miesto inde v ten deň dostane rovnaký názov (a typ, ak ešte nemá) */
+      G.stops.forEach(o=>{if(o===s||hav(o,s)>0.25)return;if(t.dataset.k==="name"&&(!o.name||(o.addr&&o.name===gpsShortAddr(o.addr))))o.name=s.name;if(t.dataset.k==="type"&&!o.type)o.type=s.type;if(t.dataset.k==="mat"&&!o.mat)o.mat=s.mat});render()}}});
 function parkHTML(){
   const ms=S.machines||[];
   const groups=CAT_ORDER.map(k=>{const list=ms.filter(m=>(CATS[m.cat]?m.cat:"other")===k);if(!list.length)return "";
@@ -3827,7 +3980,7 @@ function subnavRows(){
   if(!me||view.screen==="setup"||view.screen==="profile")return null;const sc=view.screen;
   if(sc==="firma")return [firmTabs().map(([k,l])=>({a:"firmTab",tab:k,l,sel:(firmTabCur()===k)}))];
   if(sc==="personal"){const t=view.pTab||"emp";return [P_TABS.map(([k,l])=>({a:"pTab",tab:k,l,sel:t===k}))]}
-  if(sc==="doprava"){const al=fleetAlerts().length,t=view.dTab||"park";const r=[[{a:"dTab",tab:"park",l:"Stroje a vozidlá",sel:t==="park"},{a:"dTab",tab:"logi",l:"Logistika",sel:t==="logi"},{a:"dTab",tab:"pers",l:"Personál",sel:t==="pers"},{a:"dTab",tab:"export",l:"Export",sel:t==="export"},{a:"dTab",tab:"vazenie",l:"Váženie",sel:t==="vazenie"},{a:"dTab",tab:"terminy",l:"Údržba a servis",sel:t==="terminy",n:al},{a:"dTab",tab:"stat",l:"Štatistika",sel:t==="stat"}]];
+  if(sc==="doprava"){const al=fleetAlerts().length,t=view.dTab||"park";const r=[[{a:"dTab",tab:"park",l:"Stroje a vozidlá",sel:t==="park"},{a:"dTab",tab:"logi",l:"Logistika",sel:t==="logi"},{a:"dTab",tab:"pers",l:"Personál",sel:t==="pers"},{a:"dTab",tab:"export",l:"Export",sel:t==="export"},{a:"dTab",tab:"gps",l:"Import z GPS",sel:t==="gps"},{a:"dTab",tab:"vazenie",l:"Váženie",sel:t==="vazenie"},{a:"dTab",tab:"terminy",l:"Údržba a servis",sel:t==="terminy",n:al},{a:"dTab",tab:"stat",l:"Štatistika",sel:t==="stat"}]];
     const m=view.vehId&&(S.machines||[]).find(x=>x.id===view.vehId);if(m){r[0][0].sel=true;r[0][1].sel=false;r.push([{a:"vehOpen",id:m.id,l:m.name,sel:true}])}return r}
   if(sc==="pozicovna"){const t=rTabCur();return [R_TABS.map(([k,l])=>({a:"rTab",tab:k,l,sel:t===k}))]}
   if(sc==="home")return null;

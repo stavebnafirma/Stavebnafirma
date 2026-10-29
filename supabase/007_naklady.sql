@@ -1,4 +1,4 @@
--- Ekonomika stavby: náklady (kind 'costs') a fotky dokladov.
+-- Ekonomika stavby: náklady (kind 'costs') a fotky dokladov. Zapamätané miesta z importu GPS (kind 'gpsPlaces') patria do Dopravy.
 -- Náklady patria do modulu Stavba, ale nevidí ich stavebný dozor ani bežný člen stavby –
 -- čítať ich môže administrátor, správca a používateľ s právom vidieť Stavbu, zapisovať administrátor a správca.
 -- Fotky dokladov sú v Storage "dokumentacia" v ceste <tenant_id>/naklady/<id stavby>/<súbor>.
@@ -8,7 +8,7 @@ create or replace function public.kind_module(k text) returns text
 language sql immutable set search_path = public as $$
   select case
     when k in ('att','trips','trainings','payProf','payMon') then 'personal'
-    when k in ('jobs','weighs','teams')         then 'doprava'
+    when k in ('jobs','weighs','teams','gpsPlaces') then 'doprava'
     when k in ('rentItems','rentals')           then 'pozicovna'
     when k in ('projects','diary','costs')      then 'stavba'
     else 'firma'
