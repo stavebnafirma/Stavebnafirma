@@ -143,6 +143,7 @@ table.budget td.code{font-size:12px;color:var(--muted)}
 .gsegm{display:flex;gap:12px;align-items:center;flex-wrap:wrap;grid-column:2/-1}.gsegm select{max-width:100%;flex:1 1 220px}
 @media(max-width:700px){.gtl li{grid-template-columns:70px minmax(0,1fr);align-items:start}.gfields{grid-template-columns:1fr}.gmap{grid-column:2}}
 .paycodes{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-top:8px}.paycodes label{font-size:13px}
+.dxres{border-top:1px solid var(--line);padding-top:14px;margin-top:4px}
 .seenline{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ok);font-weight:600}.dexp summary{cursor:pointer}
 .bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
 table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
@@ -3398,7 +3399,7 @@ function dxHTML(){const X=dxState(),cl=dxClients(),ms=dxMachines();
       ${G.map(g=>`<tr><td><b>${esc(g.m.name)}</b>${g.m.ecv?`<br><span class="muted num">${esc(g.m.ecv)}</span>`:""}</td><td class="num r">${g.days}</td><td class="num r">${dxNum(g.h)}${g.pre?"*":""}</td><td class="num r">${g.m.rate?eur(g.m.rate):"–"}</td><td class="num r">${eur(g.ph)}</td><td class="num r">${dxNum(g.km)}${g.pre&&g.km?"*":""}</td><td class="num r">${g.m.rateKm?eur(g.m.rateKm):"–"}</td><td class="num r">${eur(g.pk)}</td>${T.own?`<td class="num r">${g.own?eur(g.own):"–"}</td>`:""}<td class="num r"><b>${eur(g.sum)}</b></td></tr>`).join("")}</tbody>
       <tfoot><tr><td>Spolu</td><td class="num r">${new Set(rows.map(r=>r.j.date)).size}</td><td class="num r">${dxNum(T.h)}</td><td></td><td class="num r">${eur(T.ph)}</td><td class="num r">${dxNum(T.km)}</td><td></td><td class="num r">${eur(T.pk)}</td>${T.own?`<td class="num r">${eur(T.own)}</td>`:""}<td class="num r">${eur(T.sum)}</td></tr></tfoot></table>`}
   return `<div class="stack">
-    <form class="card stack" id="dxForm" onsubmit="return false"><h3>Súpis výkonov strojov</h3>
+    <div class="card stack dxcard"><form class="stack" id="dxForm" onsubmit="return false"><h3>Súpis výkonov strojov</h3>
       <div class="muted" style="font-size:13px">Odpracované hodiny a prejdené km za každý stroj ako podklad k faktúre. Údaje sa berú z naplánovaných úloh a ich knihy jázd.</div>
       <div class="grid3 dxsel"><label>Objednávateľ<select id="dxClient"><option value="">— všetci objednávatelia —</option>${cl.map(c=>`<option ${X.client===c?"selected":""}>${esc(c)}</option>`).join("")}</select></label>
         <label>Od<input type="date" id="dxFrom" value="${esc(X.from)}"></label><label>Do<input type="date" id="dxTo" value="${esc(X.to)}"></label></div>
@@ -3409,7 +3410,7 @@ function dxHTML(){const X=dxState(),cl=dxClients(),ms=dxMachines();
         ${X.all?"":`<div class="skchecks">${ms.map(m=>`<label class="chk"><input type="checkbox" data-dxm="${m.id}" ${X.ms.includes(m.id)?"checked":""}> ${esc(dxMName(m))}</label>`).join("")}</div>
           <div class="row"><button type="button" class="btn small ghost" data-a="dxPick" data-v="all">Označiť všetky</button><button type="button" class="btn small ghost" data-a="dxPick" data-v="none">Zrušiť výber</button></div>`}</fieldset>
     </form>
-    <div class="card stack">
+    <div class="stack dxres">
       <div class="entry-head"><div class="tpseg" role="tablist" style="min-width:280px"><button class="${X.mode==="days"?"on":""}" data-a="dxMode" data-m="days">Po dňoch a strojoch</button><button class="${X.mode==="sum"?"on":""}" data-a="dxMode" data-m="sum">Sumár za obdobie</button></div>
         ${rows.length?`<div class="row"><button class="btn small primary" data-a="dxPdf" data-m="days">PDF po dňoch</button><button class="btn small primary" data-a="dxPdf" data-m="sum">PDF sumár</button><button class="btn small" data-a="dxXls">Excel (oba)</button></div>`:""}</div>
       <div class="muted" style="font-size:13px">${esc(dxSubtitle(X))}</div>
@@ -3418,7 +3419,7 @@ function dxHTML(){const X=dxState(),cl=dxClients(),ms=dxMachines();
         :`<div class="row"><button class="btn small" data-a="dxBillAsk">€ Označiť všetky úkony v súpise ako fakturované</button><span class="muted" style="font-size:13px">Po vystavení faktúry. Fakturované úkony sa v ďalšom súpise nezobrazia, ak je zapnuté „Len nefakturované“.</span></div>`):(js.some(j=>!j.billed)?`<div class="muted" style="font-size:13px">Úkony s budúcim dátumom sa dajú označiť ako fakturované až po ich vykonaní.</div>`:`<div class="note okn">Všetky úkony v súpise sú označené ako fakturované.</div>`)})():""}
       ${pre?`<div class="hint">* predbežné – úloha ešte nemá vyplnenú knihu jázd, hodiny sú z času úlohy a km z odhadu. Pred fakturáciou doplň knihu jázd.</div>`:""}
       ${T.own?`<div class="hint">Pri úlohách s vlastnou (dohodnutou) cenou sa hodiny a km uvádzajú informatívne a suma je dohodnutá cena úlohy.</div>`:""}
-    </div>
+    </div></div>
     ${logExportHTML()}
   </div>`}
 function dxPDF(mode){const X=dxState(),rows=dxRows(X);if(!rows.length){toast("Žiadne údaje na export");return}
@@ -5279,18 +5280,18 @@ function econHTML(p){const A=econAuto(p),costs=costsOf(p).sort((a,b)=>(b.date||"
   const list=shown.map(c=>`<li><span class="ectag c-${c.cat}">${costCat(c.cat)}</span><div class="docmain"><b>${esc(c.desc||c.supplier||costCat(c.cat))}</b><span class="muted">${d2(c.date)}${c.supplier?` · ${esc(c.supplier)}`:""}${c.docNo?` · ${esc(c.docNo)}`:""}${c.part&&multiPart(p)?` · ${esc((p.budget.parts.find(x=>x.id===c.part)||{}).name||"")}`:""}</span></div>
       <b class="num">${eur(numIn(c.amount))}</b><div class="docbtn">${c.file?`<button class="btn small ghost" data-a="ecOpen" data-id="${c.id}">Doklad</button>`:""}${ed?`<button class="btn small ghost" data-a="ecEdit" data-id="${c.id}">Upraviť</button>`:""}</div></li>`).join("");
   return `<div class="stack">
-    <div class="eckpi"><div class="card"><div class="muted">Rozpočet bez DPH</div><div class="total num">${B?eur(B):"–"}</div></div>
-      <div class="card"><div class="muted">Vyfakturované (odsúhlasené súpisy)</div><div class="total num">${eur(inv)}</div>${T.open?`<div class="muted" style="font-size:13px">+ ${eur(T.open)} rozpracované</div>`:""}</div>
-      <div class="card"><div class="muted">Náklady spolu</div><div class="total num">${eur(all)}</div>${B?`<div class="muted" style="font-size:13px">${nf1(Math.round(all/B*1000)/10)} % rozpočtu</div>`:""}</div>
-      <div class="card"><div class="muted">Výsledok (fakturované − náklady)</div><div class="total num" style="color:var(--${res>=0?"ok":"bad"})">${eur(res)}</div></div></div>
-    ${B?`<div class="card stack"><div class="eyebrow">Čerpanie</div><div class="ecvs"><span>Vyfakturované</span>${bar(inv,B,"ok")}<span class="num">${B?nf1(Math.round(inv/B*1000)/10):0} %</span><span>Náklady</span>${bar(all,B,all>inv?"bad":"")}<span class="num">${nf1(Math.round(all/B*1000)/10)} %</span></div></div>`:""}
     <div class="card stack"><div class="entry-head"><div class="eyebrow">Náklady podľa kategórií</div>${ed&&!D?`<button class="btn small primary" data-a="ecNew">+ Pridať náklad</button>`:""}</div>
       ${catRows||`<div class="muted">Zatiaľ bez nákladov. Personálne náklady sa počítajú z denníka, doprava z plánovača úloh priradených k tejto stavbe.</div>`}
       ${A.cntH?`<div class="muted" style="font-size:13px">${h(A.cntH)} h je v denníku zapísaných iba počtom pracovníkov, bez sadzby – nie sú v personálnych nákladoch.</div>`:""}</div>
     ${form}
     <div class="card stack"><div class="entry-head"><div class="eyebrow">Doklady</div><select id="ecFlt" aria-label="Filtrovať kategóriu"><option value="">všetky kategórie</option>${COST_CATS.map(([k,l])=>`<option value="${k}" ${flt===k?"selected":""}>${l}</option>`).join("")}</select></div>
       ${list?`<ul class="doclist eclist">${list}</ul>`:`<div class="muted">${costs.length?"V tejto kategórii nie sú žiadne doklady.":"Zatiaľ žiadne ručne zadané náklady."}</div>`}
-      ${costs.length?`<div class="row"><button class="btn small ghost" data-a="ecXls">Export nákladov do Excelu</button></div>`:""}</div></div>`}
+      ${costs.length?`<div class="row"><button class="btn small ghost" data-a="ecXls">Export nákladov do Excelu</button></div>`:""}</div>
+    <div class="eckpi"><div class="card"><div class="muted">Rozpočet bez DPH</div><div class="total num">${B?eur(B):"–"}</div></div>
+      <div class="card"><div class="muted">Vyfakturované (odsúhlasené súpisy)</div><div class="total num">${eur(inv)}</div>${T.open?`<div class="muted" style="font-size:13px">+ ${eur(T.open)} rozpracované</div>`:""}</div>
+      <div class="card"><div class="muted">Náklady spolu</div><div class="total num">${eur(all)}</div>${B?`<div class="muted" style="font-size:13px">${nf1(Math.round(all/B*1000)/10)} % rozpočtu</div>`:""}</div>
+      <div class="card"><div class="muted">Výsledok (fakturované − náklady)</div><div class="total num" style="color:var(--${res>=0?"ok":"bad"})">${eur(res)}</div></div></div>
+    ${B?`<div class="card stack"><div class="eyebrow">Čerpanie</div><div class="ecvs"><span>Vyfakturované</span>${bar(inv,B,"ok")}<span class="num">${B?nf1(Math.round(inv/B*1000)/10):0} %</span><span>Náklady</span>${bar(all,B,all>inv?"bad":"")}<span class="num">${nf1(Math.round(all/B*1000)/10)} %</span></div></div>`:""}</div>`}
 function ecXLSX(p){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.");return}const A=econAuto(p);
   const rows=costsOf(p).sort((a,b)=>(a.date||"").localeCompare(b.date||"")).map(c=>[d2(c.date),costCat(c.cat),c.supplier||"",c.docNo||"",c.desc||"",r2(numIn(c.amount))]);
   if(hasMod("personal")&&A.pc)rows.push(["","Personálne","","","z denníka "+h(A.ph)+" h",r2(A.pc)]);
