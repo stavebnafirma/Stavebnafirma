@@ -131,6 +131,7 @@ table.budget td.code{font-size:12px;color:var(--muted)}
 .gmap{font-size:12px;color:var(--muted);white-space:nowrap}.gseg{padding-left:13px!important;color:var(--ink)}.gseg .gtime{font-weight:400;color:var(--muted)}
 .gsegm{display:flex;gap:12px;align-items:center;flex-wrap:wrap;grid-column:2/-1}.gsegm select{max-width:100%;flex:1 1 220px}
 @media(max-width:700px){.gtl li{grid-template-columns:70px minmax(0,1fr);align-items:start}.gfields{grid-template-columns:1fr}.gmap{grid-column:2}}
+.paycodes{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-top:8px}.paycodes label{font-size:13px}
 .seenline{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ok);font-weight:600}.dexp summary{cursor:pointer}
 .bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
 table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
@@ -1902,7 +1903,7 @@ function attHTML(){
   const exp=`<form class="card stack" id="attExportForm"><b>Export do PDF</b>
     <div class="grid3"><label>Od<input type="date" id="axFrom" value="${view.axFrom||ym+"-01"}" required></label><label>Do<input type="date" id="axTo" value="${view.axTo||days[days.length-1]}" required></label>
       <label>Zamestnanec<select id="axWho"><option value="__all">Všetci zamestnanci (hromadný export)</option>${ws.map(w=>`<option value="${w.id}" ${view.axWho===w.id?"selected":""}>${esc(w.lastName)} ${esc(w.firstName)}${w.persNo?" · "+esc(w.persNo):""}</option>`).join("")}</select></label></div>
-    <div class="row"><button class="btn primary small" type="submit">Stiahnuť PDF</button><span class="muted" style="font-size:13px">Hromadný export: súhrnná tabuľka firmy a za ňou evidencia každého zamestnanca na samostatnej strane.</span></div></form>`;
+    <div class="row"><button class="btn primary small" type="submit">Stiahnuť PDF</button><span class="muted" style="font-size:13px">Hromadný export: súhrnná tabuľka firmy a za ňou evidencia každého zamestnanca na samostatnej strane.</span></div></form>`+payExportHTML(ym);
   return `<div class="stack">
     <div class="entry-head"><div class="row monthnav"><button class="btn small" data-a="attMonth" data-d="-1" aria-label="Predchádzajúci mesiac">←</button><h2 class="mname">${esc(mName)}</h2><button class="btn small" data-a="attMonth" data-d="1" aria-label="Nasledujúci mesiac">→</button></div>
       <span class="muted" style="font-size:13px">Fond pracovného času: <b>${fond} h</b> (${fond/8} pracovných dní)</span></div>
@@ -1960,6 +1961,65 @@ function attEmployeePage(doc,w,days,from,to){
   doc.text("Legenda: číslo = odpracované hodiny, D = dovolenka (½D polovica dňa), PN, OČR, P = lekár, PS = sprevádzanie, PI = iná prekážka, SC = služobná cesta, NV = náhradné voľno, NPV = neplatené voľno, A = absencia, S = sviatok.",14,y,{maxWidth:182});doc.setTextColor(0);
   y+=18+stampGap();if(y>280){doc.addPage();y=40}doc.setFontSize(9);
   pdfStamp(doc,firmStamp(),126,y);doc.line(14,y,84,y);doc.text("Podpis zamestnanca",14,y+4);doc.line(126,y,196,y);doc.text(`Za zamestnávateľa${S.firm.repName?": "+S.firm.repName:""}`,126,y+4)}
+/* ---------- Personalistika: export dochádzky do mzdových programov (Pohoda, KROS Olymp/Omega, CSV) ---------- */
+const PAY_CODES_DEF={D:"V01",PN:"N01",OCR:"N05",P:"V03",PS:"V03",PI:"V03",SC:"V12",NV:"V02",NPV:"V04",A:"V05",OT:"",OTF:""};
+const PAY_CODE_L={OT:"Nadčas v pracovný deň",OTF:"Práca v deň pracovného pokoja"};
+const payCodes=()=>({...PAY_CODES_DEF,...((S.firm||{}).payCodes||{})});
+const hmm=h=>{const m=Math.round((+h||0)*60);return `${Math.floor(m/60)}:${String(m%60).padStart(2,"0")}`};
+const xe=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const isFree=d=>isWeekend(d)||!!holiday(d);
+/* mesačné údaje zamestnanca pre mzdy */
+function payMonthData(w,ym){const days=monthDays(ym),s=attSummary(w.id,days);let ot=0,free=0,meal=0;
+  days.forEach(d=>{const a=attOf(w.id,d);if(!a||a.t!=="W")return;const hh=+a.h||0;if(isFree(d))free+=hh;else if(hh>8)ot+=hh-8;if(hh>4)meal++});
+  const abs=[];let cur=null;days.forEach(d=>{const a=attOf(w.id,d);const t=a&&a.t!=="W"&&a.t!=="SC"?a.t:a&&a.t==="SC"?"SC":null;
+    const part=a&&(a.t==="D"&&+a.h&&+a.h<8||["P","PS","PI"].includes(a.t))?+a.h||0:0;
+    if(t&&cur&&cur.t===t&&!part&&!cur.part&&cur.to===addD(d,-1)){cur.to=d;cur.n++}
+    else if(t&&cur&&cur.t===t&&!part&&!cur.part&&isFree(addD(d,-1))&&(()=>{let x=addD(cur.to,1);while(x<d){if(!isFree(x))return false;x=addD(x,1)}return true})()){cur.to=d;cur.n++}
+    else if(t){cur={t,from:d,to:d,n:1,part};abs.push(cur)}else if(!isFree(d))cur=null});
+  return {days,s,ot,free,meal,abs,fond:s.fond}}
+function payXmlPohoda(ym){const [y,m]=ym.split("-").map(Number),C=payCodes();
+  const ws=S.workers.filter(w=>w.active!==false||monthDays(ym).some(d=>attOf(w.id,d)));
+  const emp=ws.map(w=>{const P=payMonthData(w,ym);
+    return `  <dch:dochazka_zamestnance>
+    <dch:hlavicka><dch:mesic>${m}</dch:mesic><dch:rok>${y}</dch:rok><dch:osobni_cislo>${xe(w.persNo)}</dch:osobni_cislo><dch:jmeno>${xe(w.firstName)}</dch:jmeno><dch:prijmeni>${xe(w.lastName)}</dch:prijmeni><dch:cislo_pracovniho_pomeru>${xe(w.contractNo||w.persNo||"")}</dch:cislo_pracovniho_pomeru></dch:hlavicka>
+    <dch:rozvrh>${P.days.map(d=>`<dch:uvazek datum="${d}">${isFree(d)?"0:00":"8:00"}</dch:uvazek>`).join("")}</dch:rozvrh>
+    <dch:nepritomnosti>${P.abs.map(a=>`
+      <dch:nepritomnost><dch:kod>${xe(C[a.t]||"")}</dch:kod><dch:nazev>${xe(ATT[a.t]?ATT[a.t].l:a.t)}</dch:nazev><dch:od${a.part?` nepritomnost="${hmm(a.part)}"`:""}>${a.from}</dch:od><dch:do>${a.to}</dch:do></dch:nepritomnost>`).join("")}
+    </dch:nepritomnosti>
+    <dch:pritomnost>${P.ot&&C.OT?`<dch:prescas_pracovni_den><dch:kod>${xe(C.OT)}</dch:kod><dch:nazev>Nadčas v pracovný deň</dch:nazev><dch:hodiny>${hmm(P.ot)}</dch:hodiny></dch:prescas_pracovni_den>`:""}${P.free&&C.OTF?`<dch:prescas_den_klidu><dch:kod>${xe(C.OTF)}</dch:kod><dch:nazev>Práca v deň pracovného pokoja</dch:nazev><dch:hodiny>${hmm(P.free)}</dch:hodiny></dch:prescas_den_klidu>`:""}</dch:pritomnost>
+    <dch:mzdy>${P.meal?`<dch:stravenkovy_pausal><dch:jednic>${P.meal}</dch:jednic></dch:stravenkovy_pausal>`:""}</dch:mzdy>
+  </dch:dochazka_zamestnance>`}).join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!-- Dochádzka ${ym} · ${xe((S.firm||{}).name||S.company||"")} · vytvorené aplikáciou Stavebná firma ${xe(nowIso())} -->
+<dch:dochazky_zamestnancu version="1.0" xmlns:dch="http://www.stormware.cz/schema/pamica/dochazka.xsd">
+${emp}
+</dch:dochazky_zamestnancu>
+`}
+function payRows(ym){return S.workers.filter(w=>w.active!==false||monthDays(ym).some(d=>attOf(w.id,d))).sort((a,b)=>String(a.persNo||"").localeCompare(String(b.persNo||""),"sk",{numeric:true})).map(w=>{const P=payMonthData(w,ym),s=P.s;
+  const list=t=>P.abs.filter(a=>a.t===t).map(a=>a.from===a.to?d2(a.from):`${d2(a.from)}–${d2(a.to)}`).join(", ");
+  return {w,P,cells:[w.persNo||"",w.lastName||"",w.firstName||"",P.fond,r2(s.h),r2(P.ot),r2(P.free),r2(s.D),s.PN,list("PN"),s.OCR,list("OCR"),r2(s.P),s.SC,s.NV||0,s.NPV||0,s.A||0,P.meal]}})}
+const PAY_HEAD=["Os. č.","Priezvisko","Meno","Fond h","Odpracované h","Nadčas v prac. deň h","Práca vo voľný deň h","Dovolenka dni","PN dni","PN obdobia","OČR dni","OČR obdobia","Lekár a prekážky h","Služobná cesta dni","Náhradné voľno dni","Neplatené voľno dni","Absencia dni","Dni na stravné (nad 4 h)"];
+function payCsv(ym){const q=v=>{const s=typeof v==="number"?String(v).replace(".",","):String(v??"");return /[;"\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s};
+  return "﻿"+[PAY_HEAD,...payRows(ym).map(r=>r.cells)].map(r=>r.map(q).join(";")).join("\r\n")+"\r\n"}
+function payOlymp(ym){const rows=payRows(ym);
+  return ["##&\tOSCISLO\tZR_STRAVNE_DNI","##&Popis\t\tStravné – dni (dochádzka "+ym+")",...rows.map(r=>`${(r.w.lastName||"")+" "+(r.w.firstName||"")}\t${r.w.persNo||""}\t${r.P.meal}`)].join("\r\n")+"\r\n"}
+const payFileName=(ym,f)=>`Dochadzka_${f}_${ym}`;
+const bytes=s=>new TextEncoder().encode(s).buffer;
+function payExportHTML(ym){const C=payCodes(),adm=isAdmin(me);
+  return `<form class="card stack" id="payExpForm" onsubmit="return false"><b>Export pre mzdový program · ${esc(ym.split("-").reverse().join("/"))}</b>
+    <div class="muted" style="font-size:13px">Podklad pre účtovníčku za mesiac zobrazený vyššie. Zamestnanci sa párujú podľa osobného čísla – musí byť rovnaké ako v mzdovom programe.</div>
+    <div class="row"><button class="btn small primary" data-a="payX" data-f="pohoda">Pohoda – XML dochádzky</button><button class="btn small primary" data-a="payX" data-f="olymp">KROS Olymp / Omega – stravné (TXT)</button><button class="btn small" data-a="payX" data-f="csv">Tabuľka CSV (Excel)</button><button class="btn small ghost" data-a="payX" data-f="xlsx">Excel</button></div>
+    <details><summary>Kódy zložiek pre Pohodu${adm?"":" (mení administrátor)"}</summary>
+      <div class="paycodes">${Object.keys(PAY_CODES_DEF).map(k=>`<label>${esc(ATT[k]?ATT[k].l:PAY_CODE_L[k]||k)}<input data-pc="${k}" value="${esc(C[k])}" maxlength="4" ${adm?"":"disabled"}></label>`).join("")}</div>
+      <div class="muted" style="font-size:12px">Prednastavené sú kódy zložiek podľa schémy Stormware pre import dochádzky (V01 dovolenka, N01 PN, N05 OČR…). Ak má účtovníčka v Pohode iné kódy, prepíš ich tu. Nadčasy sa prenesú, keď doplníš ich kódy zložiek z Pohody. Stravné ide ako počet dní.</div></details>
+    <div class="muted" style="font-size:12px">Pohoda: Súbor → Dátová komunikácia → Import dochádzky. KROS Olymp: Mzdové funkcie → Import stravného (výplatné pásky za mesiac musia byť vytvorené). Hodiny, dovolenky a PN pre Olymp a Omegu nájde účtovníčka v tabuľke CSV alebo Excel.</div></form>`}
+document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="payX"]');if(!b||!me)return;const ym=view.attMonth||todayIso().slice(0,7),f=b.dataset.f;
+  if(f==="pohoda")offerFile(payFileName(ym,"Pohoda")+".xml",bytes(payXmlPohoda(ym)));
+  else if(f==="olymp")offerFile(payFileName(ym,"Olymp_stravne")+".txt",bytes(payOlymp(ym)));
+  else if(f==="csv")offerFile(payFileName(ym,"mzdy")+".csv",bytes(payCsv(ym)));
+  else if(f==="xlsx"){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.");return}const ws=XLSX.utils.aoa_to_sheet([[`Dochádzka – podklad pre mzdy ${ym}`],[],PAY_HEAD,...payRows(ym).map(r=>r.cells)]);ws["!cols"]=PAY_HEAD.map((h,i)=>({wch:i===9||i===11?24:Math.max(8,Math.min(16,h.length))}));
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Dochádzka");offerFile(payFileName(ym,"mzdy")+".xlsx",XLSX.write(wb,{bookType:"xlsx",type:"array"}))}});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me||!t.dataset||t.dataset.pc===undefined||!isAdmin(me))return;S.firm=S.firm||{};S.firm.payCodes={...(S.firm.payCodes||{}),[t.dataset.pc]:t.value.trim().toUpperCase()};save();toast("Kód uložený")});
 function attExport(from,to,who){
   if(!from||!to||to<from){toast("Skontroluj obdobie od – do");return}
   const days=daysBetween(from,to);if(days.length>370){toast("Obdobie môže mať najviac jeden rok");return}
