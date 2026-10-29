@@ -2712,7 +2712,7 @@ function landingHTML(){
       ${[["home","Stavba","do 10 aktívnych stavieb","bez obmedzenia počtu účastníkov stavby",["stavebný denník a kontrolné dni","rozpočet, čerpanie a fakturácia","komunikácia so stavebným dozorom","dokumentácia a výkresy"]],
         ["personal","Personalistika","do 20 zamestnancov","",["dochádzka s exportom pre účtovníka","dovolenky, priepustky, PN","cestovné príkazy podľa zákona, školenia","OOPP a povinné formuláre"]],
         ["doprava","Doprava a logistika","do 20 strojov a vozidiel","",["plánovač pre tímy, stroje a vozidlá","kniha jázd a import z GPS","súpisy a prehľady pre fakturáciu","váženie a štatistiky"]],
-        ["pozicovna","Požičovňa","celý inventár požičovne","",["evidencia náradia a strojov","rezervácie a výpožičky","výpožičný list na podpis","vyťaženosť a prehľady"]]].map(([ic,n,lim,lim2,f])=>`<div class="ld-pcard"><div class="ld-ptop">${icon(ic)}<b>${n}</b></div>
+        ["pozicovna","Požičovňa","celý inventár požičovne","",["evidencia náradia a strojov","rezervácie a výpožičky","výpožičný list na podpis","efektivita a prehľady používania"]]].map(([ic,n,lim,lim2,f])=>`<div class="ld-pcard"><div class="ld-ptop">${icon(ic)}<b>${n}</b></div>
         <div class="ld-pprice"><span class="pm"><b>49 €</b> / mesiac</span><span class="py"><b>490 €</b> / rok</span></div><div class="ld-pvat">bez DPH</div>
         <div class="ld-plim">${lim}${lim2?`<br><small>${lim2}</small>`:""}</div><ul>${f.map(x=>`<li>${x}</li>`).join("")}</ul></div>`).join("")}
     </div>
