@@ -628,6 +628,13 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
   .taskpane:not(.open) .tp-body{display:none}
   .taskpane.open{max-height:78vh;overflow:auto}.taskpane.open .tp-chev{transform:rotate(180deg)}
   body.has-tp .toast{bottom:calc(76px + env(safe-area-inset-bottom,0px))}}
+.tp-head{gap:8px}.tp-title{flex:1}
+.tp-max{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:8px;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;flex:none}
+.tp-max:hover{color:var(--ink);border-color:var(--accent-soft)}.tp-max svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.taskpane.max{position:fixed;z-index:40;inset:calc(var(--hdr,124px) + 12px) max(16px,calc((100vw - 1100px)/2)) 16px;max-height:none;overflow:auto;border-radius:14px;box-shadow:0 24px 60px -20px rgba(0,0,0,.45)}
+.taskpane.max .tp-body{display:block;padding-bottom:16px}.taskpane.max .tp-chev{display:none}.taskpane.max .tp-head{cursor:default;position:sticky;top:0;background:var(--surface);z-index:1;border-bottom:1px solid var(--line)}
+body.tp-maxed::after{content:"";position:fixed;inset:0;background:rgba(15,17,19,.35);z-index:35}
+@media (max-width:919px){.taskpane.max{inset:0;border-radius:0;padding-bottom:env(safe-area-inset-bottom,0px)}}
 .rvbadge{display:inline-block;padding:0 7px;border-radius:9px;background:var(--tint);color:var(--ink);border:1px solid var(--accent-soft);font-size:11px;font-weight:700;line-height:18px}
 .tpseg button{white-space:nowrap;min-width:0;padding:7px 3px;font-size:12.5px}
 .tpseg button.hot{color:var(--ink)}.tpseg button.hot .num{background:var(--accent);color:var(--accent-ink);border-radius:8px;padding:0 5px;opacity:1}
@@ -1771,6 +1778,7 @@ function tasksPaneHTML(){
       <label>Termín (nepovinné)<input type="date" id="tnDue"></label>
       <div class="row"><button class="btn primary small" type="submit">Pridať úlohu</button><button type="button" class="btn ghost small" data-a="taskNewNo">Zrušiť</button></div></form>`:"";
   return `<div class="tp-head" data-a="tpToggle"><div class="tp-title">${icon("task")}<b>Úlohy</b>${mine.length?`<span class="badge ${badBadge?"":"calm"}">${mine.length}</span>`:""}${review.length?`<span class="rvbadge" title="Na kontrolu">✓ ${review.length}</span>`:""}</div>
+      <button type="button" class="tp-max" data-a="tpMax" aria-label="${view.tpMax?"Zavrieť zväčšené okno úloh":"Roztiahnuť úlohy na celú obrazovku"}" title="${view.tpMax?"Zavrieť (Esc)":"Roztiahnuť na celú obrazovku"}">${view.tpMax?"✕":`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>`}</button>
       <span class="tp-chev" aria-hidden="true">▴</span></div>
     <div class="tp-body">
       <div class="tpseg" role="tablist"><button role="tab" class="${tab==="mine"?"on":""}" data-a="taskTab" data-tab="mine">Moje <span class="num">${mine.length}</span></button>${assigner?`<button role="tab" class="${tab==="all"?"on":""}" data-a="taskTab" data-tab="all">Všetky <span class="num">${all.length}</span></button>`:""}</div>
@@ -1785,23 +1793,28 @@ function tasksPaneHTML(){
     </div>`}
 function renderTasks(){const pane=$("#taskpane"),shell=$("#shell");if(!pane||!shell)return;const on=!!me&&view.screen!=="setup"&&!needsProfile();
   pane.hidden=!on;shell.classList.toggle("with-tasks",on);document.body.classList.toggle("has-tp",on);
-  if(on){pane.innerHTML=tasksPaneHTML();pane.classList.toggle("open",!!view.tpOpen)}else pane.innerHTML="";
+  if(!on)view.tpMax=false;
+  if(on){pane.innerHTML=tasksPaneHTML();pane.classList.toggle("open",!!view.tpOpen||!!view.tpMax);pane.classList.toggle("max",!!view.tpMax)}else pane.innerHTML="";
+  document.body.classList.toggle("tp-maxed",!!view.tpMax);
   const h=document.querySelector("header.bar");if(h&&h.offsetHeight&&document.documentElement.style)document.documentElement.style.setProperty("--hdr",h.offsetHeight+"px")}
 
+/* zväčšené okno úloh: zatvorenie klávesom Esc */
+document.addEventListener("keydown",ev=>{if(ev.key==="Escape"&&view&&view.tpMax){view.tpMax=false;renderTasks()}});
 /* udalosti */
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
   if(a==="assignOpen"){ev.stopPropagation();view.assignFor=b.dataset.key;render();const s=$("#asUser");if(s&&s.focus)s.focus()}
   else if(a==="assignNo"){view.assignFor=null;render()}
   else if(a==="taskCancel"){S.tasks=S.tasks.filter(t=>t.id!==b.dataset.id);view.assignFor=null;save();toast("Úloha zrušená");render()}
   else if(a==="taskTab"){view.taskTab=b.dataset.tab;renderTasks()}
-  else if(a==="tpToggle"){view.tpOpen=!view.tpOpen;renderTasks()}
+  else if(a==="tpToggle"){if(view.tpMax)return;view.tpOpen=!view.tpOpen;renderTasks()}
+  else if(a==="tpMax"){view.tpMax=!view.tpMax;renderTasks();const btn=$("#taskpane .tp-max");if(btn)btn.focus()}
   else if(a==="taskNew"){view.taskNew=true;renderTasks();const e=$("#tnTitle");if(e&&e.focus)e.focus()}
   else if(a==="taskNewNo"){view.taskNew=false;renderTasks()}
   else if(a==="taskDone"){const t=S.tasks.find(x=>x.id===b.dataset.id);if(t){finishTask(t);save();toast(t.status==="review"?`Splnené. Odoslané na kontrolu: ${user(t.by)?.name||""}`:"Úloha hotová");render()}}
   else if(a==="taskCheck"){const t=S.tasks.find(x=>x.id===b.dataset.id);if(t&&canCheck(t)){t.status="done";t.checkedAt=nowIso();t.checkedBy=me.id;save();toast("Úloha skontrolovaná a uzavretá");render()}}
   else if(a==="taskRet"){view.retFor=b.dataset.id;renderTasks();const e=$("#trtNote");if(e&&e.focus)e.focus()}
   else if(a==="taskRetNo"){view.retFor=null;renderTasks()}
-  else if(a==="taskGo"){const t=S.tasks.find(x=>x.id===b.dataset.id),src=t&&t.src||{};view.tpOpen=false;
+  else if(a==="taskGo"){const t=S.tasks.find(x=>x.id===b.dataset.id),src=t&&t.src||{};view.tpOpen=false;view.tpMax=false;
     if((src.t==="term"||src.t==="svc")&&canSee("doprava")&&hasMod("doprava")){view={screen:"doprava",vehId:src.m,tpOpen:false};render();window.scrollTo(0,0)}
     else if(src.t==="kd"){view={screen:"project",projectId:src.p,tab:"kd",kdOpen:src.i};render();window.scrollTo(0,0)}
     else if(src.t==="skol"&&canSee("personal")){view={screen:"personal",pTab:"skol",skolOpen:src.i};render();window.scrollTo(0,0)}
