@@ -300,7 +300,7 @@ function modulesHTML(){
       ${pm&&st.paid?`<br><span class="muted" style="font-size:12.5px">Predplatené do ${dmy(new Date(new Date(pm.until)-3*864e5).toISOString())}</span>`:""}</span>
       <span class="bprice">${priceTxt(k,D.interval)}</span></label>`}).join("");
   return `<div class="stack"><div class="card stack"><h2>Moduly a predplatné</h2>
-    <div class="muted">Karta Firma (údaje o firme, zamestnanci, strojový a vozový park, používatelia) je zadarmo. Ostatné moduly si firma predplatí podľa potreby – jeden, viac alebo všetky.</div>
+    <div class="muted">Karta Firma so základným zoznamom zamestnancov a strojovým a vozovým parkom je súčasťou každého užívateľa bezplatne. Ostatné moduly si vyberieš podľa vlastnej potreby – môžeš si zvoliť iba tie, ktoré potrebuješ pre fungovanie svojej firmy.</div>
     ${banner}
     ${admin&&!B.complimentary?`<div class="seg" role="radiogroup" style="align-self:flex-start"><label><input type="radio" name="bInt" value="month" ${D.interval==="month"?"checked":""}><span>Mesačne</span></label><label><input type="radio" name="bInt" value="year" ${D.interval==="year"?"checked":""}><span>Ročne${yearSave?` (−${yearSave} %)`:""}</span></label></div>`:""}
     <div class="mods">${cards}</div>

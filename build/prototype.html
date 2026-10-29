@@ -143,6 +143,16 @@ table.budget td.code{font-size:12px;color:var(--muted)}
 .rstat td{vertical-align:middle}.rstat .ecbar{margin-bottom:2px}
 .nbset .chk{align-items:flex-start}.nbset .chk input{margin-top:3px;flex:none}
 .jfmo{grid-column:1/-1;max-width:420px}
+.mrights .mright{padding:12px 14px;gap:10px;border-radius:12px;transition:background .15s,border-color .15s}
+.mright .mname{min-width:0;text-align:left;text-transform:none;display:flex;align-items:center;gap:10px;font-size:14.5px}
+.mright .mname input{width:18px;height:18px;margin:0;flex:none;accent-color:var(--accent)}
+.mr-ic{width:18px;height:18px;flex:none;color:var(--muted)}.mright.on .mr-ic{color:var(--accent)}
+.mright .lvl{border-radius:9px;padding:3px;gap:3px;background:var(--surface2,#eef0f2);border-color:transparent}
+.mright .lvl label{position:relative;border-radius:7px;padding:7px 6px;font-size:13px}.mright .lvl label+label{border-left:0}
+.mright .lvl input{position:absolute;opacity:0;pointer-events:none}
+.mright .lvl label.sel{box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.mright .lvl label:has(input:checked){background:var(--accent);color:var(--accent-ink)}
+.mright .lvl label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:1px}
 .seenline{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ok);font-weight:600}.dexp summary{cursor:pointer}
 .bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
 table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
@@ -676,7 +686,7 @@ body.tp-maxed::after{content:"";position:fixed;inset:0;background:rgba(15,17,19,
 .ro-doprava [data-eo],.ro-personal [data-eo],.ro-pozicovna [data-eo]{display:none!important}
 form[data-ro] button[type=submit],form[data-ro] [data-a="addOopp"],form[data-ro] [data-a="delOopp"],form[data-ro] .filebtn{display:none!important}
 .ucard.isadmin{border-left:4px solid var(--accent)}
-.mrights{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.mrights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}@media(max-width:600px){.mrights{grid-template-columns:1fr}}
 .mright{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--surface)}
 .mright.on{border-color:var(--accent-soft);background:var(--tint)}
 .mright.modoff{opacity:.6}
@@ -1829,7 +1839,7 @@ function usersHTML(){
   const card=u=>{const A=isAdmin(u),pr=projRolesOf(u),self=u.id===me.id;
     const mods=RIGHT_MODS.map(([k,l])=>{const r=A?"edit":(u.rights||{})[k]||"",off=!hasMod(k);
       return `<div class="mright ${r?"on":""} ${off?"modoff":""}">
-        <label class="chk mname"><input type="checkbox" data-ur="${u.id}" data-umod="${k}" ${r?"checked":""} ${!admin||A?"disabled":""}> ${l}</label>
+        <label class="chk mname"><input type="checkbox" data-ur="${u.id}" data-umod="${k}" ${r?"checked":""} ${!admin||A?"disabled":""}>${icon(k==="stavba"?"home":k,"mr-ic")}<span>${l}</span></label>
         <div class="lvl" role="radiogroup" aria-label="Úroveň prístupu ${l}">
           <label class="${r==="view"?"sel":""}"><input type="radio" name="ul_${u.id}_${k}" value="view" data-ul="${u.id}" data-umod="${k}" ${r==="view"?"checked":""} ${!admin||A||!r?"disabled":""}> Zobrazenie</label>
           <label class="${r==="edit"?"sel":""}"><input type="radio" name="ul_${u.id}_${k}" value="edit" data-ul="${u.id}" data-umod="${k}" ${r==="edit"?"checked":""} ${!admin||A||!r?"disabled":""}> Administrácia</label></div>
@@ -1844,16 +1854,16 @@ function usersHTML(){
         :`<div><button class="linkbtn danger" data-a="userDel" data-id="${u.id}">Odstrániť používateľa</button></div>`):""}
     </div>`};
   return `<div class="stack">
-    <div class="muted">${admin?"Zaškrtni moduly, do ktorých má používateľ prístup, a zvoľ úroveň: <b>Zobrazenie</b> znamená, že modul iba sleduje, <b>Administrácia</b> znamená, že v ňom môže upravovať údaje. Zmeny sa ukladajú hneď.":"Prehľad používateľov a ich prístupov. Meniť ich môže administrátor."}</div>
+    <div class="muted">${admin?"Vytvor si pracovný tím z vlastných kolegov. Priraď im prístup a práva k jednotlivým modulom. Pri voľbe <b>Zobrazenie</b> kolega daný modul iba sleduje, pri voľbe <b>Administrácia</b> ho môže upravovať v plnom rozsahu. Zmeny sa ukladajú hneď.":"Prehľad používateľov a ich prístupov. Meniť ich môže administrátor."}</div>
     ${admin?(view.userNew?`<form class="card stack" id="userNewForm"><h3>Nový používateľ</h3>
         <div class="grid2"><label>Meno a priezvisko<input id="unName" required></label><label>E-mail<input type="email" id="unEmail" required placeholder="meno@firma.sk"></label></div>
-        <div class="mrights">${RIGHT_MODS.map(([k,l])=>`<div class="mright"><label class="chk mname"><input type="checkbox" id="un_${k}"> ${l}</label>
+        <div class="mrights">${RIGHT_MODS.map(([k,l])=>`<div class="mright"><label class="chk mname"><input type="checkbox" id="un_${k}">${icon(k==="stavba"?"home":k,"mr-ic")}<span>${l}</span></label>
           <div class="lvl"><label><input type="radio" name="unl_${k}" value="view" checked> Zobrazenie</label><label><input type="radio" name="unl_${k}" value="edit"> Administrácia</label></div></div>`).join("")}</div>
         <div class="muted" style="font-size:13px">Používateľ sa prihlási svojím e-mailom a pri prvom prihlásení si nastaví heslo. V ostrej verzii mu príde pozvánka e-mailom.</div>
         <div class="row"><button class="btn primary" type="submit">Pridať používateľa</button><button type="button" class="btn ghost" data-a="userNewNo">Zrušiť</button></div></form>`
       :`<button class="btn primary" data-a="userNew" style="align-self:flex-start">+ Pridať používateľa</button>`):""}
     ${list.map(card).join("")}
-    ${ext.length?`<h3 style="margin-top:6px">Stavebný dozor (externí)</h3><div class="muted" style="font-size:13px">Pozývajú sa na konkrétnu stavbu v záložke Tím a vidia iba ju.</div>
+    ${ext.length?`<h3 style="margin-top:6px">Externí používatelia aplikácie</h3><div class="muted" style="font-size:13px">Zoznam používateľov pozvaných len pre konkrétnu stavbu. Spravidla to je napríklad investor alebo stavebný dozor. Ich práva a role upravuješ v nastavení stavby v záložke Tím. Používateľ pozvaný na konkrétnu stavbu nevidí žiadny iný modul ani údaje o firme.</div>
       ${ext.map(u=>`<div class="card entry-head"><div style="min-width:0"><b>${esc(u.name||u.email)}</b><div class="muted" style="font-size:13px;overflow-wrap:anywhere">${esc(u.email)}${u.phone?` · ${esc(u.phone)}`:""}</div>
         <div class="muted" style="font-size:12px">${esc(dozorProjects(u).map(p=>p.name).join(", "))}</div></div>${rolePill("dozor")}</div>`).join("")}`:""}
     ${hasMod("stavba")?`<div class="note">Rolu na konkrétnej stavbe (stavbyvedúci, majster, stavebný dozor, iba čítanie) prideľuješ v stavbe v záložke Tím. Používateľ bez prístupu k modulu Stavba vidí iba stavby, na ktoré je pozvaný.</div>`:""}
@@ -3793,10 +3803,10 @@ function SEED_RENT(){const it=(id,name,cat,invNo,dayRate,weekRate,deposit)=>({id
   return {items,loans}}
 
 /* ---------- moduly (predplatné) ---------- */
-const MODULES=[["personal","Personalistika","Karty zamestnancov: kontakty, mzdy so superhrubou mzdou, veľkosti odevu a OOPP."],
-  ["doprava","Doprava a logistika","Rodné listy strojov a vozidiel: údaje z OEV II, STK, EK, tachograf, poistenie a servisné intervaly s upozorneniami."],
-  ["pozicovna","Požičovňa","Evidencia náradia v požičovni, cenník prenájmu, výpožičky so zálohou, plánovač obsadenosti a výpožičné listy."],
-  ["stavba","Stavba","Stavby, denný záznam, rozpočty, súpisy prác, stavebný dozor a kontrolné dni."]];
+const MODULES=[["personal","Personalistika","Personálna agenda, výpočty miezd, dochádzka, školenia, cestovné príkazy, generovanie PDF výstupov."],
+  ["doprava","Doprava a logistika","Plánovač úloh, sledovanie fakturácie vykonaných prác, podklady k vyúčtovaniam, import jázd z GPS, servis a údržba strojov a techniky, vážne lístky, štatistika."],
+  ["pozicovna","Požičovňa","Evidencia náradia, cenníky, generovanie výpožičných listov, plánovač a štatistika obsadenosti."],
+  ["stavba","Stavba","Stavebný denník, rozpočty, čerpanie podľa súpisov prác, elektronická komunikácia so stavebným dozorom, kontrolné dni, generovanie výstupov do archívu."]];
 const ALL_MODS={personal:true,doprava:true,pozicovna:true,stavba:true};
 const hasMod=k=>!!(S.modules||ALL_MODS)[k];
 function modName(k){return (MODULES.find(m=>m[0]===k)||[])[1]||k}
@@ -3808,7 +3818,7 @@ function modulesHTML(){
   const M=S.modules||ALL_MODS,admin=me.companyRole==="admin";
   const hint=[!M.personal&&M.stavba?"Bez Personalistiky stavba nepočíta mzdové náklady, lebo mzdy sa zadávajú v Personalistike.":""].filter(Boolean);
   return `<div class="stack"><div class="card stack"><h2>Moduly</h2>
-    <div class="muted">Karta Firma so zoznamom zamestnancov a strojovým a vozovým parkom je súčasťou každého predplatného. Ostatné moduly si firma vyberá podľa potreby, jeden alebo viac, až všetky štyri.</div>
+    <div class="muted">Karta Firma so základným zoznamom zamestnancov a strojovým a vozovým parkom je súčasťou každého užívateľa bezplatne. Ostatné moduly si vyberieš podľa vlastnej potreby – môžeš si zvoliť iba tie, ktoré potrebuješ pre fungovanie svojej firmy.</div>
     ${admin?`<form class="stack" id="modForm">${modChecks("mm",M)}
       <div class="muted" style="font-size:13px">Vypnutím modulu sa údaje nezmažú. Po opätovnom zapnutí budú znova k dispozícii. V ostrej verzii sa zmena modulov premietne do ceny predplatného.</div>
       <button class="btn primary" type="submit" style="align-self:flex-start">Uložiť moduly</button></form>`
