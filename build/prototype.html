@@ -1866,7 +1866,6 @@ function usersHTML(){
     ${ext.length?`<h3 style="margin-top:6px">Externí používatelia aplikácie</h3><div class="muted" style="font-size:13px">Zoznam používateľov pozvaných len pre konkrétnu stavbu. Spravidla to je napríklad investor alebo stavebný dozor. Ich práva a role upravuješ v nastavení stavby v záložke Tím. Používateľ pozvaný na konkrétnu stavbu nevidí žiadny iný modul ani údaje o firme.</div>
       ${ext.map(u=>`<div class="card entry-head"><div style="min-width:0"><b>${esc(u.name||u.email)}</b><div class="muted" style="font-size:13px;overflow-wrap:anywhere">${esc(u.email)}${u.phone?` · ${esc(u.phone)}`:""}</div>
         <div class="muted" style="font-size:12px">${esc(dozorProjects(u).map(p=>p.name).join(", "))}</div></div>${rolePill("dozor")}</div>`).join("")}`:""}
-    ${hasMod("stavba")?`<div class="note">Rolu na konkrétnej stavbe (stavbyvedúci, majster, stavebný dozor, iba čítanie) prideľuješ v stavbe v záložke Tím. Používateľ bez prístupu k modulu Stavba vidí iba stavby, na ktoré je pozvaný.</div>`:""}
   </div>`}
 document.addEventListener("change",ev=>{const t=ev.target;if(!me||!isAdmin(me))return;
   if(t.dataset&&t.dataset.ur){const u=user(t.dataset.ur);if(!u||isAdmin(u))return;u.rights=u.rights||{};if(t.checked)u.rights[t.dataset.umod]=u.rights[t.dataset.umod]||"view";else delete u.rights[t.dataset.umod];save();toast("Prístup uložený");render()}
