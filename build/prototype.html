@@ -1373,7 +1373,7 @@ const gpsVeh=()=>(S.machines||[]).filter(x=>NEEDS_DRIVER.includes(x.cat));
 function gpsDriverFor(name,m){const n=normText(name);if(n){const w=(S.workers||[]).find(w=>{const f=normText(fullName(w));return f&&(f===n||n.split(" ").every(x=>f.includes(x)))});if(w)return w.id}return m&&m.resp||""}
 function gpsJobsFor(date,mid){return (S.jobs||[]).filter(j=>j.date===date&&(j.machines||[]).some(x=>x.machineId===mid)).sort((a,b)=>a.from.localeCompare(b.from))}
 function gpsGuessJob(seg,mid){const d=seg.dep.slice(0,10),js=gpsJobsFor(d,mid);if(js.length===1)return js[0].id;const t=hhmm(seg.dep);const j=js.find(j=>t>=j.from&&t<=j.to);return j?j.id:(js.length?"":"__new")}
-async function gpsLoad(){const G=view.gps,mid=$("#gpsM").value,fk=$("#gpsKml").files[0],fx=$("#gpsXls").files[0];
+async function gpsLoad(){if(typeof loadLibs==="function")await loadLibs();const G=view.gps,mid=$("#gpsM").value,fk=$("#gpsKml").files[0],fx=$("#gpsXls").files[0];
   if(!mid){toast("Vyber vozidlo alebo stroj");return}if(!fk&&!fx){toast("Vyber súbor KML alebo Excel z GPS");return}
   let veh=null,rows=[];
   try{if(fx){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.");return}const wb=XLSX.read(await fx.arrayBuffer(),{type:"array",cellDates:true});
@@ -4659,7 +4659,7 @@ function importHTML(p){
   <div class="row"><button class="btn primary" data-a="impSave" ${ex.items.length?"":"disabled"}>Uložiť rozpočet do stavby</button><button class="btn ghost" data-a="impCancel">Zrušiť</button></div>
   ${p.budget&&I.target==="__new"?`<div class="muted" style="font-size:13px">Rozpočet sa pridá ako ďalšia časť stavby. Doterajšie časti a súpisy ostanú bez zmeny.</div>`:""}</div>`;
 }
-async function readBudgetFile(file,target){
+async function readBudgetFile(file,target){if(typeof loadLibs==="function")await loadLibs();
   if(!window.XLSX){toast("Knižnica na čítanie Excelu sa nenačítala. Skús stránku obnoviť.");return}
   try{
     const wb=XLSX.read(await file.arrayBuffer(),{type:"array"});

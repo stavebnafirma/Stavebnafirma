@@ -75,16 +75,22 @@ rep('</style>', '.modcard.bill{display:flex;gap:12px;align-items:flex-start}.mod
 
 # 7) lišta: prepnutie firmy a indikátor ukladania
 rep('<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");',
-    '<span class="saveind" id="saveInd" hidden>Ukladám…</span>${myTenants.length>1?`<button class="logout" data-a="switchTenant" title="Prepnúť firmu">Firmy</button>`:""}<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");')
-rep('</style>', '.spinner{width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:spin 0.9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}\n.saveind{font-size:12px;color:var(--brand-hi);margin-right:8px;white-space:nowrap}\n</style>')
+    '<span class="saveind${OFFLINE?" off":""}" id="saveInd" ${OFFLINE?"":"hidden"}>${OFFLINE?"Offline":"Ukladám…"}</span>${myTenants.length>1?`<button class="logout" data-a="switchTenant" title="Prepnúť firmu">Firmy</button>`:""}<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");')
+rep('</style>', '.spinner{width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:spin 0.9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}\n.saveind{font-size:12px;color:var(--brand-hi);margin-right:8px;white-space:nowrap}.saveind.off{color:#fff;background:#b3261e;padding:3px 8px;border-radius:999px}\n</style>')
 
 # 8) knižnica Supabase a úplný HTML dokument
-rep('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>',
-    '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>\n<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>')
+# knižnice na PDF a Excel sa načítajú až po zobrazení aplikácie (loadLibs v live.js) – stránka sa otvorí rýchlejšie
+rep('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>\n<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>\n<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>',
+    '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>')
+# lišta „Pridať na plochu“ na mobile
+rep('  renderTasks();\n  if(view.focusEntry)', '  if(me&&typeof installHTML==="function")a.insertAdjacentHTML("beforeend",installHTML());\n  renderTasks();\n  if(view.focusEntry)')
+rep('</style>', '.instbar{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:60;display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:10px 12px;box-shadow:0 8px 24px rgba(0,0,0,.14);max-width:560px;margin:0 auto}.instbar>div{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;font-size:13px}.instbar b{font-size:14px}\n</style>')
 rep('<meta name="claude:viewport-fit-sides" content="cover">\n', '')
 head_end = s.index('<header class="bar">')
 s = ('<!doctype html>\n<html lang="sk">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n'
      '<meta name="description" content="Stavebná firma – firma, personalistika, doprava a logistika, požičovňa a stavby na jednom mieste.">\n'
+     '<link rel="manifest" href="/manifest.webmanifest">\n<meta name="theme-color" content="#2b2f33">\n<link rel="apple-touch-icon" href="/icon-192.png">\n'
+     '<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-title" content="Stavebná firma">\n'
      '<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Cpath d=%27M10.4 2.6h3.2l5.2 16.4H5.2z%27 fill=%27%23e8792f%27/%3E%3Cpath d=%27M8.64 8h6.72l.78 2.5H7.86zM6.92 13.5h10.16l.78 2.5H6.14z%27 fill=%27%23fff%27/%3E%3Crect x=%272.5%27 y=%2718.6%27 width=%2719%27 height=%273%27 rx=%271.2%27 fill=%27%232b2f33%27/%3E%3C/svg%3E">\n'
      + s[:head_end] + '</head>\n<body>\n' + s[head_end:] + '\n</body>\n</html>\n')
 
@@ -93,4 +99,9 @@ for bad in ["ROOT.", "localStorage.setItem(KEY", "findAccount(", "useTenant(", "
     if bad in s:
         sys.exit(f"Build: v ostrej verzii ostal odkaz na prototyp: {bad}")
 (ROOT / "web" / "index.html").write_text(s, encoding="utf-8")
+# service worker: verzia podľa obsahu stránky, aby sa po nasadení obnovila vyrovnávacia pamäť
+import hashlib
+sw = (ROOT / "build" / "sw.js").read_text(encoding="utf-8").replace("__VERSION__", hashlib.sha1(s.encode()).hexdigest()[:10])
+(ROOT / "web" / "sw.js").write_text(sw, encoding="utf-8")
+(ROOT / "web" / "manifest.webmanifest").write_text((ROOT / "build" / "manifest.webmanifest").read_text(encoding="utf-8"), encoding="utf-8")
 print(f"web/index.html zostavený ({len(s)//1024} kB)")

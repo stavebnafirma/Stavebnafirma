@@ -39,17 +39,47 @@ function removeRow(T,kind,id){
   if(MAP_KINDS.includes(kind)){if(T[kind])delete T[kind][id];return}
   if(Array.isArray(T[kind]))T[kind]=T[kind].filter(x=>x.id!==id)}
 
+/* --- offline: údaje firmy uložené v zariadení (IndexedDB); pri ďalšom otvorení sa stiahnu len zmenené riadky --- */
+const OFF={db:null,
+  open(){return this.db||(this.db=new Promise((res,rej)=>{const r=indexedDB.open("sf-cache",1);r.onupgradeneeded=()=>r.result.createObjectStore("c");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}))},
+  async run(mode,fn){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction("c",mode);const q=fn(t.objectStore("c"));t.oncomplete=()=>res(q&&q.result);t.onerror=()=>rej(t.error)})},
+  async get(k){try{return await this.run("readonly",o=>o.get(k))}catch(e){return null}},
+  async put(k,v){try{await this.run("readwrite",o=>o.put(v,k))}catch(e){console.warn("cache",e)}},
+  async clear(){try{await this.run("readwrite",o=>o.clear())}catch(e){}}};
+let VER=new Map(),OFFLINE=false,FROM_CACHE=false,cacheT=null;
+const cacheKey=tid=>"t:"+((authUser&&authUser.id)||lsGet("sf-uid")||"")+":"+tid;
+const isNetErr=e=>!navigator.onLine||/Failed to fetch|NetworkError|network|Load failed|fetch/i.test(String(e&&e.message||e||""));
+function cacheNow(){if(!TID)return;clearTimeout(cacheT);cacheT=setTimeout(()=>{if(!TID)return;let snapS;try{snapS=structuredClone(S)}catch(e){snapS=JSON.parse(JSON.stringify(S))}
+  OFF.put(cacheKey(TID),{at:Date.now(),S:snapS,snap:[...SNAP],ver:[...VER],usnap:[...USNAP],psnap:PSNAP,me:me&&me.id,tenants:myTenants,bill:typeof BILL!=="undefined"?BILL:null})},300)}
+async function listVersions(tid){const out=[];for(let from=0;;from+=1000){const {data,error}=await SB.from("docs").select("kind,id,updated_at").eq("tenant_id",tid).order("kind").order("id").range(from,from+999);
+  if(error)throw error;out.push(...data);if(data.length<1000)break}return out}
 async function loadTenant(tid){
-  const rows=[];for(let from=0;;from+=1000){const {data,error}=await SB.from("docs").select("kind,id,project_id,data").eq("tenant_id",tid).order("kind").order("id").range(from,from+999);
-    if(error)throw error;rows.push(...data);if(data.length<1000)break}
-  const T=blankState();rows.forEach(r=>applyRow(T,r.kind,r.id,r.data));
-  /* poradie stavieb a záznamov podľa času založenia, ak ho majú */
-  S=T;TID=tid;lsSet("sf-tenant",tid);
-  SNAP=new Map();docRows().forEach((r,k)=>SNAP.set(k,rowSig(r)));
+  const C=await OFF.get(cacheKey(tid));let T;
+  if(C&&C.S&&C.ver&&C.ver.length){
+    /* zmeny urobené offline najprv odoslať */
+    S=C.S;TID=tid;SNAP=new Map(C.snap||[]);VER=new Map(C.ver);USNAP=new Map(C.usnap||[]);PSNAP=C.psnap||"";
+    const pend=[...docRows()].some(([k,r])=>SNAP.get(k)!==rowSig(r))||[...SNAP.keys()].some(k=>!docRows().has(k));
+    if(pend){try{await doDocs()}catch(e){console.warn("pending",e)}}
+    const list=await listVersions(tid),now=new Map(list.map(r=>[r.kind+"|"+r.id,r.updated_at]));
+    T=S;VER.forEach((v,k)=>{if(!now.has(k)){const i=k.indexOf("|"),kind=k.slice(0,i),id=k.slice(i+1);removeRow(T,kind==="meta"?"meta":kind,id);SNAP.delete(k)}});
+    const need={};list.forEach(r=>{const k=r.kind+"|"+r.id;if(VER.get(k)!==r.updated_at)(need[r.kind]=need[r.kind]||[]).push(r.id)});
+    for(const [kind,ids] of Object.entries(need))for(let i=0;i<ids.length;i+=150){const {data,error}=await SB.from("docs").select("kind,id,project_id,data,updated_at").eq("tenant_id",tid).eq("kind",kind).in("id",ids.slice(i,i+150));if(error)throw error;
+      data.forEach(r=>{applyRow(T,r.kind,r.id,r.data);SNAP.set((r.kind==="meta"?"meta|":r.kind+"|")+r.id,rowSig(r))})}
+    VER=now}
+  else{const rows=[];for(let from=0;;from+=1000){const {data,error}=await SB.from("docs").select("kind,id,project_id,data,updated_at").eq("tenant_id",tid).order("kind").order("id").range(from,from+999);
+      if(error)throw error;rows.push(...data);if(data.length<1000)break}
+    T=blankState();rows.forEach(r=>applyRow(T,r.kind,r.id,r.data));VER=new Map(rows.map(r=>[r.kind+"|"+r.id,r.updated_at]))}
+  const full=!(C&&C.S&&C.ver&&C.ver.length);S=T;TID=tid;lsSet("sf-tenant",tid);FROM_CACHE=false;
+  if(full){SNAP=new Map();docRows().forEach((r,k)=>SNAP.set(k,rowSig(r)))}
   await loadPeople();remapInvites();await loadBilling();
   if(!S.firm||typeof S.firm!=="object")S.firm={setupDone:false};
   S.company=S.firm.name||S.company||((myTenants.find(t=>t.tenant_id===tid)||{}).tenants||{}).name||"";
-}
+  cacheNow()}
+/* otvorenie firmy bez internetu z údajov v zariadení */
+async function openFromCache(){const tid=lsGet("sf-tenant"),uid=lsGet("sf-uid");if(!tid||!uid)return false;const C=await OFF.get("t:"+uid+":"+tid);if(!C||!C.S)return false;
+  S=C.S;TID=tid;SNAP=new Map(C.snap||[]);VER=new Map(C.ver||[]);USNAP=new Map(C.usnap||[]);PSNAP=C.psnap||"";myTenants=C.tenants||[];if(C.bill&&typeof BILL!=="undefined")BILL=C.bill;
+  me=(S.users||[]).find(u=>u.id===C.me)||null;if(!me)return false;authUser=authUser||{id:uid,email:me.email};FROM_CACHE=true;setOffline(true);
+  view=isExternal(me)?externalStart():{screen:startScreen(),tab:"dennik"};render();return true}
 /* --- používatelia firmy: členovia + čakajúce pozvánky --- */
 function userFromMember(m){const name=[m.first_name,m.last_name].filter(Boolean).join(" ");
   const rights=m.role==="spravca"?Object.fromEntries(Object.keys(MODS_ALL).map(k=>[k,"edit"])):(m.rights||{});
@@ -81,19 +111,18 @@ function userState(u){const projects=S.projects.filter(p=>(p.members||[]).some(m
 function profState(){return me?{first_name:me.firstName||null,last_name:me.lastName||null,phone:me.phone||null,stamp:me.stamp||null}:{}}
 
 /* --- ukladanie: rozdiel oproti poslednému stavu z databázy --- */
-function save(){if(!TID||!SB)return true;saveBusy++;setSaving(true);
-  saveQ=saveQ.then(doSave).catch(e=>{console.error(e);toast("Zmenu sa nepodarilo uložiť: "+errText(e))}).finally(()=>{if(--saveBusy===0){setSaving(false);if(pendingRemote)flushRemote()}});return true}
-async function doSave(){const rows=docRows(),ups=[],dels=[];
+function save(){if(!TID||!SB)return true;cacheNow();if(OFFLINE&&!navigator.onLine){setSaving(false);return true}saveBusy++;setSaving(true);
+  saveQ=saveQ.then(doSave).then(()=>{if(OFFLINE)setOffline(false);cacheNow()}).catch(e=>{console.error(e);if(isNetErr(e)){setOffline(true);cacheNow()}else toast("Zmenu sa nepodarilo uložiť: "+errText(e))}).finally(()=>{if(--saveBusy===0){setSaving(false);if(pendingRemote)flushRemote()}});return true}
+async function doSave(){await syncUsers();await syncProfile();await doDocs()}
+async function doDocs(){const rows=docRows(),ups=[],dels=[];
   rows.forEach((r,k)=>{const s=rowSig(r);if(SNAP.get(k)!==s)ups.push({k,s,row:{tenant_id:TID,kind:r.kind,id:r.id,project_id:r.project_id,data:r.data}})});
   SNAP.forEach((s,k)=>{if(!rows.has(k))dels.push(k)});
-  /* najprv používatelia (práva na stavby), potom údaje */
-  await syncUsers();await syncProfile();
   let batch=[],size=0;const flush=async()=>{if(!batch.length)return;const b=batch;batch=[];size=0;
-    const {error}=await SB.from("docs").upsert(b.map(x=>x.row),{onConflict:"tenant_id,kind,id"});if(error)throw error;b.forEach(x=>SNAP.set(x.k,x.s))};
+    const {data,error}=await SB.from("docs").upsert(b.map(x=>x.row),{onConflict:"tenant_id,kind,id"}).select("kind,id,updated_at");if(error)throw error;b.forEach(x=>SNAP.set(x.k,x.s));(data||[]).forEach(r=>VER.set(r.kind+"|"+r.id,r.updated_at))};
   for(const x of ups){const n=x.s.length;if(size+n>2e6)await flush();batch.push(x);size+=n}await flush();
   const byKind={};dels.forEach(k=>{const i=k.indexOf("|");(byKind[k.slice(0,i)]=byKind[k.slice(0,i)]||[]).push(k.slice(i+1))});
   for(const [kind,ids] of Object.entries(byKind)){for(let i=0;i<ids.length;i+=100){const part=ids.slice(i,i+100);
-    const {error}=await SB.from("docs").delete().eq("tenant_id",TID).eq("kind",kind).in("id",part);if(error)throw error;part.forEach(id=>SNAP.delete(kind+"|"+id))}}}
+    const {error}=await SB.from("docs").delete().eq("tenant_id",TID).eq("kind",kind).in("id",part);if(error)throw error;part.forEach(id=>{SNAP.delete(kind+"|"+id);VER.delete(kind+"|"+id)})}}}
 async function syncUsers(){const cur=new Map(S.users.map(u=>[u.id,u]));
   for(const u of S.users){const st=userState(u),js=JSON.stringify(st);if(USNAP.get(u.id)===js)continue;
     if(u.id.startsWith("inv:")){const row={role:st.role==="admin"?"clen":st.role,rights:st.rights,projects:st.projects,email:u.email,name:u.name||null};
@@ -108,7 +137,11 @@ async function syncProfile(){if(!me||!authUser)return;const st=profState(),js=JS
   const {error}=await SB.from("profiles").upsert({id:authUser.id,email:authUser.email,...st,updated_at:new Date().toISOString()});if(error)throw error;PSNAP=js}
 function permErr(e,msg){return /row-level security|permission denied|42501/.test(String(e.message||e.code||""))?new Error(msg):e}
 function errText(e){const m=String(e&&e.message||e||"");if(/Failed to fetch|NetworkError|network/i.test(m))return "nie je pripojenie na internet. Skús to znova.";return m}
-function setSaving(on){const el=$("#saveInd");if(el){el.hidden=!on}}
+function setSaving(on){const el=$("#saveInd");if(el){el.hidden=!on&&!OFFLINE;el.textContent=OFFLINE?"Offline":"Ukladám…";el.title=OFFLINE?"Bez pripojenia – zmeny sú uložené v zariadení a odošlú sa po pripojení":"";el.classList.toggle("off",OFFLINE)}}
+function setOffline(on){if(OFFLINE===on)return setSaving(saveBusy>0);OFFLINE=on;setSaving(saveBusy>0);if(on)toast("Si offline. Zápisy sa ukladajú v zariadení a odošlú sa po pripojení.")}
+window.addEventListener("online",async()=>{if(!TID||!me)return;try{if(FROM_CACHE){const {data:{session}}=await SB.auth.getSession();if(!session){view={screen:"home",auth:"login",loginErr:"Prihlásenie vypršalo. Prihlás sa znova – zápisy z offline režimu ostali v zariadení a odošlú sa."};me=null;render();return}
+    authUser=session.user;await openTenant(TID);setOffline(false);toast("Pripojenie obnovené – zmeny odoslané")}else{save();await saveQ;if(!OFFLINE)toast("Pripojenie obnovené – zmeny odoslané")}}catch(e){console.warn(e)}});
+window.addEventListener("offline",()=>{if(TID)setOffline(true)});
 
 /* --- živé zmeny od ostatných používateľov --- */
 const remoteQ=[];
@@ -130,9 +163,10 @@ async function boot(){
   SB.auth.onAuthStateChange((ev,s)=>{if(ev==="PASSWORD_RECOVERY"){me=null;TID=null;view={screen:"home",auth:"newpw"};render()}});
   const hash=location.hash||"";if(/type=recovery/.test(hash))return;
   if(/error_description=/.test(hash)){const m=decodeURIComponent((hash.match(/error_description=([^&]*)/)||[])[1]||"").replace(/\+/g," ");history.replaceState(null,"",location.pathname);view={screen:"home",auth:"login",loginErr:/expired/i.test(m)?"Odkaz v e-maile už neplatí. Prihlás sa alebo si vyžiadaj nový.":m};render();return}
-  const {data:{session}}=await SB.auth.getSession();
-  if(session&&session.user)await afterLogin(session.user);else{view={screen:"home",auth:/[?&]prihlasenie/.test(location.search)?"login":"landing",loginErr:""};render()}}
-async function afterLogin(u){authUser=u;view={screen:"home",auth:"loading"};render();
+  if(!navigator.onLine&&await openFromCache())return;
+  let session=null;try{({data:{session}}=await SB.auth.getSession())}catch(e){if(await openFromCache())return}
+  if(session&&session.user)await afterLogin(session.user);else if(lsGet("sf-uid")&&!navigator.onLine&&await openFromCache())return;else{view={screen:"home",auth:/[?&]prihlasenie/.test(location.search)?"login":"landing",loginErr:""};render()}}
+async function afterLogin(u){authUser=u;lsSet("sf-uid",u.id);view={screen:"home",auth:"loading"};render();
   try{await SB.rpc("accept_invites");
     const {data:ms,error}=await SB.from("members").select("tenant_id,role,tenants(name)").eq("user_id",u.id);if(error)throw error;
     myTenants=ms||[];
@@ -143,7 +177,7 @@ async function afterLogin(u){authUser=u;view={screen:"home",auth:"loading"};rend
     const last=lsGet("sf-tenant"),pick=myTenants.find(t=>t.tenant_id===last)||(myTenants.length===1?myTenants[0]:null);
     if(!pick){view={screen:"home",auth:"pick"};render();return}
     await openTenant(pick.tenant_id)}
-  catch(e){console.error(e);view={screen:"home",auth:"login",loginErr:"Prihlásenie zlyhalo: "+errText(e)};render()}}
+  catch(e){console.error(e);if(isNetErr(e)&&await openFromCache())return;view={screen:"home",auth:"login",loginErr:"Prihlásenie zlyhalo: "+errText(e)};render()}}
 async function openTenant(tid){view={screen:"home",auth:"loading"};render();
   await loadTenant(tid);subscribeLive();
   if(!me){view={screen:"home",auth:"login",loginErr:"Do tejto firmy už nemáš prístup."};render();return}
@@ -155,7 +189,7 @@ async function createFirm(name){
   const {data:ms}=await SB.from("members").select("tenant_id,role,tenants(name)").eq("user_id",authUser.id);myTenants=ms||[];
   const keepMods=S.modules;await loadTenant(tid);S.modules={...MODS_ALL,...keepMods};subscribeLive()}
 async function logout(){try{if(liveCh)SB.removeChannel(liveCh)}catch(e){}liveCh=null;await saveQ.catch(()=>{});await SB.auth.signOut();
-  me=null;authUser=null;TID=null;S=blankState();SNAP=new Map();USNAP=new Map();view={screen:"home",auth:"landing",loginErr:""};render();window.scrollTo(0,0)}
+  await OFF.clear();lsSet("sf-uid","");me=null;authUser=null;TID=null;S=blankState();SNAP=new Map();USNAP=new Map();VER=new Map();view={screen:"home",auth:"landing",loginErr:""};render();window.scrollTo(0,0)}
 function needsSetup(){return me&&me.companyRole==="admin"&&(!TID||!S.firm||!S.firm.setupDone)}
 
 function authShell(title,eyebrow,body){return `<div class="login stack"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1></div>${body}</div>`}
@@ -303,3 +337,31 @@ async function afterPaymentReturn(){const q=new URLSearchParams(location.search)
   if(r==="ok"){toast("Ďakujeme, platba prebehla. Zapínam moduly…");for(let i=0;i<10;i++){await loadBilling();if(!(BILL&&Object.keys(BILL.paid_modules||{}).length)&&i>=1)await syncBilling();render();if(BILL&&Object.keys(BILL.paid_modules||{}).length)break;await new Promise(z=>setTimeout(z,2000))}
     view.billDraft=null;await loadTenant(TID);render();return}
   await syncBilling();await loadBilling();render()}
+
+/* =====================================================================
+   RÝCHLOSŤ A MOBIL: knižnice na PDF a Excel až po zobrazení, inštalácia na plochu, práca offline
+   ===================================================================== */
+const LIBS=["https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js","https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js","https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"];
+let libsP=null,libsReady=false;
+function loadLibs(){return libsP||(libsP=LIBS.reduce((p,src)=>p.then(()=>new Promise(res=>{const el=document.createElement("script");el.src=src;el.onload=res;el.onerror=()=>{console.warn("Knižnica sa nenačítala:",src);res()};document.head.appendChild(el)})),Promise.resolve()).then(()=>{libsReady=true}))}
+/* klik na export skôr, ako sa knižnice načítali: počkať a kliknúť znova */
+const LIB_ACT=/pdf|xls|excel|exp|dex|payX|print|gps|supis|stamp|cert|zmluv|ziadost|list$/i,LIB_FORMS=new Set(["attExportForm","logExpForm","gpsForm","dexForm"]);
+document.addEventListener("click",ev=>{if(libsReady)return;const b=ev.target.closest&&ev.target.closest("[data-a]");if(!b||!LIB_ACT.test(b.dataset.a))return;
+  ev.preventDefault();ev.stopImmediatePropagation();toast("Pripravujem export…");loadLibs().then(()=>b.click())},true);
+document.addEventListener("submit",ev=>{if(libsReady)return;const f=ev.target;if(!f||!LIB_FORMS.has(f.id))return;ev.preventDefault();ev.stopImmediatePropagation();
+  loadLibs().then(()=>f.requestSubmit?f.requestSubmit():f.dispatchEvent(new Event("submit",{cancelable:true,bubbles:true})))},true);
+window.addEventListener("load",()=>{const go=()=>loadLibs();if("requestIdleCallback" in window)requestIdleCallback(go,{timeout:4000});else setTimeout(go,1500)});
+
+/* aplikácia na plochu (PWA): service worker drží aplikáciu v zariadení, aby sa otvorila aj bez signálu */
+if("serviceWorker" in navigator&&location.protocol==="https:")window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(e=>console.warn("sw",e)));
+let installEv=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEv=e;if(me)render()});
+window.addEventListener("appinstalled",()=>{installEv=null;lsSet("sf-inst","1");render()});
+const isStandalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const isIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream;
+function installHTML(){if(isStandalone()||lsGet("sf-inst-skip")==="1"||!me)return "";if(!installEv&&!(isIOS()&&matchMedia("(max-width:820px)").matches))return "";
+  return `<div class="instbar" role="region" aria-label="Aplikácia na plochu"><div><b>Pridaj si aplikáciu na plochu</b><span>${installEv?"Otvorí sa jedným ťuknutím a denník aj dochádzku zapíšeš aj bez signálu.":"V Safari ťukni na Zdieľať a potom na „Pridať na plochu“. Denník aj dochádzku zapíšeš aj bez signálu."}</span></div>
+    ${installEv?`<button class="btn small primary" data-a="pwaInstall">Pridať</button>`:""}<button class="btn small ghost" data-a="pwaSkip" aria-label="Zavrieť">✕</button></div>`}
+document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-a]");if(!b)return;
+  if(b.dataset.a==="pwaInstall"&&installEv){ev.stopImmediatePropagation();installEv.prompt();installEv.userChoice.finally(()=>{installEv=null;render()})}
+  else if(b.dataset.a==="pwaSkip"){ev.stopImmediatePropagation();lsSet("sf-inst-skip","1");render()}},true);
