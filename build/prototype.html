@@ -3820,7 +3820,7 @@ function modulesHTML(){
   return `<div class="stack"><div class="card stack"><h2>Moduly</h2>
     <div class="muted">Karta Firma so základným zoznamom zamestnancov a strojovým a vozovým parkom je súčasťou každého užívateľa bezplatne. Ostatné moduly si vyberieš podľa vlastnej potreby – môžeš si zvoliť iba tie, ktoré potrebuješ pre fungovanie svojej firmy.</div>
     ${admin?`<form class="stack" id="modForm">${modChecks("mm",M)}
-      <div class="muted" style="font-size:13px">Vypnutím modulu sa údaje nezmažú. Po opätovnom zapnutí budú znova k dispozícii. V ostrej verzii sa zmena modulov premietne do ceny predplatného.</div>
+      <div class="muted" style="font-size:13px">Vypnutím modulu sa údaje nezmažú. Po opätovnom zapnutí budú znova k dispozícii.</div>
       <button class="btn primary" type="submit" style="align-self:flex-start">Uložiť moduly</button></form>`
     :`<ul class="modlist">${MODULES.map(([k,l])=>`<li><span class="pill ${M[k]?"s-ok":"s-lock"}">${M[k]?"Aktívny":"Neaktívny"}</span> ${l}</li>`).join("")}</ul>`}
     ${hint.map(x=>`<div class="note">${x}</div>`).join("")}</div></div>`}
