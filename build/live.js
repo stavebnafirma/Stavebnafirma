@@ -113,7 +113,17 @@ function profState(){return me?{first_name:me.firstName||null,last_name:me.lastN
 /* --- ukladanie: rozdiel oproti poslednému stavu z databázy --- */
 function save(){if(!TID||!SB)return true;cacheNow();if(OFFLINE&&!navigator.onLine){setSaving(false);return true}saveBusy++;setSaving(true);
   saveQ=saveQ.then(doSave).then(()=>{if(OFFLINE)setOffline(false);cacheNow()}).catch(e=>{console.error(e);if(isNetErr(e)){setOffline(true);cacheNow()}else toast("Zmenu sa nepodarilo uložiť: "+errText(e))}).finally(()=>{if(--saveBusy===0){setSaving(false);if(pendingRemote)flushRemote()}});return true}
-async function doSave(){await syncUsers();await syncProfile();await doDocs()}
+async function doSave(){await syncUsers();await syncProfile();await doDocs();await syncOffers()}
+/* --- ponuka strojov: stroje označené „Stroj v ponuke“ sa kopírujú do tabuľky offers, ktorú vidia všetci --- */
+let OFFERS=[],OSNAP=null,offersAt=0;
+async function syncOffers(){if(!TID||typeof offerFromMachine!=="function")return;const mine=(S.machines||[]).filter(m=>m.offer).map(m=>({id:m.id,data:offerFromMachine(m)}));
+  const sig=JSON.stringify(mine);if(sig===OSNAP)return;
+  try{const {data:cur,error:e0}=await SB.from("offers").select("id").eq("tenant_id",TID);if(e0)throw e0;
+    if(mine.length){const {error}=await SB.from("offers").upsert(mine.map(o=>({tenant_id:TID,id:o.id,data:{...o.data,own:false},updated_at:new Date().toISOString()})),{onConflict:"tenant_id,id"});if(error)throw error}
+    const gone=(cur||[]).map(r=>r.id).filter(id=>!mine.some(o=>o.id===id));if(gone.length){const {error}=await SB.from("offers").delete().eq("tenant_id",TID).in("id",gone);if(error)throw error}
+    OSNAP=sig}catch(e){console.warn("ponuka strojov",e)}}
+async function loadOffers(force){if(!SB||(!force&&Date.now()-offersAt<120000))return;offersAt=Date.now();
+  try{const {data,error}=await SB.from("offers").select("tenant_id,id,data").limit(1000);if(error)throw error;OFFERS=(data||[]).map(r=>({...r.data,id:r.tenant_id+"|"+r.id,tenant:r.tenant_id,own:false}));render()}catch(e){console.warn("ponuka strojov",e)}}
 async function doDocs(){const rows=docRows(),ups=[],dels=[];
   rows.forEach((r,k)=>{const s=rowSig(r);if(SNAP.get(k)!==s)ups.push({k,s,row:{tenant_id:TID,kind:r.kind,id:r.id,project_id:r.project_id,data:r.data}})});
   SNAP.forEach((s,k)=>{if(!rows.has(k))dels.push(k)});

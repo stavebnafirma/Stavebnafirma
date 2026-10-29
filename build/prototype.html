@@ -153,6 +153,20 @@ table.budget td.code{font-size:12px;color:var(--muted)}
 .mright .lvl label.sel{box-shadow:0 1px 2px rgba(0,0,0,.12)}
 .mright .lvl label:has(input:checked){background:var(--accent);color:var(--accent-ink)}
 .mright .lvl label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:1px}
+.offers{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.offer{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}.offer.own{border-color:var(--accent-soft)}
+.ofimg{position:relative;aspect-ratio:4/3;background:var(--tint);overflow:hidden}.ofimg img{width:100%;height:100%;object-fit:cover;display:block}
+.ofph{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--muted);font-size:12px}.ofph svg{width:44px;height:44px;opacity:.55}
+.oftag,.ofkm{position:absolute;top:8px;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:999px}.oftag{left:8px;background:var(--accent);color:var(--accent-ink)}.ofkm{right:8px;background:rgba(20,22,25,.72);color:#fff}
+.ofbody{padding:12px 14px;display:flex;flex-direction:column;gap:4px;flex:1}.ofbody .muted{font-size:13px}.ofprice{font-weight:700;font-size:14px;margin-top:2px}
+.ofnote{font-size:13px;color:var(--muted)}.ofwhy{font-size:12px;color:var(--accent)}.offirm{margin-top:auto;padding-top:8px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px}
+.offer a.btn{text-decoration:none;color:inherit}
+.mkbar{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}.mkbar>label{flex:1 1 180px}
+.tkneed .offers{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.fmph{position:relative;max-width:520px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}.fmph canvas{display:block;width:100%;height:auto;touch-action:auto}.fmph.blur canvas{cursor:crosshair;touch-action:none}
+#fmSel{position:absolute;border:2px dashed #e8792f;background:rgba(232,121,47,.15);pointer-events:none}
+fieldset:has(#fmOffer:not(:checked)) .fmofr{display:none}
+.fmname{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.fmthumb{width:44px;height:33px;object-fit:cover;border-radius:5px;border:1px solid var(--line)}
 .seenline{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ok);font-weight:600}.dexp summary{cursor:pointer}
 .bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
 table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
@@ -1262,6 +1276,130 @@ function firmEmployeesHTML(){
       <label class="chk" style="margin-left:auto"><input type="checkbox" id="fzAll" ${showAll?"checked":""}> Zobraziť aj neaktívnych</label></div>
     <div class="card tablewrap" style="padding:6px 8px"><table><thead><tr><th>Os. č.</th><th>Priezvisko a meno</th><th>Pracovná pozícia</th>${ed?"<th></th>":""}</tr></thead>
       <tbody>${rows||`<tr><td colspan="4" class="muted">Zatiaľ nie je zadaný žiadny zamestnanec.</td></tr>`}</tbody></table></div></div>`}
+/* ---------- Ponuka strojov: fotky, ponuka pre všetkých používateľov aplikácie, odporúčanie techniky pre stavbu ---------- */
+/* približné súradnice obcí (na výpočet vzdialenosti bez internetu); ostatné obce sa dohľadajú na mape */
+const GEO_SK={"bratislava":[48.148,17.107],"trnava":[48.377,17.588],"nitra":[48.307,18.087],"trencin":[48.894,18.044],"zilina":[49.223,18.739],"banska bystrica":[48.736,19.146],"presov":[48.998,21.239],"kosice":[48.716,21.261],
+  "rimavska sobota":[48.383,20.022],"tornala":[48.422,20.329],"jesenske":[48.303,20.068],"hrachovo":[48.427,20.076],"lucenec":[48.331,19.667],"filakovo":[48.270,19.825],"revuca":[48.683,20.117],"roznava":[48.661,20.532],
+  "hnusta":[48.582,19.953],"tisovec":[48.677,19.944],"zvolen":[48.574,19.124],"detva":[48.557,19.419],"brezno":[48.804,19.639],"velky krtis":[48.209,19.349],"poltar":[48.431,19.794],"ziar nad hronom":[48.591,18.853],
+  "banska stiavnica":[48.449,18.909],"krupina":[48.355,19.067],"levice":[48.217,18.600],"nove zamky":[47.986,18.161],"komarno":[47.763,18.129],"dunajska streda":[47.994,17.619],"galanta":[48.190,17.727],"senec":[48.219,17.400],
+  "pezinok":[48.289,17.267],"malacky":[48.436,17.022],"senica":[48.679,17.367],"skalica":[48.845,17.227],"piestany":[48.591,17.827],"topolcany":[48.561,18.177],"partizanske":[48.627,18.380],"prievidza":[48.774,18.627],
+  "povazska bystrica":[49.121,18.421],"puchov":[49.124,18.326],"martin":[49.066,18.923],"ruzomberok":[49.075,19.303],"liptovsky mikulas":[49.084,19.612],"dolny kubin":[49.210,19.296],"cadca":[49.438,18.789],
+  "poprad":[49.059,20.297],"kezmarok":[49.135,20.433],"spisska nova ves":[48.944,20.562],"levoca":[49.026,20.588],"gelnica":[48.855,20.937],"michalovce":[48.755,21.918],"trebisov":[48.628,21.719],"humenne":[48.937,21.906],
+  "bardejov":[49.292,21.276],"svidnik":[49.306,21.568],"vranov nad toplou":[48.888,21.685],"stara lubovna":[49.299,20.686],"snina":[48.988,22.152],"moldava nad bodvou":[48.614,20.999],"sala":[48.152,17.875],"hlohovec":[48.425,17.803]};
+const GEO_KEY="sf-geo";let GEO_CACHE=null;
+const geoCache=()=>GEO_CACHE||(GEO_CACHE=(()=>{try{return JSON.parse(localStorage.getItem(GEO_KEY)||"{}")}catch(e){return {}}})());
+const townKey=t=>normText(String(t||"").split(/[,·]/)[0].replace(/^\d{3}\s?\d{2}\s+/,"").replace(/\s*-\s*.*$/,"").replace(/\b(k\.\s?ú\.|obec|mesto)\b/g,"")).trim();
+function geoOf(place){const k=townKey(place);if(!k)return null;const g=GEO_SK[k]||geoCache()[k];return g?{lat:g[0],lng:g[1]}:null}
+async function geoLookup(places){const C=geoCache();let n=0;for(const pl of places){const k=townKey(pl);if(!k||GEO_SK[k]||C[k])continue;
+    try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=sk&accept-language=sk&q=${encodeURIComponent(String(pl).split(/[,·]/)[0])}`);const j=await r.json();if(j&&j[0]){C[k]=[+j[0].lat,+j[0].lon];n++}}catch(e){break}
+    await new Promise(r=>setTimeout(r,1100))}
+  if(n){try{localStorage.setItem(GEO_KEY,JSON.stringify(C))}catch(e){}render()}return n}
+const kmBetween=(a,b)=>a&&b?hav({lat:a.lat,lon:a.lng},{lat:b.lat,lon:b.lng}):null;
+function projGeo(p){if(p.locType==="gps"&&p.gps)return {lat:p.gps.lat,lng:p.gps.lng};return geoOf(p.locality)||geoOf(p.address)}
+/* ponuka: vlastné stroje označené „Stroj v ponuke“ + ponuky ostatných firiem */
+function offerFromMachine(m){const F=S.firm||{};return {id:m.id,own:true,name:m.name,type:m.type||"",cat:m.cat||"other",photo:m.photo||"",rate:m.rate||0,rateDay:m.rateDay||0,rateKm:m.rateKm||0,rateOther:m.rateOther||0,otherName:m.otherName||"",otherUnit:m.otherUnit||"",
+  firm:F.name||S.company||"",phone:m.offerPhone||F.phone||"",email:F.email||"",place:m.offerPlace||F.city||"",note:m.offerNote||"",withOp:!!m.offerOp}}
+const MARKET_SEED=[
+  {id:"x1",name:"Kolesové rýpadlo 16 t",type:"Rýpadlo",cat:"machine",rate:48,rateDay:0,firm:"Zemné práce Gemer s.r.o. (ukážka)",phone:"+421 900 111 001",place:"Rimavská Sobota",note:"s obsluhou, rýpadlová lyžica 0,6 m³ a svahovka",withOp:true},
+  {id:"x2",name:"Minirýpadlo 1,8 t",type:"Minirýpadlo",cat:"machine",rate:32,rateDay:220,firm:"Výkopy Novák (ukážka)",phone:"+421 900 111 002",place:"Lučenec",note:"lyžice 30, 40 a 60 cm, vrták na stĺpiky",withOp:true},
+  {id:"x3",name:"Vibračná doska 400 kg reverzná",type:"Vibračná doska",cat:"small",rateDay:55,firm:"Požičovňa Hron (ukážka)",phone:"+421 900 111 003",place:"Zvolen",note:"vhodná na podkladové vrstvy a dlažbu"},
+  {id:"x4",name:"Vibračný valec 7 t",type:"Vibračný valec",cat:"machine",rate:38,firm:"Cesty Juh s.r.o. (ukážka)",phone:"+421 900 111 004",place:"Tornaľa",withOp:true},
+  {id:"x5",name:"Rezač asfaltu a betónu Ø 500",type:"Rezač asfaltu",cat:"small",rateDay:45,rateOther:1.1,otherName:"opotrebenie rezného kotúča",otherUnit:"bm",firm:"Požičovňa Hron (ukážka)",phone:"+421 900 111 003",place:"Zvolen"},
+  {id:"x6",name:"Tatra 815 sklápač 6×6",type:"Nákladné auto – sklápač",cat:"truck",rate:45,rateKm:1.3,firm:"Doprava Lukáč (ukážka)",phone:"+421 900 111 006",place:"Revúca",withOp:true},
+  {id:"x7",name:"Autožeriav 30 t",type:"Autožeriav",cat:"truck",rate:85,firm:"Žeriavy Východ (ukážka)",phone:"+421 900 111 007",place:"Košice",withOp:true},
+  {id:"x8",name:"Čerpadlo na betón 36 m",type:"Čerpadlo betónu",cat:"truck",rate:120,firm:"Betón Gemer (ukážka)",phone:"+421 900 111 008",place:"Rimavská Sobota",withOp:true},
+  {id:"x9",name:"Kolesový nakladač 2 m³",type:"Nakladač",cat:"machine",rate:44,firm:"Zemné práce Gemer s.r.o. (ukážka)",phone:"+421 900 111 001",place:"Rimavská Sobota",withOp:true},
+  {id:"x10",name:"Búracie kladivo 30 kg",type:"Búracie kladivo",cat:"small",rateDay:28,firm:"Požičovňa Hron (ukážka)",phone:"+421 900 111 003",place:"Zvolen"}];
+let marketExt=()=>MARKET_SEED.map(o=>({...o,own:false}));
+function marketList(){return [...(S.machines||[]).filter(m=>m.offer).map(offerFromMachine),...marketExt()]}
+const offerPrice=o=>o.rate?o.rate*8:o.rateDay||0; /* na porovnanie: deň práce = 8 h */
+function offerPriceText(o){const a=[];if(o.rate)a.push(`${eur(o.rate)} / h`);if(o.rateDay)a.push(`${eur(o.rateDay)} / deň`);if(o.rateKm)a.push(`${eur(o.rateKm)} / km`);if(o.rateOther)a.push(`${eur(o.rateOther)} / ${o.otherUnit||"j."}${o.otherName?` (${o.otherName})`:""}`);return a.join(" · ")||"cena dohodou"}
+/* odporúčanie: z popisu položky rozpočtu určiť druh práce a potrebnú techniku */
+const TECH_RULES=[
+  {k:"vykop",l:"Výkopy a zemné práce",re:/vykop|hlben|ryh[ay]|jam[ay]?\b|odkop|zemn|zemin|ornic|nasyp|zasyp|svah|planir|urovn/,m:/rypad|bager|nakladac|rypadlo|jcb|cat 3|kubota/},
+  {k:"ryha",l:"Ryhy a prípojky",re:/ryh|pripojk|kanaliz|vodovod|pokladk[ay] potrub|chranick/,m:/minirypad|mini rypad|kubota|rypadlo/},
+  {k:"hutn",l:"Hutnenie",re:/hutn|zhutn|zhutnen|valcov/,m:/vibra|valec|hutn|doska|jezko|bomag|wacker/},
+  {k:"rozpr",l:"Rozprestretie a presun materiálu",re:/rozprest|presun hmot|nakladan|strkodrv|sterkopiesok|kamenivo|drvin/,m:/nakladac|rypadlo-nakladac|jcb|rypad/},
+  {k:"odvoz",l:"Doprava a odvoz",re:/odvoz|doprav|vyvoz|sut[ie]|skladk|vodorovne premiestn|premiestnen/,m:/tatra|sklapac|nakladne|man |tgs|kontajner/},
+  {k:"asfalt",l:"Rezanie asfaltu a betónu",re:/rezan|prerez|asfalt|odfrez|frez/,m:/rezac|pila|frez/},
+  {k:"burac",l:"Búracie práce",re:/burani|odstranen|vybura|demolac|rozobrat/,m:/burac|kladivo|hydraulick/},
+  {k:"beton",l:"Betonáž",re:/betonaz|zelezobeton|zakladov[ey] pas|^(?!.*(odstran|vybur|rezan|frez|obrubn|dlazb)).*betonu? (c|tr|triedy)/,m:/cerpadl.*beton|domiesav|vibrator|mies/},
+  {k:"zeriav",l:"Zdvíhanie a montáž",re:/prefabrik|stropn[ey] panel|nosnik|zeriav|zdvih|montaz (oceľ|ocel|konstruk|panel)/,m:/zeriav|manipulator|nakladac s|hydraulick.*ruk/},
+  {k:"voda",l:"Čerpanie vody",re:/cerpan|odvodnen|cerpadl/,m:/cerpadl(?!.*beton)|kalov/},
+  {k:"dlazba",l:"Dlažba a obrubníky",re:/dlazb|obrubn|dlazd/,m:/vibra|doska|rezac|pila/}];
+function techNeeds(p){const out=new Map();/* poradie podľa pravidiel */((p.budget&&p.budget.items)||[]).forEach(i=>{const t=normText(i.desc);TECH_RULES.forEach(R=>{if(R.re.test(t)){if(!out.has(R.k))out.set(R.k,{R,items:[]});out.get(R.k).items.push(i)}})});return [...out.values()].sort((a,b)=>TECH_RULES.indexOf(a.R)-TECH_RULES.indexOf(b.R))}
+const offerText=o=>normText([o.name,o.type,o.note].join(" "));
+function offerCard(o,ref,why){const d=ref?kmBetween(ref,geoOf(o.place)):null;
+  return `<article class="offer${o.own?" own":""}"><div class="ofimg">${o.photo?`<img src="${o.photo}" alt="${esc(o.name)}" loading="lazy">`:`<div class="ofph">${icon(o.cat==="truck"||o.cat==="car"?"doprava":o.cat==="small"?"pozicovna":"doprava")}<span>${esc((CATS[o.cat]||CATS.other).l)}</span></div>`}
+      ${o.own?`<span class="oftag">Naša firma</span>`:""}${d!=null?`<span class="ofkm">${nf1(Math.round(d))} km</span>`:""}</div>
+    <div class="ofbody"><b>${esc(o.name)}</b>${o.type?`<span class="muted">${esc(o.type)}</span>`:""}
+      <div class="ofprice">${esc(offerPriceText(o))}</div>${o.note?`<div class="ofnote">${esc(o.note)}</div>`:""}${why?`<div class="ofwhy">${esc(why)}</div>`:""}
+      <div class="offirm"><span>${esc(o.firm)}${o.place?` · ${esc(o.place)}`:""}${o.withOp?` · s obsluhou`:""}</span>
+        <span class="row" style="gap:6px">${o.phone?`<a class="btn small" href="tel:${esc(o.phone.replace(/\s/g,""))}">Zavolať</a>`:""}${o.email?`<a class="btn small ghost" href="mailto:${esc(o.email)}?subject=${encodeURIComponent("Dopyt: "+o.name)}">E-mail</a>`:""}</span></div></div></article>`}
+function marketSortRef(){const k=view.mkFrom||"firm";if(k==="firm")return geoOf((S.firm||{}).city);const p=S.projects.find(x=>x.id===k);return p?projGeo(p):null}
+function marketHTML(){const all=marketList(),q=normText(view.mkQ||""),cat=view.mkCat||"",sort=view.mkSort||"dist",ref=marketSortRef();
+  let L=all.filter(o=>(!cat||o.cat===cat)&&(!q||offerText(o).includes(q)||normText(o.firm).includes(q)));
+  L=L.sort((a,b)=>sort==="price"?(offerPrice(a)||1e9)-(offerPrice(b)||1e9):((kmBetween(ref,geoOf(a.place))??1e9)-(kmBetween(ref,geoOf(b.place))??1e9)));
+  const mine=(S.machines||[]).filter(m=>m.offer).length;
+  return `<div class="stack"><div class="muted">Stroje a technika, ktoré firmy v aplikácii ponúkajú na prenájom. Svoj stroj pridáš do ponuky v karte Strojový a vozový park zaškrtnutím „Stroj v ponuke“.${mine?` Naša firma ponúka ${mine} ${pl(mine,"stroj","stroje","strojov")}.`:""}</div>
+    <div class="card mkbar"><label>Hľadať<input id="mkQ" value="${esc(view.mkQ||"")}" placeholder="napr. rýpadlo, vibračná doska" autocomplete="off"></label>
+      <label>Druh<select id="mkCat"><option value="">všetky</option>${CAT_ORDER.map(k=>`<option value="${k}" ${cat===k?"selected":""}>${CATS[k].l}</option>`).join("")}</select></label>
+      <label>Zoradiť<select id="mkSort"><option value="dist" ${sort==="dist"?"selected":""}>podľa vzdialenosti</option><option value="price" ${sort==="price"?"selected":""}>podľa ceny</option></select></label>
+      ${sort==="dist"?`<label>Vzdialenosť od<select id="mkFrom"><option value="firm">sídla firmy</option>${S.projects.filter(p=>p.status!=="closed").map(p=>`<option value="${p.id}" ${view.mkFrom===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></label>`:""}</div>
+    ${sort==="dist"&&!ref?`<div class="note">Pre zvolené miesto nepoznáme polohu. Doplň obec v údajoch o firme alebo GPS v údajoch o stavbe.</div>`:""}
+    <div class="offers">${L.map(o=>offerCard(o,sort==="dist"?ref:null)).join("")||`<div class="card muted">Nič nezodpovedá hľadaniu.</div>`}</div>
+    <div class="muted" style="font-size:12px">Vzdialenosť je vzdušná čiara medzi obcami. Ceny sú bez DPH, pri porovnaní cien sa hodinová sadzba počíta ako 8 h práce.</div></div>`}
+/* Stavba – Technika: odporúčané stroje podľa položiek rozpočtu */
+function techHTML(p){const needs=techNeeds(p),all=marketList(),mode=view.tkMode||"rec",sort=view.tkSort||"dist",ref=projGeo(p);
+  const cmp=(a,b)=>sort==="price"?(offerPrice(a)||1e9)-(offerPrice(b)||1e9):((kmBetween(ref,geoOf(a.place))??1e9)-(kmBetween(ref,geoOf(b.place))??1e9));
+  const bar=`<div class="card mkbar"><div class="tpseg" role="tablist" style="min-width:300px"><button class="${mode==="rec"?"on":""}" data-a="tkMode" data-m="rec">Odporúčaná technika</button><button class="${mode==="all"?"on":""}" data-a="tkMode" data-m="all">Celý zoznam</button></div>
+    <div class="tpseg" role="tablist" style="min-width:300px"><button class="${sort==="dist"?"on":""}" data-a="tkSort" data-s="dist">Najbližšie k stavbe</button><button class="${sort==="price"?"on":""}" data-a="tkSort" data-s="price">Najlacnejšie</button></div></div>
+    ${sort==="dist"&&!ref?`<div class="note">Stavba nemá polohu, ktorú poznáme. Doplň obec alebo GPS v údajoch o stavbe – potom zoradíme stroje podľa vzdialenosti.</div>`:""}`;
+  let body;
+  if(mode==="all")body=`<div class="offers">${all.slice().sort(cmp).map(o=>offerCard(o,ref)).join("")}</div>`;
+  else if(!p.budget)body=`<div class="card muted">Najprv nahraj rozpočet stavby v záložke Rozpočet. Z popisov položiek potom odporučíme vhodnú techniku.</div>`;
+  else if(!needs.length)body=`<div class="card muted">V položkách rozpočtu sme nenašli práce, na ktoré by bola potrebná technika z ponuky. Pozri si celý zoznam.</div>`;
+  else body=needs.map(({R,items})=>{const L=all.filter(o=>R.m.test(offerText(o))).sort(cmp),ex=items.slice(0,3).map(i=>i.desc.length>70?i.desc.slice(0,68)+"…":i.desc);
+    return `<section class="card stack tkneed"><div class="entry-head"><div><h3>${esc(R.l)}</h3><div class="muted" style="font-size:13px">${items.length} ${pl(items.length,"položka","položky","položiek")} rozpočtu, napr. ${ex.map(x=>`„${esc(x)}“`).join(", ")}</div></div><span class="pill s-open">${L.length} ${pl(L.length,"stroj","stroje","strojov")}</span></div>
+      ${L.length?`<div class="offers">${L.slice(0,6).map(o=>offerCard(o,ref)).join("")}</div>`:`<div class="muted">V ponuke zatiaľ nie je vhodný stroj.</div>`}</section>`}).join("");
+  return `<div class="stack"><div class="muted">Technika z ponuky strojov firiem v aplikácii. Odporúčanie vychádza z popisov položiek rozpočtu – napr. „násyp zo štrkodrvy so zhutnením“ potrebuje rýpadlo alebo nakladač a vibračnú dosku alebo valec.</div>${bar}${body}</div>`}
+document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(a==="tkMode"){view.tkMode=b.dataset.m;render()}else if(a==="tkSort"){view.tkSort=b.dataset.s;render()}});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me)return;
+  if(t.id==="mkCat"){view.mkCat=t.value;render()}else if(t.id==="mkSort"){view.mkSort=t.value;render()}else if(t.id==="mkFrom"){view.mkFrom=t.value;render()}});
+document.addEventListener("input",ev=>{if(ev.target.id==="mkQ"){view.mkQ=ev.target.value;const pos=ev.target.selectionStart;render();const el=$("#mkQ");if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}}}});
+/* fotka stroja: zmenšenie a zakrytie EČV */
+function fmReset(){delete view.fmPhoto;view.fmBlur=false;view.fmDraft=null;delete view._ok}
+function confirmOk(k){view._ok=view._ok||{};if(view._ok[k])return true;view._ok[k]=true;return false}
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
+async function photoFromFile(f){const url=URL.createObjectURL(f);try{const img=await loadImg(url),M=1200,k=Math.min(1,M/Math.max(img.width,img.height)),c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+  c.getContext("2d").drawImage(img,0,0,c.width,c.height);return c.toDataURL("image/jpeg",0.82)}finally{URL.revokeObjectURL(url)}}
+function fmPhotoHTML(m){const ph=view.fmPhoto!==undefined?view.fmPhoto:(m&&m.photo)||"";
+  return `<fieldset class="modes"><legend>Fotka stroja</legend>
+    ${ph?`<div class="fmph${view.fmBlur?" blur":""}"><canvas id="fmCanvas" data-src="1"></canvas></div>
+      <div class="row">${view.fmBlur?`<span class="muted" style="font-size:13px">Ťahaním prstom alebo myšou označ evidenčné číslo – rozmaže sa.</span><button type="button" class="btn small primary" data-a="fmBlurOff">Hotovo</button>`
+        :`<button type="button" class="btn small" data-a="fmBlurOn">Zakryť EČV</button><label class="btn small ghost" style="cursor:pointer">Iná fotka<input type="file" id="fmPhotoIn" accept="image/*" hidden></label><button type="button" class="btn small ghost" data-a="fmPhotoDel">Odstrániť fotku</button>`}</div>`
+    :`<label class="docdrop"><input type="file" id="fmPhotoIn" accept="image/*" capture="environment"><span>Odfotiť alebo nahrať fotku stroja</span></label>`}
+    <span class="hint">Fotka sa zobrazí v ponuke strojov. Pred zverejnením zakry evidenčné číslo vozidla (tlačidlo „Zakryť EČV“) a nefoť ľudí.</span></fieldset>`}
+async function fmDrawCanvas(){const c=$("#fmCanvas");if(!c)return;const src=view.fmPhoto!==undefined?view.fmPhoto:((S.machines||[]).find(x=>x.id===view.fmEdit)||{}).photo;if(!src)return;
+  const img=await loadImg(src);c.width=img.width;c.height=img.height;c.getContext("2d").drawImage(img,0,0)}
+function pixelate(c,x,y,w,h){const g=c.getContext("2d"),B=Math.max(8,Math.round(Math.max(c.width,c.height)/70));x=Math.max(0,Math.round(x));y=Math.max(0,Math.round(y));w=Math.min(c.width-x,Math.round(w));h=Math.min(c.height-y,Math.round(h));if(w<4||h<4)return;
+  const d=g.getImageData(x,y,w,h),D=d.data;for(let by=0;by<h;by+=B)for(let bx=0;bx<w;bx+=B){let r=0,gg=0,b=0,n=0;for(let yy=by;yy<Math.min(h,by+B);yy++)for(let xx=bx;xx<Math.min(w,bx+B);xx++){const i=(yy*w+xx)*4;r+=D[i];gg+=D[i+1];b+=D[i+2];n++}
+    r/=n;gg/=n;b/=n;for(let yy=by;yy<Math.min(h,by+B);yy++)for(let xx=bx;xx<Math.min(w,bx+B);xx++){const i=(yy*w+xx)*4;D[i]=r;D[i+1]=gg;D[i+2]=b}}g.putImageData(d,x,y)}
+let fmDrag=null;
+document.addEventListener("pointerdown",ev=>{const c=ev.target;if(c.id!=="fmCanvas"||!view.fmBlur)return;ev.preventDefault();const r=c.getBoundingClientRect();fmDrag={c,r,x0:ev.clientX,y0:ev.clientY};
+  let box=document.getElementById("fmSel");if(!box){box=document.createElement("div");box.id="fmSel";c.parentNode.appendChild(box)}box.style.cssText=`left:${ev.clientX-r.left}px;top:${ev.clientY-r.top}px;width:0;height:0`;c.setPointerCapture&&c.setPointerCapture(ev.pointerId)});
+document.addEventListener("pointermove",ev=>{if(!fmDrag)return;const {r,x0,y0}=fmDrag,box=document.getElementById("fmSel");if(!box)return;
+  box.style.cssText=`left:${Math.min(x0,ev.clientX)-r.left}px;top:${Math.min(y0,ev.clientY)-r.top}px;width:${Math.abs(ev.clientX-x0)}px;height:${Math.abs(ev.clientY-y0)}px`});
+document.addEventListener("pointerup",ev=>{if(!fmDrag)return;const {c,r,x0,y0}=fmDrag;fmDrag=null;const box=document.getElementById("fmSel");if(box)box.remove();
+  const sx=c.width/r.width,sy=c.height/r.height;pixelate(c,(Math.min(x0,ev.clientX)-r.left)*sx,(Math.min(y0,ev.clientY)-r.top)*sy,Math.abs(ev.clientX-x0)*sx,Math.abs(ev.clientY-y0)*sy);
+  view.fmPhoto=c.toDataURL("image/jpeg",0.82)});
+document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(a==="fmBlurOn"){view.fmBlur=true;keepFm();render()}else if(a==="fmBlurOff"){view.fmBlur=false;keepFm();render()}else if(a==="fmPhotoDel"){view.fmPhoto="";view.fmBlur=false;keepFm();render()}});
+document.addEventListener("change",async ev=>{const t=ev.target;if(t.id!=="fmPhotoIn"||!t.files[0])return;try{view.fmPhoto=await photoFromFile(t.files[0]);view.fmBlur=false;keepFm();render()}catch(e){toast("Fotku sa nepodarilo načítať")}});
+/* rozpísané údaje formulára stroja si podržať pri prekreslení */
+function keepFm(){const f=$("#fmForm");if(!f)return;const D={};f.querySelectorAll("input[id],select[id]").forEach(el=>{if(el.type==="file")return;D[el.id]=el.type==="checkbox"?el.checked:el.value});view.fmDraft=D}
+function restoreFm(){const D=view.fmDraft,f=$("#fmForm");if(!D||!f)return;Object.entries(D).forEach(([id,v])=>{const el=document.getElementById(id);if(!el)return;if(el.type==="checkbox")el.checked=v;else el.value=v})}
 function firmMachinesHTML(){
   const ed=isAdmin(me)||canEdit("doprava"),editing=view.fmEdit,m=editing&&editing!=="__new"?(S.machines||[]).find(x=>x.id===editing):null;
   const form=ed&&editing?`<form class="card stack" id="fmForm" data-id="${m?m.id:""}"><h3>${m?"Upraviť stroj":"Nový stroj alebo vozidlo"}</h3>
@@ -1273,10 +1411,15 @@ function firmMachinesHTML(){
       <fieldset class="modes"><legend>Iná cena (nepovinné)</legend><div class="grid3"><label>Za čo<input id="fmOtherName" value="${esc(m?.otherName)}" placeholder="napr. opotrebenie rezného kotúča"></label>
         <label>Merná jednotka<input id="fmOtherUnit" value="${esc(m?.otherUnit)}" placeholder="napr. bm"></label><label>Cena za jednotku €<input id="fmOther" inputmode="decimal" value="${m&&m.rateOther?String(m.rateOther).replace(".",","):""}" placeholder="napr. 1,20"></label></div>
         <span class="hint">Napr. rezač asfaltu: denný nájom + opotrebenie kotúča za bežný meter. Množstvo sa zadá pri úlohe v plánovači.</span></fieldset>
+      ${fmPhotoHTML(m)}
+      <fieldset class="modes"><legend>Ponuka strojov</legend><label class="chk"><input type="checkbox" id="fmOffer" ${m&&m.offer?"checked":""}> <b>Stroj v ponuke</b> – zobrazí sa s fotkou a cenami v Ponuke strojov všetkým používateľom aplikácie</label>
+        <div class="grid3 fmofr"><label>Miesto stroja (obec)<input id="fmOfPlace" value="${esc(m?.offerPlace||"")}" placeholder="${esc((S.firm||{}).city||"napr. Rimavská Sobota")}"></label><label>Telefón na dopyt<input id="fmOfPhone" type="tel" value="${esc(m?.offerPhone||"")}" placeholder="${esc((S.firm||{}).phone||"+421 …")}"></label>
+          <label class="chk" style="align-self:end"><input type="checkbox" id="fmOfOp" ${m&&m.offerOp?"checked":""}> s obsluhou</label></div>
+        <label class="fmofr">Poznámka k ponuke<input id="fmOfNote" value="${esc(m?.offerNote||"")}" placeholder="napr. lyžice 30/40/60 cm, svahovka, preprava na stavbu zabezpečíme"></label></fieldset>
       <datalist id="typeList">${[...new Set((S.machines||[]).map(x=>x.type).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
       <div class="row"><button class="btn primary" type="submit">${m?"Uložiť":"Pridať"}</button><button type="button" class="btn ghost" data-a="fmNo">Zrušiť</button>
         ${m?`<button type="button" class="btn ghost" data-a="fmDel" data-id="${m.id}" style="margin-left:auto;color:var(--bad)">Odstrániť</button>`:""}</div></form>`:"";
-  const rows=(S.machines||[]).slice().sort((a,b)=>CAT_ORDER.indexOf(a.cat||"other")-CAT_ORDER.indexOf(b.cat||"other")).map(x=>`<tr><td><b>${esc(x.name)}</b>${x.ecv?`<br><span class="muted num">${esc(x.ecv)}</span>`:""}</td><td>${esc(catOf(x).l)}${x.type?`<br><span class="muted">${esc(x.type)}</span>`:""}</td><td class="num r">${x.rate?eur(x.rate):"–"}</td><td class="num r">${x.rateKm?eur(x.rateKm):"–"}</td><td class="num r">${x.rateDay?eur(x.rateDay):"–"}</td><td class="r" style="white-space:normal;min-width:130px">${x.rateOther?`<span class="num">${eur(x.rateOther)} / ${esc(x.otherUnit||"j.")}</span>${x.otherName?`<br><span class="muted" style="font-size:12px">${esc(x.otherName)}</span>`:""}`:`<span class="num">–</span>`}</td>${ed?`<td class="r"><button class="btn small ghost" data-a="fmEdit" data-id="${x.id}">Upraviť</button></td>`:""}</tr>`).join("");
+  const rows=(S.machines||[]).slice().sort((a,b)=>CAT_ORDER.indexOf(a.cat||"other")-CAT_ORDER.indexOf(b.cat||"other")).map(x=>`<tr><td class="fmname">${x.photo?`<img class="fmthumb" src="${x.photo}" alt="">`:""}<b>${esc(x.name)}</b>${x.offer?` <span class="pill s-ok" style="font-size:11px">v ponuke</span>`:""}${x.ecv?`<br><span class="muted num">${esc(x.ecv)}</span>`:""}</td><td>${esc(catOf(x).l)}${x.type?`<br><span class="muted">${esc(x.type)}</span>`:""}</td><td class="num r">${x.rate?eur(x.rate):"–"}</td><td class="num r">${x.rateKm?eur(x.rateKm):"–"}</td><td class="num r">${x.rateDay?eur(x.rateDay):"–"}</td><td class="r" style="white-space:normal;min-width:130px">${x.rateOther?`<span class="num">${eur(x.rateOther)} / ${esc(x.otherUnit||"j.")}</span>${x.otherName?`<br><span class="muted" style="font-size:12px">${esc(x.otherName)}</span>`:""}`:`<span class="num">–</span>`}</td>${ed?`<td class="r"><button class="btn small ghost" data-a="fmEdit" data-id="${x.id}">Upraviť</button></td>`:""}</tr>`).join("");
   return `<div class="stack">
     <div class="muted">Stroje a vozidlá firmy so základnou sadzbou na mernú jednotku (cenník pre fakturáciu úloh v logistike). Z tohto zoznamu vyberáš do denného záznamu stavieb, zadaná cena sa použije v nákladoch stavby.${hasMod("doprava")&&canSee("doprava")?" Rodný list, termíny a servis sú v module Doprava a logistika.":""}</div>
     ${form||(ed?`<button class="btn primary" data-a="fmNew" style="align-self:flex-start">+ Pridať stroj alebo vozidlo</button>`:"")}
@@ -3845,7 +3988,7 @@ function navHTML(){if(!me||view.screen==="setup"||needsProfile())return "";
   return `<nav class="topnav" role="tablist" aria-label="Hlavné menu">${items.map(k=>{const locked=k!=="firma"&&!hasMod(SEC_MOD[k]);const n=k==="doprava"&&!locked?fleetAlerts().length:0;const [full,short]=NAV_LABELS[k];
     return `<button class="ntab ${locked?"locked":""}" role="tab" aria-selected="${cur===k}" data-a="${locked?"secLocked":"sec"}" data-sec="${k}" ${locked?`title="Modul ${full} nie je v predplatnom"`:""}>${icon(locked?"lock":k)}<span class="l-full">${full}</span><span class="l-short">${short}</span>${n?`<span class="badge">${n}</span>`:""}</button>`}).join("")}</nav>`}
 function setupHTML(){return `<div class="stack"><div><div class="eyebrow">Vitaj v aplikácii, ${esc(me.name)}</div><h1>Nastavenie firmy</h1></div>${firmFormHTML("setup")}</div>`}
-function firmTabs(){return [["nastenka","Nástenka"],["udaje","Údaje o firme"],...(isCompanyRole(me)?[["zam","Zamestnanci"],["park","Strojový a vozový park"]]:[]),["moduly","Moduly"],["role","Používatelia a prístupy"]]}
+function firmTabs(){return [["nastenka","Nástenka"],["udaje","Údaje o firme"],...(isCompanyRole(me)?[["zam","Zamestnanci"],["park","Strojový a vozový park"]]:[]),["moduly","Moduly"],["role","Používatelia a prístupy"],["ponuka","Ponuka strojov"]]}
 function firmTabCur(){const t=view.firmTab||"nastenka";return firmTabs().some(x=>x[0]===t)?t:"nastenka"}
 /* ---------- Nástenka: prehľad zo všetkých modulov ---------- */
 function dashFleetHTML(){
@@ -3867,7 +4010,7 @@ function nastenkaHTML(){
     <div class="dash nbdash">${bubbles.join("")||`<div class="card muted">Pre tvoju rolu tu zatiaľ nie sú žiadne prehľady.</div>`}</div></div>`}
 function firmaHTML(){
   const t=firmTabCur(),tabs="";
-  const body=t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML());
+  const body=t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():t==="ponuka"?marketHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML());
   return `<div class="stack"><div><div class="eyebrow">Firma</div><h1>${esc(S.firm.name||"Firma")}</h1></div>${tabs}${t==="udaje"&&!view.firmEditing?firmStartRowHTML():""}${body}</div>`}
 const P_TABS=[["emp","Zamestnanci"],["att","Dochádzka"],["mzdy","Podklady pre mzdy"],["sc","Služobné cesty"],["skol","Školenia"],["ost","Ostatné"]];
 /* služobné cesty sa skladajú z dní "SC" v dochádzke; po sebe idúce dni jedného zamestnanca = jedna cesta */
@@ -4094,6 +4237,7 @@ function render0(){renderBar();const a=$("#app");
   if(me&&view.lightbox)a.insertAdjacentHTML("beforeend",lightboxHTML());
   if(me&&view.lightboxSrc)a.insertAdjacentHTML("beforeend",`<div class="lb"><figure class="lbin"><img src="${view.lightboxSrc}" alt="Doklad"><div class="row lbnav"><button class="btn small" data-a="srcClose" style="margin-left:auto">Zavrieť</button></div></figure></div>`);
   if(a.classList){a.classList.toggle("ro-doprava",!!me&&view.screen==="doprava"&&!canEdit("doprava"));a.classList.toggle("ro-personal",!!me&&view.screen==="personal"&&!canEdit("personal"));a.classList.toggle("ro-pozicovna",!!me&&view.screen==="pozicovna"&&!canEdit("pozicovna"))}
+  if(me&&$("#fmForm")){restoreFm();fmDrawCanvas()}
   renderTasks();
   if(view.focusEntry){const el=document.getElementById("e_"+view.focusEntry);view.focusEntry=null;if(el&&el.scrollIntoView)setTimeout(()=>el.scrollIntoView({block:"start"}),0)}
 }
@@ -4133,6 +4277,7 @@ function projectTabs(p){
   if(can(p,"econ.view"))tabs.push(["ekonomika","Ekonomika"]);
   if(can(p,"settings"))tabs.push(["nastavenia","Nastavenia"]);
   tabs.push(["dokumentacia","Dokumentácia",0]);
+  if(!isExternal(me))tabs.push(["technika","Technika"]);
   return tabs}
 /* druhý rad menu: podkarty aktuálnej sekcie */
 function subnavRows(){
@@ -4158,6 +4303,7 @@ function projectHTML(){
   else if(view.tab==="rozpocet")body=budgetHTML(p);
   else if(view.tab==="nastavenia")body=settingsHTML(p);
   else if(view.tab==="dokumentacia")body=docsHTML(p);
+  else if(view.tab==="technika")body=techHTML(p);
   else if(view.tab==="kd")body=kdHTML(p);
   else body=invoicesHTML(p);
   return `<div class="stack">
@@ -5199,9 +5345,9 @@ document.addEventListener("click",ev=>{
   else if(a==="fzEdit"){view.fzEdit=b.dataset.id;render();window.scrollTo(0,0)}
   else if(a==="fzNo"){view.fzEdit=null;render()}
   else if(a==="fzCard"){view={screen:"personal",empEdit:b.dataset.id};render();window.scrollTo(0,0)}
-  else if(a==="fmNew"){view.fmEdit="__new";render();const e=$("#fmName");if(e)e.focus()}
-  else if(a==="fmEdit"){view.fmEdit=b.dataset.id;render();window.scrollTo(0,0)}
-  else if(a==="fmNo"){view.fmEdit=null;render()}
+  else if(a==="fmNew"){view.fmEdit="__new";fmReset();render();const e=$("#fmName");if(e)e.focus()}
+  else if(a==="fmEdit"){view.fmEdit=b.dataset.id;fmReset();render();window.scrollTo(0,0)}
+  else if(a==="fmNo"){view.fmEdit=null;fmReset();render()}
   else if(a==="fmDel"){const id=b.dataset.id;if(S.diary.some(e=>(e.mach||[]).some(c=>c.machineId===id))){toast("Stroj je použitý v denných záznamoch, nedá sa odstrániť.");return}
     S.machines=S.machines.filter(x=>x.id!==id);view.fmEdit=null;save();toast("Stroj odstránený");render()}
   else if(a==="firmTab"){view.firmTab=b.dataset.tab;view.firmEditing=false;view.firmDraft=null;render()}
@@ -5355,8 +5501,10 @@ document.addEventListener("submit",ev=>{
   else if(f==="fmForm"){if(!(isAdmin(me)||canEdit("doprava")))return;const v=id=>($("#"+id)?.value||"").trim();if(moneyVal("fmRate")===null||moneyVal("fmRateKm")===null){toast("Sadzbu zadaj ako číslo, napr. 42 alebo 0,90");return}
     for(const k of ["fmRate","fmRateKm","fmRateDay","fmOther"])if(moneyVal(k)===null){toast("Cenu zadaj ako číslo, napr. 35 alebo 1,20");return}
     const d={name:v("fmName"),cat:v("fmCat"),type:v("fmType"),rate:rateVal("fmRate"),rateKm:rateVal("fmRateKm"),rateDay:rateVal("fmRateDay"),rateOther:rateVal("fmOther"),otherName:v("fmOtherName"),otherUnit:v("fmOtherUnit")};if(!d.name){toast("Zadaj názov stroja");return}
+    Object.assign(d,{offer:!!$("#fmOffer")?.checked,offerPlace:v("fmOfPlace"),offerPhone:v("fmOfPhone"),offerOp:!!$("#fmOfOp")?.checked,offerNote:v("fmOfNote")});if(view.fmPhoto!==undefined)d.photo=view.fmPhoto;
+    if(d.offer&&!d.photo&&!confirmOk("fmNoPhoto")){toast("Tip: s fotkou je ponuka atraktívnejšia. Ulož ešte raz, ak ju chceš zverejniť bez fotky.");return}
     const id=ev.target.dataset.id;if(id){Object.assign(S.machines.find(x=>x.id===id),d);toast("Zmeny uložené")}else{(S.machines=S.machines||[]).push({id:uid("m"),...d});toast("Stroj pridaný")}
-    view.fmEdit=null;save();render()}
+    view.fmEdit=null;fmReset();save();render()}
   else if(f==="machineForm"){(S.machines=S.machines||[]).push({id:uid("m"),name:$("#mName").value.trim(),type:$("#mType").value.trim(),rate:+$("#mRate").value||0});save();toast("Stroj pridaný");render()}
   else if(f==="settingsForm"){const d=readProjectFields("st");if(d.error){toast(d.error);return}Object.assign(p,d);delete p.place;
     p.crewMode=document.querySelector('input[name="stCrew"]:checked').value;p.machMode=document.querySelector('input[name="stMach"]:checked').value;save();toast("Nastavenia uložené");render()}

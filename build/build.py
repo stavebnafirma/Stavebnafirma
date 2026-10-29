@@ -73,6 +73,9 @@ rep('function modulesHTML(){\n  const M=S.modules||ALL_MODS','function modulesHT
 rep('nie je v predplatnom. Zapnúť ho môžeš tu.','nie je predplatený. Predplatiť ho môžeš tu.')
 rep('</style>', '.modcard.bill{display:flex;gap:12px;align-items:flex-start}.modcard.bill.on{border-color:var(--accent);background:var(--tint)}.bprice{white-space:nowrap;font-weight:600;font-size:14px}\n</style>')
 
+# 6c) ponuka strojov: ostatné firmy z tabuľky offers (live.js), nie ukážkové dáta
+rep('let marketExt=()=>MARKET_SEED.map(o=>({...o,own:false}));', 'let marketExt=()=>{loadOffers();return OFFERS.filter(o=>o.tenant!==TID)};')
+
 # 7) lišta: prepnutie firmy a indikátor ukladania
 rep('<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");',
     '<span class="saveind${OFFLINE?" off":""}" id="saveInd" ${OFFLINE?"":"hidden"}>${OFFLINE?"Offline":"Ukladám…"}</span>${myTenants.length>1?`<button class="logout" data-a="switchTenant" title="Prepnúť firmu">Firmy</button>`:""}<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");')
