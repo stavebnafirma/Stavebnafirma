@@ -121,6 +121,7 @@ table.budget td.code{font-size:12px;color:var(--muted)}
 .docmain{display:flex;flex-direction:column;min-width:0}.docmain b{overflow-wrap:anywhere}.docmain .muted{font-size:12.5px}
 .docbtn{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
 @media(max-width:620px){.doclist li{grid-template-columns:auto minmax(0,1fr)}.docbtn{grid-column:1/-1;justify-content:flex-start}}
+.seenline{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ok);font-weight:600}.dexp summary{cursor:pointer}
 .bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
 table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
 table.budget tr.sec td{background:var(--bg);font-weight:700;font-size:13px;color:var(--ink);padding-top:10px}
@@ -1288,6 +1289,7 @@ function can(p,act,entry){
     case"inv.unlock":return r==="admin";
     case"inv.approve":return r==="dozor";
     case"diary.note":return r==="dozor";
+    case"diary.seen":return r==="dozor";
     case"kd.convene":return r==="dozor";
     case"diary.request":return["admin","stavbyveduci","majster"].includes(r);
     case"settings":return["admin","stavbyveduci"].includes(r);
@@ -4065,6 +4067,89 @@ function projGroups(p){const g=[p.crewMode==="count"?"crewC":"crew"];if(p.machMo
 function entryGroups(e){return Object.keys(GROUPS).filter(g=>e[g]&&e[g].length)}
 function pl(n,one,few,many){return n===1?one:(n>=2&&n<=4?few:many)}
 
+/* ---------- Stavebný denník: export celého denníka a surový export záznamov ---------- */
+const memberRoleLabel=r=>({stavbyveduci:"Stavbyvedúci",majster:"Majster",dozor:"Stavebný dozor",citanie:"Iba čítanie",spravca:"Správca stavieb",admin:"Administrátor"}[r]||ROLES[r]||r||"");
+function diarySeenText(e){return (e.seen||[]).map(s=>`Videné – Stavebný dozor ${s.name||user(s.by)?.name||""}${s.at?` · ${dt(s.at)}`:""}`)}
+function entryPeopleText(e){const out=[];
+  (e.crew||[]).forEach(c=>{const w=worker(c.workerId);out.push(`${w?fullName(w):"?"}${w&&w.profession?` (${w.profession})`:""} ${c.from}–${c.to}, ${h(hours(c))} h`)});
+  (e.crewC||[]).forEach(c=>out.push(`${c.label||"Pracovníci"}: ${+c.count||0} × ${h(+c.hours||0)} h`));return out}
+function entryMachText(e){const out=[];(e.mach||[]).forEach(c=>{const m=machine(c.machineId);out.push(`${m?m.name:"?"}: ${h(+c.hours||0)} h`)});
+  (e.machC||[]).forEach(c=>out.push(`${c.label||"Stroje"}: ${+c.count||0} × ${h(+c.hours||0)} h`));return out}
+const entryWritten=e=>e.createdAt?dt(e.createdAt):"";
+/* záznamy do PDF (spoločné pre celý denník aj export za obdobie) */
+function pdfDiaryEntries(doc,es,y){const W=doc.internal.pageSize.getWidth(),L=14,R=W-14,need=hh=>{if(y+hh>280){doc.addPage();y=16}};
+  es.forEach(e=>{need(30);doc.setFillColor(243,244,245);doc.rect(L,y,R-L,8,"F");doc.setFont("DVC","bold");doc.setFontSize(10.5);doc.text(plain(fmtDate(e.date)),L+2,y+5.5);
+    doc.setFont("DVC","normal");doc.setFontSize(8.5);doc.text(plain([e.weather,e.temp!==""&&e.temp!=null?`${e.temp} °C`:""].filter(Boolean).join(", ")),R-2,y+5.5,{align:"right"});y+=11;
+    doc.setFontSize(8.5);doc.setTextColor(90);doc.text(plain(`Zapísal: ${user(e.authorId)?.name||""}${e.createdAt?` · ${dt(e.createdAt)}`:""}${e.updatedAt&&e.updatedAt!==e.createdAt?` · upravené ${dt(e.updatedAt)}`:""}${e.locked?` · podpísal a uzamkol ${user(e.lockedBy)?.name||""}${e.lockedAt?` ${dt(e.lockedAt)}`:""}`:""}`),L,y);doc.setTextColor(0);y+=5;
+    doc.setFontSize(9.5);const wt=doc.splitTextToSize(plain(e.work||""),R-L);need(wt.length*4.6);doc.text(wt,L,y);y+=wt.length*4.6+2;
+    const blk=(title,lines)=>{if(!lines.length)return;doc.setFont("DVC","bold");doc.setFontSize(8.8);need(8);doc.text(title,L,y);y+=4.3;doc.setFont("DVC","normal");
+      lines.forEach(t=>{const ls=doc.splitTextToSize(plain("• "+t),R-L-4);need(ls.length*4);doc.text(ls,L+3,y);y+=ls.length*4});y+=1.5};
+    blk("Pracovníci",entryPeopleText(e));blk("Stroje a mechanizmy",entryMachText(e));
+    (e.dozorNotes||[]).forEach(n=>blk(`Zápis stavebného dozoru – ${user(n.by)?.name||""}, ${dt(n.at)}`,[n.text]));
+    (e.requests||[]).forEach(r=>{blk(`Výzva dozoru na vyjadrenie – ${user(r.by)?.name||""}, ${dt(r.at)}`,[r.text]);if(r.answer)blk(`Vyjadrenie dozoru – ${user(r.answer.by)?.name||""}, ${dt(r.answer.at)}`,[r.answer.text])});
+    const seen=diarySeenText(e);if(seen.length){doc.setFont("DVC","bold");doc.setFontSize(8.8);seen.forEach(t=>{need(5);doc.setTextColor(29,122,74);doc.text(plain(t),L,y);doc.setTextColor(0);y+=4.6})}
+    doc.setFont("DVC","normal");y+=4;doc.setDrawColor(220);doc.line(L,y-2,R,y-2);doc.setDrawColor(0)});
+  return y}
+function pdfDiaryFooter(doc,p,label){const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(plain(`${p.name} · ${label}`),14,290);doc.text(`Strana ${k} / ${n}`,196,290,{align:"right"});doc.setTextColor(0)}}
+const diaryFile=(p,s)=>(`Stavebny_dennik_${p.name}_${s}`).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_").slice(0,90);
+function diaryFullPDF(p){const es=S.diary.filter(d=>d.projectId===p.id).sort((a,b)=>(a.date+(a.createdAt||"")).localeCompare(b.date+(b.createdAt||"")));
+  const doc=newPdf("portrait");if(!doc)return;const F=S.firm||{},W=210,L=20;
+  /* 1. strana – titulná */
+  let y=24;if(F.logo){const lh=18,lw=Math.min(60,lh*F.logo.w/F.logo.h);try{doc.addImage(F.logo.data,"PNG",W/2-lw/2,y,lw,lw*F.logo.h/F.logo.w)}catch(e){}y+=lw*F.logo.h/F.logo.w+10}else y+=10;
+  doc.setFont("DVC","bold");doc.setFontSize(26);doc.text("STAVEBNÝ DENNÍK",W/2,y+10,{align:"center"});y+=22;
+  doc.setFontSize(15);const nt=doc.splitTextToSize(plain(p.name),W-2*L);doc.text(nt,W/2,y,{align:"center"});y+=nt.length*7+10;
+  const sv=p.members.filter(m=>m.role==="stavbyveduci").map(m=>user(m.userId)?.name).filter(Boolean).join(", "),dz=dozorsOf(p).map(u=>u.name).join(", ");
+  const rows=[["Stavba",p.name],["Miesto stavby",placeText(p)],["Investor",p.investor||""],["Objednávateľ",p.client||""],["Zhotoviteľ",[F.name||S.company,firmAddress(F),F.ico?`IČO ${F.ico}`:""].filter(Boolean).join(", ")],
+    ["Stavbyvedúci",sv],["Stavebný dozor",dz],["Denník vedený od",es.length?d2(es[0].date):""],["Posledný záznam",es.length?d2(es[es.length-1].date):""],["Počet denných záznamov",String(es.length)],["Vytlačené",dt(nowIso())]];
+  doc.autoTable({body:rows.map(r=>[r[0],plain(r[1]||"–")]),startY:y,margin:{left:L,right:L},theme:"grid",styles:{font:"DVC",fontSize:10,cellPadding:2.2,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},columnStyles:{0:{cellWidth:52,fontStyle:"bold",fillColor:[245,246,247]}}});
+  y=Math.max(doc.lastAutoTable.finalY+34,236);const cw=(W-2*L-20)/3;
+  [["Zhotoviteľ",firmStamp()],["Stavebný dozor",dozorsOf(p)[0]&&dozorsOf(p)[0].stamp],["Investor",null]].forEach(([l,st],i)=>{const x=L+i*(cw+10);pdfStamp(doc,st,x-4,y,cw,20);doc.line(x,y,x+cw,y);doc.setFontSize(9);doc.setFont("DVC","normal");doc.text(l,x,y+5)});
+  /* 2. strana – účastníci */
+  doc.addPage();pdfFirmHeader(doc,"Účastníci stavby",plain(p.name));
+  const ppl=[];p.members.forEach(m=>{const u=user(m.userId);if(u)ppl.push([u.name||"",memberRoleLabel(m.role),u.phone||"",u.email||""])});
+  (p.contacts||[]).forEach(c=>ppl.push([c.name||"",c.role||"",c.phone||"",c.email||""]));
+  if(p.investor&&!ppl.some(x=>/investor/i.test(x[1])))ppl.unshift([p.investor,"Investor","",""]);
+  doc.autoTable({head:[["Meno","Funkcia","Telefón","E-mail"]],body:ppl.map(r=>r.map(plain)),startY:28,margin:{left:14,right:14},theme:"grid",styles:{font:"DVC",fontSize:9,cellPadding:1.6,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255}});
+  /* 3. strana – kontrolné dni */
+  doc.addPage();pdfFirmHeader(doc,"Kontrolné dni",plain(p.name));y=28;
+  const kds=(p.inspections||[]).slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  if(!kds.length){doc.setFontSize(10);doc.text("Na stavbe zatiaľ nebol zvolaný žiadny kontrolný deň.",14,y+4)}
+  kds.forEach(k=>{if(y>230){doc.addPage();y=18}const [st]=kdStatus(k);
+    doc.setFillColor(243,244,245);doc.rect(14,y,182,8,"F");doc.setFont("DVC","bold");doc.setFontSize(10.5);doc.text(plain(`Kontrolný deň č. ${k.no} · ${fmtDate(k.date)} o ${k.time}`),16,y+5.5);doc.setFont("DVC","normal");doc.setFontSize(8.5);doc.text(st,194,y+5.5,{align:"right"});y+=12;
+    doc.setFontSize(9);doc.text(plain(`Miesto: ${k.place||""} · zvolal ${user(k.by)?.name||""}`),14,y);y+=5;
+    const ag=doc.splitTextToSize(plain("Program: "+(k.agenda||"").replace(/\n/g,"; ")),182);doc.text(ag,14,y);y+=ag.length*4.3+2;
+    if(k.minutes){doc.setFont("DVC","bold");doc.text(plain(`Zápis – ${user(k.minutes.by)?.name||""}, ${dt(k.minutes.at)}`),14,y);y+=4.5;doc.setFont("DVC","normal");
+      const mt=doc.splitTextToSize(plain(k.minutes.text),182);mt.forEach(l=>{if(y>280){doc.addPage();y=18}doc.text(l,14,y);y+=4.3});y+=2}
+    if(k.status==="cancelled"){doc.text(plain(`Zrušený${k.cancelNote?": "+k.cancelNote:""}`),14,y);y+=6}
+    else{const rs=k.rsvp||{};doc.autoTable({head:[["Prezenčná listina – meno","Funkcia","Účasť","Podpis"]],body:k.invitees.map(i=>{const u=i.key.startsWith("u:")?i.key.slice(2):null,r=u?rs[u]:null;return [plain(i.name),plain(i.role),r==="yes"?"potvrdil":r==="no"?"ospravedlnil":"",""]}),
+      startY:y,margin:{left:14,right:14},theme:"grid",styles:{font:"DVC",fontSize:8.8,cellPadding:1.5,minCellHeight:8,valign:"middle",lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255,minCellHeight:6},columnStyles:{2:{cellWidth:24},3:{cellWidth:50}}});
+      y=doc.lastAutoTable.finalY+8}});
+  /* denné záznamy */
+  doc.addPage();pdfFirmHeader(doc,"Denné záznamy",plain(p.name));
+  if(!es.length){doc.setFontSize(10);doc.text("Zatiaľ bez denných záznamov.",14,32)}else pdfDiaryEntries(doc,es,28);
+  pdfDiaryFooter(doc,p,"stavebný denník");offerFile(diaryFile(p,todayIso())+".pdf",doc.output("arraybuffer"))}
+function diaryRangeEntries(p){const X=view.dex||{};return S.diary.filter(d=>d.projectId===p.id&&(!X.from||d.date>=X.from)&&(!X.to||d.date<=X.to)).sort((a,b)=>(a.date+(a.createdAt||"")).localeCompare(b.date+(b.createdAt||"")))}
+function diaryRangePDF(p){const es=diaryRangeEntries(p),X=view.dex||{};if(!es.length){toast("V zvolenom období nie sú žiadne denné záznamy");return}
+  const doc=newPdf("portrait");if(!doc)return;pdfFirmHeader(doc,"Denné záznamy stavebného denníka",plain(`${p.name} · ${X.from?d2(X.from):"od začiatku"} – ${X.to?d2(X.to):"dnes"}`));
+  pdfDiaryEntries(doc,es,28);pdfDiaryFooter(doc,p,`denné záznamy ${X.from||""} – ${X.to||""}`);offerFile(diaryFile(p,`${X.from||"zaciatok"}_${X.to||todayIso()}`)+".pdf",doc.output("arraybuffer"))}
+function diaryRangeXLSX(p){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.");return}const es=diaryRangeEntries(p);if(!es.length){toast("V zvolenom období nie sú žiadne denné záznamy");return}
+  const head=["Dátum","Zapísané (dátum a čas)","Zapísal","Počasie","Teplota °C","Vykonané práce","Pracovníci","Hodín pracovníkov","Stroje","Hodín strojov","Zápisy stavebného dozoru","Videné stavebným dozorom","Uzamknuté"];
+  const rows=es.map(e=>[d2(e.date),entryWritten(e),user(e.authorId)?.name||"",e.weather||"",e.temp??"",e.work||"",entryPeopleText(e).join("\n"),r2(["crew","crewC"].reduce((s,g)=>s+grpHours(g,e[g]),0)),entryMachText(e).join("\n"),r2(["mach","machC"].reduce((s,g)=>s+grpHours(g,e[g]),0)),
+    (e.dozorNotes||[]).map(n=>`${user(n.by)?.name||""} ${dt(n.at)}: ${n.text}`).join("\n"),diarySeenText(e).join("\n"),e.locked?`${user(e.lockedBy)?.name||""}${e.lockedAt?" "+dt(e.lockedAt):""}`:""]);
+  const ws=XLSX.utils.aoa_to_sheet([[`Stavebný denník – ${p.name}`],[],head,...rows]);ws["!cols"]=[10,18,18,12,8,60,40,10,30,10,40,40,22].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Denné záznamy");const X=view.dex||{};offerFile(diaryFile(p,`${X.from||"zaciatok"}_${X.to||todayIso()}`)+".xlsx",XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
+function diaryExportHTML(p,n){const X=view.dex||(view.dex={from:"",to:todayIso()});
+  return `<details class="card dexp"><summary><b>Export stavebného denníka</b> <span class="muted">· ${n} ${pl(n,"záznam","záznamy","záznamov")}</span></summary>
+    <div class="stack" style="margin-top:10px">
+      <div class="row"><button class="btn small primary" data-a="dexFull">Celý stavebný denník (PDF)</button><span class="muted" style="font-size:13px">Titulná strana, účastníci stavby, kontrolné dni so zápismi a prezenčnou listinou a všetky denné záznamy.</span></div>
+      <form class="stack" id="dexForm" onsubmit="return false"><b style="font-size:14px">Denné záznamy za obdobie</b>
+        <div class="grid2"><label>Od<input type="date" id="dexFrom" value="${esc(X.from)}"></label><label>Do<input type="date" id="dexTo" value="${esc(X.to)}"></label></div>
+        <div class="row"><button class="btn small" data-a="dexPdf">PDF</button><button class="btn small" data-a="dexXls">Excel</button><span class="muted" style="font-size:13px">S dátumom a časom zápisu, autorom, zápismi dozoru a potvrdením „Videné“.</span></div></form></div></details>`}
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me||view.screen!=="project")return;const a=b.dataset.a;if(!/^dex|^seen/.test(a))return;
+  const p=S.projects.find(x=>x.id===view.projectId);if(!p)return;
+  if(a==="dexFull")diaryFullPDF(p);else if(a==="dexPdf")diaryRangePDF(p);else if(a==="dexXls")diaryRangeXLSX(p);
+  else if(a==="seenMark"){const e=S.diary.find(d=>d.id===b.dataset.id);if(e&&can(p,"diary.seen")&&!(e.seen||[]).some(s=>s.by===me.id)){(e.seen=e.seen||[]).push({by:me.id,name:me.name,at:nowIso()});save();toast("Záznam označený ako videný");render()}}});
+document.addEventListener("change",ev=>{if(!me)return;const t=ev.target;if(t.id==="dexFrom"||t.id==="dexTo"){view.dex=view.dex||{};view.dex[t.id==="dexFrom"?"from":"to"]=t.value}});
 function diaryHTML(p){
   const entries=S.diary.filter(d=>d.projectId===p.id).sort((a,b)=>b.date.localeCompare(a.date));
   const editing=view.editId?S.diary.find(d=>d.id===view.editId)||{new:true}:null;
@@ -4072,13 +4157,14 @@ function diaryHTML(p){
   if(editing) out+=diaryForm(p,editing.new?null:editing);
   else if(can(p,"diary.create")) out+=`<button class="btn primary" data-a="newEntry" style="align-self:flex-start">+ Nový denný záznam</button>`;
   else out+=`<div class="note">Máš prístup iba na čítanie. Záznamy zapisuje majster alebo stavbyvedúci.</div>`;
+  if(entries.length&&!editing)out+=diaryExportHTML(p,entries.length);
   out+=entries.map(e=>{
     const status=e.locked?`<span class="pill s-lock">Uzamknuté · ${esc(user(e.lockedBy)?.name||"")}</span>`:`<span class="pill s-open">Rozpracované</span>`;
     const acts=[can(p,"diary.edit",e)?`<button class="btn small" data-a="edit" data-id="${e.id}">Upraviť</button>`:"",
       can(p,"diary.lock",e)?`<button class="btn small" data-a="lock" data-id="${e.id}">Podpísať a uzamknúť</button>`:""].join("");
     const tables=entryGroups(e).map(g=>entryTable(g,e[g])).join("");
     return `<article class="card stack" id="e_${e.id}">
-      <div class="entry-head"><div><div class="date">${fmtDate(e.date)}</div><div class="muted" style="font-size:13px">${esc(e.weather)}${e.temp!==""?`, ${esc(e.temp)} °C`:""}${e.wxCheckedBy?` (počasie overil ${esc(user(e.wxCheckedBy)?.name||"")})`:""} · zapísal ${esc(user(e.authorId)?.name||"")}</div></div>${status}</div>
+      <div class="entry-head"><div><div class="date">${fmtDate(e.date)}</div><div class="muted" style="font-size:13px">${esc(e.weather)}${e.temp!==""?`, ${esc(e.temp)} °C`:""}${e.wxCheckedBy?` (počasie overil ${esc(user(e.wxCheckedBy)?.name||"")})`:""} · zapísal ${esc(user(e.authorId)?.name||"")}${e.createdAt?` · ${esc(dt(e.createdAt))}`:""}</div></div>${status}</div>
       <div>${esc(e.work)}</div>${tables}${photosViewHTML(e)}
       ${(e.dozorNotes||[]).map(n=>`<div class="dnote"><div class="eyebrow">Zápis stavebného dozoru · ${esc(user(n.by)?.name||"")} · ${dt(n.at)}</div><div>${esc(n.text)}</div></div>`).join("")}
       ${can(p,"diary.note")?(view.noteFor===e.id?`<form class="stack dnote-form" id="dnoteForm" data-id="${e.id}"><label>Zápis stavebného dozoru<textarea id="dnoteText" required placeholder="Pripomienky, zistenia, pokyny pre zhotoviteľa"></textarea></label>
@@ -4086,6 +4172,8 @@ function diaryHTML(p){
         <div class="row"><button class="btn primary small" type="submit">Uložiť zápis</button><button type="button" class="btn ghost small" data-a="noteNo">Zrušiť</button></div></form>`
         :`<div class="row"><button class="btn small" data-a="noteAdd" data-id="${e.id}">+ Dopísať zápis dozoru</button></div>`):""}
       ${requestsHTML(p,e)}
+      ${(e.seen||[]).length?`<div class="seenline">${diarySeenText(e).map(t=>`<span>✓ ${esc(t)}</span>`).join("")}</div>`:""}
+      ${can(p,"diary.seen")&&!(e.seen||[]).some(s=>s.by===me.id)?`<div class="row"><button class="btn small primary" data-a="seenMark" data-id="${e.id}">✓ Videné</button><span class="muted" style="font-size:13px">Potvrdíš, že si záznam ako stavebný dozor videl. Uloží sa meno a čas.</span></div>`:""}
       ${acts?`<div class="row">${acts}</div>`:""}</article>`}).join("")||`<div class="card muted">Na tejto stavbe zatiaľ nie je žiadny denný záznam.</div>`;
   return `<div class="stack">${out}</div>`;
 }
@@ -4947,7 +5035,7 @@ document.addEventListener("click",ev=>{
   else if(a==="cancel"){view.wxMsg=null;view.editId=null;view.draft=null;render()}
   else if(a==="addRow"){readDraft();view.draft[b.dataset.g].push(GROUPS[b.dataset.g].blank());render()}
   else if(a==="delRow"){readDraft();view.draft[b.dataset.g].splice(+b.dataset.i,1);render()}
-  else if(a==="lock"){const e=S.diary.find(d=>d.id===b.dataset.id);if(can(p,"diary.lock",e)){e.locked=true;e.lockedBy=me.id;save();toast("Záznam podpísaný a uzamknutý");render()}}
+  else if(a==="lock"){const e=S.diary.find(d=>d.id===b.dataset.id);if(can(p,"diary.lock",e)){e.locked=true;e.lockedBy=me.id;e.lockedAt=nowIso();save();toast("Záznam podpísaný a uzamknutý");render()}}
   else if(a==="wxLoad"){const d=$("#dDate").value,loc=placeText(p)||"miesto stavby nie je zadané";readDraft();
     view.wxDate=d;view.wxMsg=`Automatické načítanie počasia (${esc(d2(d))}, ${esc(loc)}) bude fungovať v ostrej verzii na serveri. Prototyp tu nemôže čítať údaje z iných webov, zatiaľ zadaj počasie ručne. Pod týmto textom vidíš potvrdenie, ktoré bude povinné pri každom automaticky načítanom počasí.`;
     const keep={date:d,weather:$("#dWeather").value,temp:$("#dTemp").value,work:$("#dWork").value};render();$("#dDate").value=keep.date;$("#dWeather").value=keep.weather;$("#dTemp").value=keep.temp;$("#dWork").value=keep.work}
@@ -5089,8 +5177,8 @@ document.addEventListener("submit",ev=>{
     Object.keys(GROUPS).forEach(g=>{data[g]=view.draft[g]?view.draft[g].filter(c=>g.endsWith("C")?(+c.count>0):true):undefined});
     if(!(data.crew&&data.crew.length)&&!(data.crewC&&data.crewC.length)){toast("Zadaj aspoň jedného pracovníka alebo počet pracovníkov");return}
     readCaptions();data.photos=view.draftPhotos||[];
-    if(view.editId==="__new")S.diary.push({id:uid("d"),projectId:p.id,authorId:me.id,locked:false,...data});
-    else{const en=S.diary.find(d=>d.id===view.editId);Object.keys(GROUPS).forEach(g=>delete en[g]);Object.assign(en,data)}
+    if(view.editId==="__new")S.diary.push({id:uid("d"),projectId:p.id,authorId:me.id,locked:false,createdAt:nowIso(),...data});
+    else{const en=S.diary.find(d=>d.id===view.editId);Object.keys(GROUPS).forEach(g=>delete en[g]);Object.assign(en,data,{updatedAt:nowIso()})}
     Object.values(S.diary).forEach(en=>Object.keys(GROUPS).forEach(g=>{if(en[g]===undefined)delete en[g]}));
     view.editId=null;view.draft=null;view.draftPhotos=null;if(save())toast("Záznam uložený");render()}
   else if(f==="newInvForm"){const n=view.newInv;n.from=$("#niFrom").value;n.to=$("#niTo").value;if(!n.from||!n.to||n.to<n.from){toast("Skontroluj dátumy obdobia");return}
