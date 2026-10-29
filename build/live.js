@@ -93,9 +93,9 @@ async function loadPeople(){
   const {data:inv}=await SB.from("invites").select("id,email,name,role,rights,projects,accepted_at,accepted_by").eq("tenant_id",TID);
   S._inv=inv||[];
   (inv||[]).filter(i=>!i.accepted_at).forEach(i=>S.users.push({id:"inv:"+i.id,email:i.email,name:i.name||i.email.split("@")[0],companyRole:"clen",rights:i.role==="spravca"?Object.fromEntries(Object.keys(MODS_ALL).map(k=>[k,"edit"])):(i.rights||{}),dbRole:i.role,pending:true}));
-  const {data:pr}=await SB.from("profiles").select("first_name,last_name,phone,stamp").eq("id",authUser.id).maybeSingle();
+  const {data:pr}=await SB.from("profiles").select("first_name,last_name,phone,stamp,prefs").eq("id",authUser.id).maybeSingle();
   me=S.users.find(u=>u.id===authUser.id)||null;
-  if(me&&pr){me.firstName=pr.first_name||"";me.lastName=pr.last_name||"";me.phone=pr.phone||"";if(pr.stamp)me.stamp=pr.stamp;me.name=[me.firstName,me.lastName].filter(Boolean).join(" ")||me.name}
+  if(me&&pr){me.firstName=pr.first_name||"";me.lastName=pr.last_name||"";me.phone=pr.phone||"";if(pr.stamp)me.stamp=pr.stamp;if(pr.prefs&&pr.prefs.dash)me.dash=pr.prefs.dash;me.name=[me.firstName,me.lastName].filter(Boolean).join(" ")||me.name}
   USNAP=new Map();S.users.forEach(u=>USNAP.set(u.id,JSON.stringify(userState(u))));PSNAP=JSON.stringify(profState());
   /* meno z registrácie do profilu (uloží sa pri najbližšom ukladaní) */
   const mn=authUser.user_metadata&&authUser.user_metadata.name;
@@ -108,7 +108,7 @@ function userState(u){const projects=S.projects.filter(p=>(p.members||[]).some(m
   let role=u.companyRole==="admin"?"admin":(u.dbRole==="spravca"&&RIGHT_MODS.every(([k])=>(u.rights||{})[k]==="edit"))?"spravca":
     (!RIGHT_MODS.some(([k])=>(u.rights||{})[k])&&projects.length&&S.projects.filter(p=>projects.includes(p.id)).every(p=>p.members.find(m=>m.userId===u.id).role==="dozor"))?"dozor":"clen";
   return {role,rights:role==="admin"?{}:(u.rights||{}),projects}}
-function profState(){return me?{first_name:me.firstName||null,last_name:me.lastName||null,phone:me.phone||null,stamp:me.stamp||null}:{}}
+function profState(){return me?{first_name:me.firstName||null,last_name:me.lastName||null,phone:me.phone||null,stamp:me.stamp||null,prefs:me.dash?{dash:me.dash}:null}:{}}
 
 /* --- ukladanie: rozdiel oproti poslednému stavu z databázy --- */
 function save(){if(!TID||!SB)return true;cacheNow();if(OFFLINE&&!navigator.onLine){setSaving(false);return true}saveBusy++;setSaving(true);

@@ -152,6 +152,7 @@ table.budget td.code{font-size:12px;color:var(--muted)}
 .lgl-tw{overflow-x:auto}.lgl-tw table{border-collapse:collapse;width:100%;font-size:13px}.lgl-tw th,.lgl-tw td{border:1px solid #e3e5e8;padding:6px 8px;text-align:left;vertical-align:top}.lgl-tw th{background:#f3f4f5}.lgl-tw th,.lgl-tw td{white-space:normal;min-width:110px}
 .ld-flegal{display:flex;gap:18px;flex-wrap:wrap}.ld-flegal .ld-link{color:inherit;font-weight:500;font-size:13px}
 .rstat td{vertical-align:middle}.rstat .ecbar{margin-bottom:2px}
+.nbset .chk{align-items:flex-start}.nbset .chk input{margin-top:3px;flex:none}
 .seenline{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ok);font-weight:600}.dexp summary{cursor:pointer}
 .bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
 table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
@@ -1066,9 +1067,9 @@ async function loadPeople(){
   const {data:inv}=await SB.from("invites").select("id,email,name,role,rights,projects,accepted_at,accepted_by").eq("tenant_id",TID);
   S._inv=inv||[];
   (inv||[]).filter(i=>!i.accepted_at).forEach(i=>S.users.push({id:"inv:"+i.id,email:i.email,name:i.name||i.email.split("@")[0],companyRole:"clen",rights:i.role==="spravca"?Object.fromEntries(Object.keys(MODS_ALL).map(k=>[k,"edit"])):(i.rights||{}),dbRole:i.role,pending:true}));
-  const {data:pr}=await SB.from("profiles").select("first_name,last_name,phone,stamp").eq("id",authUser.id).maybeSingle();
+  const {data:pr}=await SB.from("profiles").select("first_name,last_name,phone,stamp,prefs").eq("id",authUser.id).maybeSingle();
   me=S.users.find(u=>u.id===authUser.id)||null;
-  if(me&&pr){me.firstName=pr.first_name||"";me.lastName=pr.last_name||"";me.phone=pr.phone||"";if(pr.stamp)me.stamp=pr.stamp;me.name=[me.firstName,me.lastName].filter(Boolean).join(" ")||me.name}
+  if(me&&pr){me.firstName=pr.first_name||"";me.lastName=pr.last_name||"";me.phone=pr.phone||"";if(pr.stamp)me.stamp=pr.stamp;if(pr.prefs&&pr.prefs.dash)me.dash=pr.prefs.dash;me.name=[me.firstName,me.lastName].filter(Boolean).join(" ")||me.name}
   USNAP=new Map();S.users.forEach(u=>USNAP.set(u.id,JSON.stringify(userState(u))));PSNAP=JSON.stringify(profState());
   /* meno z registrácie do profilu (uloží sa pri najbližšom ukladaní) */
   const mn=authUser.user_metadata&&authUser.user_metadata.name;
@@ -1081,7 +1082,7 @@ function userState(u){const projects=S.projects.filter(p=>(p.members||[]).some(m
   let role=u.companyRole==="admin"?"admin":(u.dbRole==="spravca"&&RIGHT_MODS.every(([k])=>(u.rights||{})[k]==="edit"))?"spravca":
     (!RIGHT_MODS.some(([k])=>(u.rights||{})[k])&&projects.length&&S.projects.filter(p=>projects.includes(p.id)).every(p=>p.members.find(m=>m.userId===u.id).role==="dozor"))?"dozor":"clen";
   return {role,rights:role==="admin"?{}:(u.rights||{}),projects}}
-function profState(){return me?{first_name:me.firstName||null,last_name:me.lastName||null,phone:me.phone||null,stamp:me.stamp||null}:{}}
+function profState(){return me?{first_name:me.firstName||null,last_name:me.lastName||null,phone:me.phone||null,stamp:me.stamp||null,prefs:me.dash?{dash:me.dash}:null}:{}}
 
 /* --- ukladanie: rozdiel oproti poslednému stavu z databázy --- */
 function save(){if(!TID||!SB)return true;cacheNow();if(OFFLINE&&!navigator.onLine){setSaving(false);return true}saveBusy++;setSaving(true);
@@ -1481,7 +1482,7 @@ function centersHTML(){const ed=me.companyRole==="admin"||canEdit("doprava"),E=v
       <div class="grid3"><label>Ulica a číslo<input id="ctStreet" value="${esc(c0?.street)}"></label><label>Obec *<input id="ctCity" value="${esc(c0?.city)}" required></label><label>PSČ<input id="ctZip" value="${esc(c0?.zip)}" inputmode="numeric"></label></div>
       <div class="row"><button class="btn primary small" type="submit">${c0?"Uložiť":"Pridať stredisko"}</button><button type="button" class="btn ghost small" data-a="ctrNo">Zrušiť</button>
         ${c0?`<button type="button" class="btn ghost small" data-a="ctrDel" data-id="${c0.id}" style="margin-left:auto;color:var(--bad)">Odstrániť</button>`:""}</div></form>`:"";
-  return `<div class="card stack"><div class="entry-head"><div><h3>Strediská</h3><div class="muted" style="font-size:13px">Prevádzky firmy, napr. stredisko s váhou. Vyberajú sa pri vážení a uvádzajú sa na vážnom lístku.</div></div>
+  return `<div class="card stack"><div class="entry-head"><div><h3>Strediská</h3><div class="muted" style="font-size:13px">Ulož sem prevádzky Tvojej firmy, kanceláriu, predajňu alebo stredisko s váhou. Údaje sa čerpajú do protokolov, vážnych lístkov a dokumentov v karte Personalistika.</div></div>
       ${ed&&!E?`<button class="btn small" data-a="ctrNew">+ Pridať stredisko</button>`:""}</div>
     ${cs.length?`<div class="tablewrap"><table><thead><tr><th>Stredisko</th><th>Adresa</th>${ed?"<th></th>":""}</tr></thead><tbody>${cs.map(c=>`<tr><td><b>${esc(c.name)}</b></td><td>${esc(centerAddr(c))}</td>${ed?`<td class="r"><button class="btn small ghost" data-a="ctrEdit" data-id="${c.id}">Upraviť</button></td>`:""}</tr>`).join("")}</tbody></table></div>`:(E?"":`<div class="muted">Zatiaľ nie je zadané žiadne stredisko.</div>`)}
     ${form}</div>`}
@@ -2788,17 +2789,18 @@ document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||!["odGps",
 /* ---------- Nástenka: nastavenie a bubliny z modulov ---------- */
 const NB_MODS=[["personal","Personalistika"],["doprava","Doprava a logistika"],["pozicovna","Požičovňa"],["stavba","Stavba"]];
 const NB_ITEMS={
-  personal:[["skol","Končiace platnosti školení"],["att","Nevyplnená dochádzka"],["cash","Peniaze na výplatu za minulý mesiac"]],
-  doprava:[["fleet","Termíny údržby a servisu"],["jobs","Zákazky na dnes a zajtra"],["bill","Lehota na fakturáciu výkonov"],["weigh","Dnešné váženie"]],
-  pozicovna:[["rentOver","Výpožičky po termíne vrátenia"],["rentToday","Dnešné vydania a vrátenia"]],
-  stavba:[["inv","Súpisy prác na odsúhlasenie"],["diary","Stavby bez denného záznamu"]]};
-const nbOn=k=>{const D=(S.firm||{}).dash;return !D||D[k]!==false};
+  personal:[["skol","Platnosti školení"],["att","Nevyplnená dochádzka"],["cash","Finančná potreba na mzdy"]],
+  doprava:[["bill","Lehota na fakturáciu výkonov"],["jobs","Udalosti na dnes a zajtra"],["fleet","Termíny údržby a servisu"]],
+  pozicovna:[["rentToday","Dnešné vydania a vrátenia"],["rentOver","Výpožičky po termíne vrátenia"],["rentSvc","Nutný servis"]],
+  stavba:[["diary","Nevyplnené denné záznamy"],["inv","Súpisy prác"],["kd","Najbližšie kontrolné dni"]]};
+/* nastavenie nástenky má každý používateľ vlastné; kým si ho nenastaví, platí nastavenie firmy */
+const nbOn=k=>{const U=me&&me.dash;if(U&&k in U)return U[k]!==false;const D=(S.firm||{}).dash;return !D||D[k]!==false};
 const nbModOk=m=>hasMod(m)&&canSee(m);
-function nbSettingsHTML(){const ed=me.companyRole==="admin";
-  return `<div class="card stack nbset"><div><h3>Nastavenie nástenky</h3><div class="muted" style="font-size:13px">Čo sa zobrazí na nástenke firmy. Každý používateľ vidí len moduly, ku ktorým má prístup.</div></div>
+function nbSettingsHTML(){const ed=true;
+  return `<div class="card stack nbset"><div><h3>Nastavenie nástenky</h3><div class="muted" style="font-size:13px">Zobrazenie udalostí, ktoré považuješ za najdôležitejšie. Každý kolega vo firme si ich nastaví podľa seba.</div></div>
     <div class="nbgrid">${NB_MODS.map(([m,l])=>`<fieldset class="nbmod${hasMod(m)?"":" off"}"><legend>${icon(m==="stavba"?"home":m,"nb-ic")}${l}${hasMod(m)?"":` <span class="muted" style="font-weight:400">· nepredplatený</span>`}</legend>
       ${NB_ITEMS[m].map(([k,t])=>`<label class="chk"><input type="checkbox" data-nb="${k}" ${nbOn(k)?"checked":""} ${ed?"":"disabled"}> ${t}</label>`).join("")}</fieldset>`).join("")}</div>
-    ${ed?"":`<span class="hint">Nástenku nastavuje administrátor firmy.</span>`}</div>`}
+    </div>`}
 function firmStartRowHTML(){const st=startChecklist();
   const left=st||(me.companyRole==="admin"?`<div class="card stack start"><div class="entry-head"><h3>Začíname</h3><span class="pill s-ok">Hotovo</span></div><div class="muted" style="font-size:13px">Firma je nastavená: údaje, logo, pečiatka, zamestnanci, vozový park${hasMod("stavba")?" aj prvá stavba":""}.</div></div>`:"");
   return left?`<div class="halves">${left}${nbSettingsHTML()}</div>`:nbSettingsHTML()}
@@ -2847,10 +2849,19 @@ function nbDiary(){let d=isoShift(todayIso(),-1);while(!isWorkday(d))d=isoShift(
 function nbBill(){const A=billAlerts(),bad=A.filter(x=>x.st==="bad").length;
   return nbBubble("doprava","Lehota na fakturáciu výkonov",pill(bad,"s-ret","po lehote")+pill(A.length-bad,"s-open","končí zajtra")||`<span class="pill s-ok">Všetko fakturované</span>`,
     A.map(x=>({st:x.st,main:x.j.client,sub:`${d2(x.j.date)} · ${x.j.place||x.j.desc||""} · ${eur(jobPrice(x.j))}`,when:x.left<0?`${-x.left} d po lehote`:x.left===0?"dnes":"zajtra",go:{sec:"doprava",dtab:"export"}})),`Žiadny výkon nečaká na fakturáciu dlhšie ako ${billDays()-1} dní.`,{sec:"doprava",dtab:"export"})}
-const NB_RENDER={bill:nbBill,skol:nbSkol,att:nbAtt,cash:nbCash,fleet:dashFleetHTML,jobs:nbJobs,weigh:nbWeigh,rentOver:nbRentOver,rentToday:nbRentToday,inv:nbInv,diary:nbDiary};
+function nbRentSvc(){const rows=rItems().filter(i=>i.state==="servis").map(i=>{const last=(i.svc||[]).slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
+    return {st:"soon",main:i.name,sub:[i.invNo?`inv. č. ${i.invNo}`:"",last?`posledný servis ${d2(last.date)}`:""].filter(Boolean).join(" · "),when:"v servise"}});
+  return nbBubble("pozicovna","Nutný servis",rows.length?pill(rows.length,"s-wait","v servise"):`<span class="pill s-ok">Všetko v poriadku</span>`,rows,"Žiadne náradie nie je označené na servis.",{sec:"pozicovna",rtab:"inv"})}
+function nbKd(){const t=todayIso(),rows=[];visibleProjects().forEach(p=>(p.inspections||[]).forEach(k=>{if(k.status!=="cancelled"&&k.status!=="held"&&k.date>=t)rows.push({k,p})}));
+  rows.sort((a,b)=>(a.k.date+a.k.time).localeCompare(b.k.date+b.k.time));
+  const R=rows.slice(0,5).map(({k,p})=>({st:daysTo(k.date)<=2?"soon":"",main:p.name,sub:`Kontrolný deň č. ${k.no} · ${d2(k.date)} o ${k.time}${k.place?" · "+k.place:""}`,when:dleft(k.date),go:{sec:"project",proj:p.id,ptab2:"kd"}}));
+  return nbBubble("stavba","Najbližšie kontrolné dni",rows.length?pill(rows.length,"s-open","naplánované"):`<span class="pill s-ok">Nič naplánované</span>`,R,"Na stavbách nie je naplánovaný žiadny kontrolný deň.",{sec:"home"})}
+const NB_RENDER={rentSvc:nbRentSvc,kd:nbKd,bill:nbBill,skol:nbSkol,att:nbAtt,cash:nbCash,fleet:dashFleetHTML,jobs:nbJobs,weigh:nbWeigh,rentOver:nbRentOver,rentToday:nbRentToday,inv:nbInv,diary:nbDiary};
 function nbBubbles(){const out=[];NB_MODS.forEach(([m])=>{if(!nbModOk(m))return;NB_ITEMS[m].forEach(([k])=>{if(!nbOn(k))return;try{const h=NB_RENDER[k]();if(h)out.push(h)}catch(e){console.error("nástenka",k,e)}})});return out}
 
-document.addEventListener("change",ev=>{const t=ev.target;if(!me||!t.dataset||!t.dataset.nb||me.companyRole!=="admin")return;S.firm.dash={...(S.firm.dash||{}),[t.dataset.nb]:t.checked};save();toast("Nástenka upravená")});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me||!t.dataset||!t.dataset.nb)return;
+  /* prvé vlastné nastavenie prevezme doterajšie nastavenie firmy */
+  if(!me.dash){me.dash={};Object.values(NB_ITEMS).flat().forEach(([k])=>me.dash[k]=nbOn(k))}me.dash={...me.dash,[t.dataset.nb]:t.checked};save();toast("Tvoja nástenka upravená")});
 document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="nbGo"]');if(!b||!me)return;const D=b.dataset;
   if(D.sec==="project"){view={screen:"project",projectId:D.proj,tab:D.ptab2||"dennik"}}
   else{view={screen:D.sec,tab:"dennik",newProj:false};if(D.dtab)view.dTab=D.dtab;if(D.ptab)view.pTab=D.ptab;if(D.rtab)view.rTab=D.rtab;if(D.pm)view.payMonth=D.pm}
