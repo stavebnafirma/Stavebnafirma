@@ -540,7 +540,8 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 .ld-price .py{display:none}.ld-price.year .py{display:inline}.ld-price.year .pm{display:none}
 .ld-pvat{font-size:12px;color:var(--l-mut)}
 .ld-plim{font-weight:600;font-size:14px;padding:8px 0;border-top:1px solid var(--l-line);border-bottom:1px solid var(--l-line);margin:6px 0}.ld-plim small{font-weight:400;color:var(--l-mut)}
-.ld-pcard ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;font-size:13.5px}.ld-pcard li{padding-left:18px;position:relative}.ld-pcard li::before{content:"✓";position:absolute;left:0;color:#1d7a4a;font-weight:700}
+.ld-pcard ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;font-size:13.5px}
+@supports (grid-template-rows:subgrid){.ld-pcard{display:grid;grid-row:span 8;grid-template-rows:subgrid;row-gap:6px;align-content:start}.ld-pcard ul{display:contents}.ld-pcard li{font-size:13.5px;align-self:start}.ld-ptop,.ld-pprice,.ld-pvat,.ld-plim{align-self:end}.ld-plim{align-self:stretch}}.ld-pcard li{padding-left:18px;position:relative}.ld-pcard li::before{content:"✓";position:absolute;left:0;color:#1d7a4a;font-weight:700}
 .ld-pnote{text-align:center;color:var(--l-mut);margin:22px 0 0}
 .ld-contact{background:var(--l-card)}
 .ld-ctwo{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}@media (max-width:760px){.ld-ctwo{grid-template-columns:1fr;gap:16px}}
