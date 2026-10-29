@@ -2375,7 +2375,6 @@ function ostatneHTML(){const ed=canEdit("personal"),vs=vehicles(),today=todayIso
   const mode=id=>`<label>Forma<select id="${id}"><option value="list">Hromadne s podpisovou listinou</option><option value="each">Každý zamestnanec zvlášť</option></select></label>`;
   const hint=`<span class="hint">Text dokumentu je zatiaľ všeobecný. Po dodaní vašich vzorov ho upravíme.</span>`;
   return `<div class="stack">
-    ${ooppBubble()}
     <form class="bubble" id="odGps"><h3>Oboznámenie s GPS vo vozidlách</h3>
       <label>Zamestnanci<select id="gpsWho">${empOpts(true)}</select></label>
       <label>Vozidlá<select id="gpsVeh">${vs.length?vehOpts(true):`<option value="">Vo vozovom parku nie sú autá ani nákladné vozidlá</option>`}</select></label>
@@ -2401,6 +2400,7 @@ function ostatneHTML(){const ed=canEdit("personal"),vs=vehicles(),today=todayIso
       <button type="button" class="btn small" data-a="addTool" style="align-self:flex-start">+ Pridať náradie</button>
       <datalist id="toolList">${[...new Set((S.rentItems||[]).map(x=>x.name).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
       ${hint}<button class="btn primary small" type="submit" style="align-self:flex-start">Stiahnuť PDF</button></form>
+    ${ooppBubble()}
   </div>${ed?"":""}`}
 function toolRow(){return `<div class="toolrow"><label>Náradie<input data-t="name" list="toolList" placeholder="napr. Vŕtacie kladivo"></label><label>Výr. / inv. číslo<input data-t="no"></label><label>Ks<input data-t="qty" type="number" min="1" value="1"></label><label>Hodnota €<input data-t="val" type="number" min="0" step="0.01"></label><button type="button" class="x" data-a="delTool" aria-label="Odstrániť riadok">×</button></div>`}
 
