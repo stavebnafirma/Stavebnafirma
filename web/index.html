@@ -151,6 +151,7 @@ table.budget td.code{font-size:12px;color:var(--muted)}
 .lgl-x{position:sticky;top:0;float:right;margin:-8px -8px 0 0;width:38px;height:38px;border-radius:50%;border:1px solid #d5d8dc;background:#fff;font-size:16px;cursor:pointer}
 .lgl-tw{overflow-x:auto}.lgl-tw table{border-collapse:collapse;width:100%;font-size:13px}.lgl-tw th,.lgl-tw td{border:1px solid #e3e5e8;padding:6px 8px;text-align:left;vertical-align:top}.lgl-tw th{background:#f3f4f5}.lgl-tw th,.lgl-tw td{white-space:normal;min-width:110px}
 .ld-flegal{display:flex;gap:18px;flex-wrap:wrap}.ld-flegal .ld-link{color:inherit;font-weight:500;font-size:13px}
+.rstat td{vertical-align:middle}.rstat .ecbar{margin-bottom:2px}
 .seenline{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ok);font-weight:600}.dexp summary{cursor:pointer}
 .bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
 table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
@@ -3778,7 +3779,7 @@ function SEED_TEAMS(){return [
   {id:"tm2",name:"Zemné práce – Lukáč",color:"#b7791f",leaderId:"w4",members:["w4","w5"],vehicles:[{machineId:"m1",driverId:"w4"},{machineId:"m4",driverId:"w5"}],tools:[],note:"Výkopy, odvoz zeminy"}]}
 
 /* ---------- modul Požičovňa: náradie v požičovni, výpožičky, plánovač ---------- */
-const R_TABS=[["nast","Nástenka"],["inv","Inventár"],["podm","Podmienky požičovne"]];
+const R_TABS=[["nast","Nástenka"],["inv","Inventár"],["podm","Podmienky požičovne"],["stat","Štatistika"]];
 const rTabCur=()=>R_TABS.some(x=>x[0]===view.rTab)?view.rTab:"nast";
 const RENT_TERMS_DEFAULT=`1. Nájomca svojím podpisom potvrdzuje prevzatie uvedeného náradia v úplnom a funkčnom stave vrátane príslušenstva.
 2. Nájomca sa zaväzuje používať náradie v súlade s návodom na obsluhu a len na účel, na ktorý je určené. Náradie nesmie prenechať tretej osobe.
@@ -3801,8 +3802,60 @@ const rDeposit=l=>(l.items||[]).reduce((s,id)=>s+rNum(rItem(id)?.deposit),0);
 const rOverdue=l=>l.status==="out"&&l.to<todayIso();
 function rBusy(itemId,from,to,exceptId){return rLoans().filter(l=>l.id!==exceptId&&l.status!=="back"&&(l.items||[]).includes(itemId)&&l.from<=to&&from<=rEnd(l))}
 function rNextNo(){const y=todayIso().slice(0,4),n=rLoans().filter(l=>String(l.no).startsWith(`V${y}-`)).map(l=>+String(l.no).split("-")[1]||0);return `V${y}-${String((n.length?Math.max(...n):0)+1).padStart(3,"0")}`}
+/* --- štatistika požičovne: príjmy, servis, vyťaženosť a návratnosť jednotlivých strojov --- */
+const rSvc=it=>(it.svc||[]);
+const rSvcCost=(it,from,to)=>rSvc(it).filter(s=>(!from||s.date>=from)&&(!to||s.date<=to)).reduce((a,s)=>a+rNum(s.cost),0);
+/* príjem a dni prenájmu jedného kusu v období; pri dohodnutej cene výpožičky sa suma rozdelí podľa cenníka */
+function rItemUse(it,from,to){let rev=0,days=0,loans=0;
+  rLoans().filter(l=>l.status!=="rez"&&(l.items||[]).includes(it.id)).forEach(l=>{const a=l.from,b=rEnd(l);if(b<from||a>to)return;
+    const tot=rDays(a,b),list=(l.items||[]).reduce((s,id)=>{const x=rItem(id);return s+(x?rItemPrice(x,tot):0)},0),mine=rItemPrice(it,tot);
+    const price=l.priceOwn?(list?rNum(l.price)*mine/list:rNum(l.price)/(l.items||[]).length):mine;
+    const ia=a<from?from:a,ib=b>to?to:b,d=rDays(ia,ib);days+=d;rev+=price*d/tot;loans++});
+  return {rev,days,loans}}
+function rStatPeriod(){const t=todayIso(),y=t.slice(0,4),P=view.rsPer||"year";
+  if(P==="12m")return {from:addD(t,-364),to:t,l:"posledných 12 mesiacov"};if(P==="all"){const ds=[...rItems().map(i=>i.buyDate),...rLoans().map(l=>l.from)].filter(Boolean).sort();return {from:ds[0]||`${y}-01-01`,to:t,l:"celé obdobie"}}
+  return {from:`${y}-01-01`,to:t,l:`rok ${y}`}}
+function rStatRows(){const P=rStatPeriod(),t=todayIso();
+  return rItems().filter(i=>i.state!=="off"||rItemUse(i,P.from,P.to).loans).map(it=>{const U=rItemUse(it,P.from,P.to),start=it.buyDate&&it.buyDate>P.from?it.buyDate:P.from,avail=start>P.to?0:rDays(start,P.to);
+    const svc=rSvcCost(it,P.from,P.to),buy=rNum(it.buyPrice);
+    /* návratnosť od nákupu: čistý výnos celkovo a priemer za mesiac */
+    const life=it.buyDate||[...rLoans().filter(l=>(l.items||[]).includes(it.id)).map(l=>l.from)].sort()[0]||t,L=rItemUse(it,life,t),lsvc=rSvcCost(it,life,t),net=L.rev-lsvc;
+    const months=Math.max(1,rDays(life,t)/30.44),perM=net/months,left=buy-net;
+    const pay=!buy?null:left<=0?{done:true}:perM>0?{months:left/perM,date:addD(t,Math.round(left/perM*30.44))}:{never:true};
+    return {it,U,svc,profit:U.rev-svc,util:avail?Math.min(1,U.days/avail):0,avail,buy,net,cover:buy?net/buy:null,pay,perM}}).sort((a,b)=>b.profit-a.profit)}
+function rStatHTML(){const R=rStatRows(),P=rStatPeriod(),T=R.reduce((s,r)=>({rev:s.rev+r.U.rev,svc:s.svc+r.svc,days:s.days+r.U.days,avail:s.avail+r.avail,buy:s.buy+r.buy,net:s.net+r.net}),{rev:0,svc:0,days:0,avail:0,buy:0,net:0});
+  const pct=v=>`${nf1(Math.round(v*1000)/10)} %`,bar=(v,c)=>`<div class="ecbar"><i class="${c||""}" style="width:${Math.max(0,Math.min(100,v*100))}%"></i></div>`;
+  const payTxt=r=>!r.buy?`<span class="muted">zadaj nákupnú cenu</span>`:r.pay.done?`<span class="pill s-ok">splatené</span>`:r.pay.never?`<span class="muted">pri doterajších príjmoch sa nevráti</span>`:`o ${r.pay.months<12?`${Math.max(1,Math.round(r.pay.months))} mes.`:`${nf1(Math.round(r.pay.months/12*10)/10)} roka`}<br><span class="muted" style="font-size:12px">${esc(d2(r.pay.date))}</span>`;
+  const missing=rItems().filter(i=>i.state!=="off"&&!rNum(i.buyPrice)).length;
+  const top=R.filter(r=>r.U.rev>0)[0],idle=R.filter(r=>r.it.state!=="off"&&r.avail>30).sort((a,b)=>a.util-b.util)[0];
+  return `<div class="stack">
+    <div class="row"><div class="tpseg" role="tablist" style="min-width:330px">${[["year","Tento rok"],["12m","12 mesiacov"],["all","Celé obdobie"]].map(([k,l])=>`<button class="${(view.rsPer||"year")===k?"on":""}" data-a="rsPer" data-p="${k}">${l}</button>`).join("")}</div><span class="muted" style="font-size:13px">${esc(d2(P.from))} – ${esc(d2(P.to))} · ceny bez DPH</span></div>
+    <div class="eckpi"><div class="card"><div class="muted">Príjem z prenájmu</div><div class="total num">${eur(T.rev)}</div></div>
+      <div class="card"><div class="muted">Servis a údržba</div><div class="total num">${eur(T.svc)}</div></div>
+      <div class="card"><div class="muted">Zisk (príjem − servis)</div><div class="total num" style="color:var(--${T.rev-T.svc>=0?"ok":"bad"})">${eur(T.rev-T.svc)}</div></div>
+      <div class="card"><div class="muted">Priemerná vyťaženosť</div><div class="total num">${T.avail?pct(T.days/T.avail):"–"}</div></div>
+      <div class="card"><div class="muted">Návratnosť investícií</div><div class="total num">${T.buy?pct(T.net/T.buy):"–"}</div>${T.buy?`<div class="muted" style="font-size:13px">${eur(T.net)} z ${eur(T.buy)}</div>`:""}</div></div>
+    ${top||idle?`<div class="note">${top?`Najviac zarába <b>${esc(top.it.name)}</b> (${eur(top.profit)}).`:""}${idle?` Najmenej sa požičiava <b>${esc(idle.it.name)}</b> – vyťaženosť ${pct(idle.util)}.`:""}</div>`:""}
+    <div class="card stack"><b>Ziskovosť a vyťaženosť · ${esc(P.l)}</b><div class="tablewrap"><table class="dxt rstat"><thead><tr><th>Stroj / náradie</th><th class="r">Výpožičky</th><th class="r">Dni</th><th style="min-width:120px">Vyťaženosť</th><th class="r">Príjem</th><th class="r">Servis</th><th class="r">Zisk</th></tr></thead>
+    <tbody>${R.map(r=>`<tr><td><b>${esc(r.it.name)}</b>${r.it.invNo?`<br><span class="muted num">inv. č. ${esc(r.it.invNo)}</span>`:""}</td><td class="num r">${r.U.loans}</td><td class="num r">${r.U.days}</td>
+      <td>${bar(r.util,r.util<0.2?"bad":r.util>0.5?"ok":"")}<span class="num" style="font-size:12px">${pct(r.util)}</span></td><td class="num r">${eur(r.U.rev)}</td><td class="num r">${r.svc?eur(r.svc):"–"}</td>
+      <td class="num r" style="color:var(--${r.profit>=0?"ok":"bad"})">${eur(r.profit)}</td></tr>`).join("")||`<tr><td colspan="7" class="muted">Zatiaľ nie je zadané žiadne náradie.</td></tr>`}</tbody></table></div></div>
+    <div class="card stack"><b>Návratnosť investície · od nákupu</b><div class="tablewrap"><table class="dxt rstat"><thead><tr><th>Stroj / náradie</th><th class="r">Nákupná cena</th><th class="r">Čistý výnos od nákupu</th><th style="min-width:130px">Splatené z nákupu</th><th>Zaplatí sa</th></tr></thead>
+    <tbody>${R.slice().sort((a,b)=>(b.cover??-9)-(a.cover??-9)).map(r=>`<tr><td><b>${esc(r.it.name)}</b>${r.it.buyDate?`<br><span class="muted num">kúpené ${esc(d2(r.it.buyDate))}</span>`:""}</td><td class="num r">${r.buy?eur(r.buy):"–"}</td><td class="num r">${eur(r.net)}</td>
+      <td>${r.buy?`${bar(Math.max(0,r.cover),r.cover>=1?"ok":"")}<span class="num" style="font-size:12px">${pct(Math.max(0,r.cover))}</span>`:"–"}</td><td>${payTxt(r)}</td></tr>`).join("")}</tbody></table></div></div>
+    <div class="muted" style="font-size:13px">Vyťaženosť = dni prenájmu / dni, keď bol stroj v požičovni k dispozícii (od dátumu nákupu). Príjem pri dohodnutej cene výpožičky sa rozdelí medzi kusy podľa cenníka. Predpokladaná návratnosť počíta s priemerným čistým výnosom za mesiac od nákupu.${missing?` <b>${missing} ${pl(missing,"kus nemá","kusy nemajú","kusov nemá")} zadanú nákupnú cenu</b> – doplníš ju v Inventári.`:""}</div></div>`}
+document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(a==="rsPer"){view.rsPer=b.dataset.p;render()}
+  else if(a==="rsvDel"&&canEdit("pozicovna")){const it=rItem(b.dataset.i);if(it){it.svc=rSvc(it).filter(s=>s.id!==b.dataset.id);save();render()}}
+  else if(a==="rsvAdd"&&canEdit("pozicovna")){const it=rItem(b.dataset.i);if(!it)return;const d=$("#rsvDate").value,ds=$("#rsvDesc").value.trim(),c=rNum($("#rsvCost").value);
+    if(!d||!ds){toast("Zadaj dátum a popis servisu");return}(it.svc=it.svc||[]).push({id:uid("rs"),date:d,desc:ds,cost:c});save();toast("Servis zapísaný");render()}});
+function rSvcHTML(it){if(!it)return "";const L=rSvc(it).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  return `<fieldset class="modes"><legend>Servis a údržba</legend>
+    ${L.length?`<ul class="doclist">${L.map(s=>`<li><span class="num muted">${esc(d2(s.date))}</span><div class="docmain"><b>${esc(s.desc)}</b></div><div class="docbtn"><b class="num">${eur(rNum(s.cost))}</b><button type="button" class="btn small ghost" data-a="rsvDel" data-i="${it.id}" data-id="${s.id}" aria-label="Zmazať">✕</button></div></li>`).join("")}</ul>`:`<div class="muted" style="font-size:13px">Zatiaľ bez záznamov o servise.</div>`}
+    <div class="grid3"><label>Dátum<input type="date" id="rsvDate" value="${todayIso()}"></label><label>Čo sa robilo<input id="rsvDesc" placeholder="napr. výmena uhlíkov, olej"></label><label>Náklad € bez DPH<input id="rsvCost" inputmode="decimal" placeholder="0"></label></div>
+    <div><button type="button" class="btn small" data-a="rsvAdd" data-i="${it.id}">+ Zapísať servis</button></div></fieldset>`}
 function rentHTML(){const t=rTabCur(),title=(R_TABS.find(x=>x[0]===t)||R_TABS[0])[1];
-  return `<div class="stack"><div><div class="eyebrow">Požičovňa</div><h1>${esc(title)}</h1></div>${t==="inv"?rItemsHTML():t==="podm"?rTermsHTML():rLoansHTML()+rPlanHTML()}</div>`}
+  return `<div class="stack"><div><div class="eyebrow">Požičovňa</div><h1>${esc(title)}</h1></div>${t==="inv"?rItemsHTML():t==="podm"?rTermsHTML():t==="stat"?rStatHTML():rLoansHTML()+rPlanHTML()}</div>`}
 /* --- podmienky požičovne (text na výpožičný list) --- */
 function rTermsHTML(){const ed=canEdit("pozicovna");
   return `<form class="card stack" id="rtForm"><div class="muted">Text sa vytlačí na každý výpožičný list pod zoznam náradia, nad podpisy. Každý odsek začni na novom riadku.</div>
@@ -3824,7 +3877,9 @@ function rItemsHTML(){const ed=canEdit("pozicovna"),E=view.riEdit,cats=[...new S
       <label>Cena za týždeň € (nepovinné)<input id="riWeek" inputmode="decimal" value="${esc(i0?String(i0.weekRate||"").replace(".",","):"")}" placeholder="napr. 120"></label>
       <label>Záloha / kaucia €<input id="riDep" inputmode="decimal" value="${esc(i0?String(i0.deposit||"").replace(".",","):"")}" placeholder="napr. 100"></label></div>
     <span class="hint">Pri prenájme na 7 a viac dní sa použije týždenná cena (a za zvyšné dni denná, najviac do výšky ďalšieho týždňa).</span>
+    <div class="grid2"><label>Nákupná cena € bez DPH<input id="riBuy" inputmode="decimal" value="${esc(i0&&i0.buyPrice?String(i0.buyPrice).replace(".",","):"")}" placeholder="pre štatistiku návratnosti"></label><label>Dátum nákupu<input type="date" id="riBuyDate" value="${esc(i0?.buyDate||"")}"></label></div>
     <label>Poznámka<input id="riNote" value="${esc(i0?.note)}" placeholder="napr. príslušenstvo: 2 sekáče, kufor"></label>
+    ${rSvcHTML(i0)}
     <div class="row"><button class="btn primary small" type="submit">${i0?"Uložiť":"Pridať náradie"}</button><button type="button" class="btn ghost small" data-a="riNo">Zrušiť</button>
       ${i0?`<button type="button" class="btn ghost small" data-a="riDel" data-id="${i0.id}" style="margin-left:auto;color:var(--bad)">Odstrániť</button>`:""}</div></form>`:"";
   return `<div class="stack">${form||(ed?`<button class="btn primary" data-a="riNew" style="align-self:flex-start">+ Pridať náradie</button>`:"")}
@@ -3967,8 +4022,8 @@ document.addEventListener("change",ev=>{const t=ev.target;if(!me||!t.closest||!t
   render()});
 document.addEventListener("submit",ev=>{const f=ev.target.id;if(!me||!["riForm","rlForm","rtForm"].includes(f))return;ev.preventDefault();if(!canEdit("pozicovna"))return;
   if(f==="rtForm"){S.rentTerms=($("#rtText")?.value||"").trim();save();toast("Podmienky požičovne uložené");render();return}
-  if(f==="riForm"){const v=id=>($("#"+id)?.value||"").trim();for(const k of ["riDay","riWeek","riDep"])if(moneyVal(k)===null){toast("Cenu zadaj ako číslo, napr. 25 alebo 12,50");return}
-    const d={name:v("riName"),cat:v("riCat"),invNo:v("riInv"),serial:v("riSerial"),state:v("riState"),dayRate:+moneyVal("riDay")||0,weekRate:+moneyVal("riWeek")||0,deposit:+moneyVal("riDep")||0,note:v("riNote")};
+  if(f==="riForm"){const v=id=>($("#"+id)?.value||"").trim();for(const k of ["riDay","riWeek","riDep","riBuy"])if(moneyVal(k)===null){toast("Cenu zadaj ako číslo, napr. 25 alebo 12,50");return}
+    const d={name:v("riName"),cat:v("riCat"),invNo:v("riInv"),serial:v("riSerial"),state:v("riState"),dayRate:+moneyVal("riDay")||0,weekRate:+moneyVal("riWeek")||0,deposit:+moneyVal("riDep")||0,buyPrice:+moneyVal("riBuy")||0,buyDate:v("riBuyDate"),note:v("riNote")};
     if(!d.name){toast("Zadaj názov náradia");return}if(!d.dayRate){toast("Zadaj cenu prenájmu za deň");return}
     const id=ev.target.dataset.id;S.rentItems=rItems();if(id)Object.assign(rItem(id),d);else S.rentItems.push({id:uid("ri"),...d});view.riEdit=null;save();toast(id?"Náradie upravené":"Náradie pridané");render();return}
   readRlForm();const D=view.rlDraft;D.customer.name=D.customer.name.trim();
