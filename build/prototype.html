@@ -142,6 +142,7 @@ table.budget td.code{font-size:12px;color:var(--muted)}
 .ld-flegal{display:flex;gap:18px;flex-wrap:wrap}.ld-flegal .ld-link{color:inherit;font-weight:500;font-size:13px}
 .rstat td{vertical-align:middle}.rstat .ecbar{margin-bottom:2px}
 .nbset .chk{align-items:flex-start}.nbset .chk input{margin-top:3px;flex:none}
+.jfmo{grid-column:1/-1;max-width:420px}
 .seenline{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ok);font-weight:600}.dexp summary{cursor:pointer}
 .bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
 table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
@@ -1257,16 +1258,20 @@ function firmMachinesHTML(){
       <label>Názov *<input id="fmName" value="${esc(m?.name)}" required placeholder="napr. JCB 3CX (RS 412AB)"></label>
       <div class="grid2"><label>Druh<select id="fmCat">${CAT_ORDER.map(k=>`<option value="${k}" ${(m?.cat||"other")===k?"selected":""}>${CATS[k].l}</option>`).join("")}</select></label>
         <label>Typ / označenie<input id="fmType" value="${esc(m?.type)}" list="typeList" placeholder="napr. Rýpadlo-nakladač"></label></div>
-      <div class="grid2"><label>Sadzba za hodinu €<input id="fmRate" inputmode="decimal" value="${m&&m.rate?String(m.rate).replace(".",","):""}" placeholder="napr. 42"></label>${rateKmIn("fmRateKm",m&&m.rateKm)}</div>
+      <div class="grid3"><label>Sadzba za hodinu €<input id="fmRate" inputmode="decimal" value="${m&&m.rate?String(m.rate).replace(".",","):""}" placeholder="napr. 42"></label>${rateKmIn("fmRateKm",m&&m.rateKm)}
+        <label>Cena za deň €<input id="fmRateDay" inputmode="decimal" value="${m&&m.rateDay?String(m.rateDay).replace(".",","):""}" placeholder="napr. 35"></label></div>
+      <fieldset class="modes"><legend>Iná cena (nepovinné)</legend><div class="grid3"><label>Za čo<input id="fmOtherName" value="${esc(m?.otherName)}" placeholder="napr. opotrebenie rezného kotúča"></label>
+        <label>Merná jednotka<input id="fmOtherUnit" value="${esc(m?.otherUnit)}" placeholder="napr. bm"></label><label>Cena za jednotku €<input id="fmOther" inputmode="decimal" value="${m&&m.rateOther?String(m.rateOther).replace(".",","):""}" placeholder="napr. 1,20"></label></div>
+        <span class="hint">Napr. rezač asfaltu: denný nájom + opotrebenie kotúča za bežný meter. Množstvo sa zadá pri úlohe v plánovači.</span></fieldset>
       <datalist id="typeList">${[...new Set((S.machines||[]).map(x=>x.type).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
       <div class="row"><button class="btn primary" type="submit">${m?"Uložiť":"Pridať"}</button><button type="button" class="btn ghost" data-a="fmNo">Zrušiť</button>
         ${m?`<button type="button" class="btn ghost" data-a="fmDel" data-id="${m.id}" style="margin-left:auto;color:var(--bad)">Odstrániť</button>`:""}</div></form>`:"";
-  const rows=(S.machines||[]).slice().sort((a,b)=>CAT_ORDER.indexOf(a.cat||"other")-CAT_ORDER.indexOf(b.cat||"other")).map(x=>`<tr><td><b>${esc(x.name)}</b>${x.ecv?`<br><span class="muted num">${esc(x.ecv)}</span>`:""}</td><td>${esc(catOf(x).l)}${x.type?`<br><span class="muted">${esc(x.type)}</span>`:""}</td><td class="num r">${x.rate?eur(x.rate):"–"}</td><td class="num r">${x.rateKm?eur(x.rateKm):"–"}</td>${ed?`<td class="r"><button class="btn small ghost" data-a="fmEdit" data-id="${x.id}">Upraviť</button></td>`:""}</tr>`).join("");
+  const rows=(S.machines||[]).slice().sort((a,b)=>CAT_ORDER.indexOf(a.cat||"other")-CAT_ORDER.indexOf(b.cat||"other")).map(x=>`<tr><td><b>${esc(x.name)}</b>${x.ecv?`<br><span class="muted num">${esc(x.ecv)}</span>`:""}</td><td>${esc(catOf(x).l)}${x.type?`<br><span class="muted">${esc(x.type)}</span>`:""}</td><td class="num r">${x.rate?eur(x.rate):"–"}</td><td class="num r">${x.rateKm?eur(x.rateKm):"–"}</td><td class="num r">${x.rateDay?eur(x.rateDay):"–"}</td><td class="r" style="white-space:normal;min-width:130px">${x.rateOther?`<span class="num">${eur(x.rateOther)} / ${esc(x.otherUnit||"j.")}</span>${x.otherName?`<br><span class="muted" style="font-size:12px">${esc(x.otherName)}</span>`:""}`:`<span class="num">–</span>`}</td>${ed?`<td class="r"><button class="btn small ghost" data-a="fmEdit" data-id="${x.id}">Upraviť</button></td>`:""}</tr>`).join("");
   return `<div class="stack">
-    <div class="muted">Stroje a vozidlá firmy so sadzbou za hodinu a za km (cenník pre fakturáciu úloh v logistike). Vyberajú sa v dennom zázname stavby a sadzba sa použije v nákladoch stavby.${hasMod("doprava")&&canSee("doprava")?" Rodný list, termíny a servis sú v module Doprava a logistika.":""}</div>
+    <div class="muted">Stroje a vozidlá firmy so základnou sadzbou na mernú jednotku (cenník pre fakturáciu úloh v logistike). Z tohto zoznamu vyberáš do denného záznamu stavieb, zadaná cena sa použije v nákladoch stavby.${hasMod("doprava")&&canSee("doprava")?" Rodný list, termíny a servis sú v module Doprava a logistika.":""}</div>
     ${form||(ed?`<button class="btn primary" data-a="fmNew" style="align-self:flex-start">+ Pridať stroj alebo vozidlo</button>`:"")}
-    <div class="card tablewrap" style="padding:6px 8px"><table><thead><tr><th>Stroj / vozidlo</th><th>Druh</th><th class="r">Sadzba / hod.</th><th class="r">Sadzba / km</th>${ed?"<th></th>":""}</tr></thead>
-      <tbody>${rows||`<tr><td colspan="5" class="muted">Zatiaľ nie je zadaný žiadny stroj ani vozidlo.</td></tr>`}</tbody></table></div></div>`}
+    <div class="card tablewrap" style="padding:6px 8px"><table><thead><tr><th>Stroj / vozidlo</th><th>Druh</th><th class="r">Sadzba / hod.</th><th class="r">Sadzba / km</th><th class="r">Cena / deň</th><th class="r">Iná cena</th>${ed?"<th></th>":""}</tr></thead>
+      <tbody>${rows||`<tr><td colspan="7" class="muted">Zatiaľ nie je zadaný žiadny stroj ani vozidlo.</td></tr>`}</tbody></table></div></div>`}
 
 /* ---------- Doprava a logistika: rodný list stroja ---------- */
 const CATS={
@@ -1508,7 +1513,7 @@ function vehMainHTML(m){
       <label>Poznámka<input id="vmNote" value="${esc(m.note)}"></label>
       <div class="row"><button class="btn primary" type="submit">Uložiť</button><button type="button" class="btn ghost" data-a="vehEditNo">Zrušiť</button></div></form>`}
   const rows=[["Druh",C.l],["Typ",m.type],...(C.main?[["EČV",m.ecv],["VIN",m.vin],["Farba",m.color]]:[["Výrobné číslo",m.serial]]),
-    ["Zodpovedná osoba",m.resp?workerLabel(worker(m.resp)||{}):""],["Sadzba za hodinu",m.rate?eur(m.rate):""],["Sadzba za km",m.rateKm?eur(m.rateKm):""],["Poznámka",m.note]];
+    ["Zodpovedná osoba",m.resp?workerLabel(worker(m.resp)||{}):""],["Sadzba za hodinu",m.rate?eur(m.rate):""],["Sadzba za km",m.rateKm?eur(m.rateKm):""],["Cena za deň",m.rateDay?eur(m.rateDay):""],["Iná cena",m.rateOther?`${eur(m.rateOther)} / ${m.otherUnit||"j."}${m.otherName?` (${m.otherName})`:""}`:""],["Poznámka",m.note]];
   return `<div class="card stack"><div class="entry-head"><h3>Hlavné údaje</h3><button class="btn small" data-a="vehEdit" data-eo="1">Upraviť</button></div>
     <dl class="dl">${rows.map(r=>`<dt>${r[0]}</dt><dd class="${["EČV","VIN"].includes(r[0])?"num":""}">${r[1]?esc(r[1]):'<span class="muted">nevyplnené</span>'}</dd>`).join("")}</dl></div>`}
 function oevHTML(m){
@@ -2893,12 +2898,12 @@ function jobHours(j){return Math.max(0,(tmin(j.to)-tmin(j.from))/60)}
 const numv=v=>+String(v??"").replace(",",".")||0;
 function jobKm(j,x){const rows=(j.log||{})[x.machineId];return rows?{km:rows.reduce((s,r)=>s+numv(r.km),0),src:"log"}:{km:numv(x.km),src:x.km?"plan":""}}
 function jobCennikParts(j){return (j.machines||[]).map(x=>{const m=machine(x.machineId);if(!m)return null;const k=jobKm(j,x),rows=(j.log||{})[x.machineId];
-  const h=rows?rows.reduce((s,r)=>s+numv(r.h),0):jobHours(j),ph=(m.rate||0)*h,pk=(m.rateKm||0)*k.km;return {m,h,km:k.km,src:k.src,ph,pk,sum:ph+pk}}).filter(Boolean)}
+  const h=rows?rows.reduce((s,r)=>s+numv(r.h),0):jobHours(j),ph=(m.rate||0)*h,pk=(m.rateKm||0)*k.km,qo=numv(x.qOther),px=(m.rateDay||0)+(m.rateOther||0)*qo;return {m,h,km:k.km,src:k.src,ph,pk,qo,px,sum:ph+pk+px}}).filter(Boolean)}
 function jobCennik(j){return jobCennikParts(j).reduce((s,p)=>s+p.sum,0)}
 function cennikText(j){const ps=jobCennikParts(j);if(!ps.length)return "žiadny stroj";
-  return ps.map(p=>{const a=[];if(p.m.rate)a.push(`${nf1(p.h)} h × ${eur(p.m.rate)}${p.src==="log"?"":" (čas úlohy)"}`);if(p.m.rateKm&&p.km)a.push(`${nf1(p.km)} km × ${eur(p.m.rateKm)}${p.src==="log"?"":" (odhad)"}`);
+  return ps.map(p=>{const a=[];if(p.m.rate)a.push(`${nf1(p.h)} h × ${eur(p.m.rate)}${p.src==="log"?"":" (čas úlohy)"}`);if(p.m.rateKm&&p.km)a.push(`${nf1(p.km)} km × ${eur(p.m.rateKm)}${p.src==="log"?"":" (odhad)"}`);if(p.m.rateDay)a.push(`1 deň × ${eur(p.m.rateDay)}`);if(p.m.rateOther&&p.qo)a.push(`${nf1(p.qo)} ${p.m.otherUnit||"j."} × ${eur(p.m.rateOther)}`);
     const miss=p.m.rateKm&&!p.km?" (km zatiaľ nezadané)":"";
-    return `${p.m.name}${p.src==="log"?" (podľa knihy jázd)":""}: ${a.length?a.join(" + ")+" = "+eur(p.sum)+miss:(p.m.rate||p.m.rateKm?"0 €"+miss:"bez sadzby")}`}).join(" · ")}
+    return `${p.m.name}${p.src==="log"?" (podľa knihy jázd)":""}: ${a.length?a.join(" + ")+" = "+eur(p.sum)+miss:(p.m.rate||p.m.rateKm||p.m.rateDay||p.m.rateOther?"0 €"+miss:"bez sadzby")}`}).join(" · ")}
 function jobPrice(j){return j.priceMode==="own"?(+String(j.price||"").replace(",",".")||0):jobCennik(j)}
 function jobPeople(j){return [...new Set([...(j.machines||[]).map(x=>x.driverId).filter(Boolean),...(j.workers||[])])]}
 function jobsOn(d){return (S.jobs||[]).filter(j=>j.date===d).sort((a,b)=>a.from.localeCompare(b.from))}
@@ -2994,7 +2999,8 @@ function jobForm(){
       ${D.machines.map((x,i)=>{const m=machine(x.machineId),need=m&&NEEDS_DRIVER.includes(m.cat);return `<div class="jfm"><label>Stroj / vozidlo<select data-jm="${i}" data-k="machineId">${ms.map(mm=>`<option value="${mm.id}" ${mm.id===x.machineId?"selected":""}>${esc(mm.name)}${mm.ecv?" · "+esc(mm.ecv):""}</option>`).join("")}</select></label>
         <label>${m&&m.cat==="machine"?"Strojník":m&&NEEDS_DRIVER.includes(m.cat)?"Vodič":"Obsluha"}${need?" *":""}<select data-jm="${i}" data-k="driverId"><option value="">— vyber —</option>${ws.map(w=>`<option value="${w.id}" ${w.id===x.driverId?"selected":""}>${esc(w.lastName)} ${esc(w.firstName)}${w.profession?" · "+esc(w.profession):""}</option>`).join("")}</select></label>
         ${m&&(m.rateKm||["car","truck"].includes(m.cat))?`<label>Km${(D.log||{})[x.machineId]?" (z knihy jázd)":" (odhad)"}<input class="nin" data-jm="${i}" data-k="km" inputmode="decimal" value="${esc((D.log||{})[x.machineId]?nf1(jobKm(D,x).km):(x.km||""))}" ${(D.log||{})[x.machineId]?"disabled":""} placeholder="0"></label>`:"<span></span>"}
-        <button type="button" class="x" data-a="jfmDel" data-i="${i}" aria-label="Odobrať stroj">×</button></div>`}).join("")}
+        <button type="button" class="x" data-a="jfmDel" data-i="${i}" aria-label="Odobrať stroj">×</button>
+        ${m&&m.rateOther?`<label class="jfmo">${esc(m.otherName||"Iná cena")} (${esc(m.otherUnit||"j.")}) · ${eur(m.rateOther)} / ${esc(m.otherUnit||"j.")}<input class="nin" data-jm="${i}" data-k="qOther" inputmode="decimal" value="${esc(x.qOther||"")}" placeholder="0"></label>`:""}</div>`}).join("")}
       <button type="button" class="btn small" data-a="jfmAdd" style="align-self:flex-start">+ Pridať stroj alebo vozidlo</button></fieldset>
     <fieldset class="modes"><legend>Ďalší pracovníci</legend><div class="skchecks">${ws.filter(w=>!drivers.has(w.id)).map(w=>`<label class="chk"><input type="checkbox" data-jw="${w.id}" ${D.workers.includes(w.id)?"checked":""}> ${esc(w.lastName)} ${esc(w.firstName)}<span class="muted">${w.profession?" · "+esc(w.profession):""}</span></label>`).join("")}</div></fieldset>
     <fieldset class="modes"><legend>Cena bez DPH</legend>
@@ -3134,10 +3140,10 @@ function dxRows(X){const sel=X.all?null:new Set(X.ms),out=[];
   (S.jobs||[]).filter(j=>j.date>=X.from&&j.date<=X.to&&(!X.client||j.client===X.client)&&(!X.unbilled||!j.billed)).sort((a,b)=>(a.date+a.from).localeCompare(b.date+b.from)).forEach(j=>{
     const parts=jobCennikParts(j),own=j.priceMode==="own";let ownDone=false;
     (j.machines||[]).forEach(x=>{if(sel&&!sel.has(x.machineId))return;const p=parts.find(q=>q.m.id===x.machineId);if(!p)return;
-      const r={j,m:p.m,dr:worker(x.driverId),h:p.h,km:p.km,pre:p.src!=="log",own,ph:own?0:p.ph,pk:own?0:p.pk,ownAmt:0};
-      if(own&&!ownDone){r.ownAmt=jobPrice(j);ownDone=true}r.sum=r.ph+r.pk+r.ownAmt;out.push(r)})});
+      const r={j,m:p.m,dr:worker(x.driverId),h:p.h,km:p.km,pre:p.src!=="log",own,ph:own?0:p.ph,pk:own?0:p.pk,px:own?0:p.px,ownAmt:0};
+      if(own&&!ownDone){r.ownAmt=jobPrice(j);ownDone=true}r.sum=r.ph+r.pk+r.px+r.ownAmt;out.push(r)})});
   return out.sort((a,b)=>a.j.date.localeCompare(b.j.date)||(a.m.name||"").localeCompare(b.m.name||"","sk")||a.j.from.localeCompare(b.j.from))}
-function dxSum(rows){return rows.reduce((s,r)=>({h:s.h+r.h,km:s.km+r.km,ph:s.ph+r.ph,pk:s.pk+r.pk,own:s.own+r.ownAmt,sum:s.sum+r.sum}),{h:0,km:0,ph:0,pk:0,own:0,sum:0})}
+function dxSum(rows){return rows.reduce((s,r)=>({h:s.h+r.h,km:s.km+r.km,ph:s.ph+r.ph,pk:s.pk+r.pk,px:s.px+(r.px||0),own:s.own+r.ownAmt,sum:s.sum+r.sum}),{h:0,km:0,ph:0,pk:0,px:0,own:0,sum:0})}
 function dxSummary(rows){const g=new Map();rows.forEach(r=>{if(!g.has(r.m.id))g.set(r.m.id,{m:r.m,rows:[]});g.get(r.m.id).rows.push(r)});
   return dxMachines().filter(m=>g.has(m.id)).map(m=>{const G=g.get(m.id);return {m,days:new Set(G.rows.map(r=>r.j.date)).size,jobs:G.rows.length,pre:G.rows.some(r=>r.pre),...dxSum(G.rows)}})}
 const dxNum=v=>nf1(Math.round(v*10)/10);
@@ -3150,14 +3156,14 @@ function dxHTML(){const X=dxState(),cl=dxClients(),ms=dxMachines();
   if(rows.length&&X.mode==="days"){let html="",i=0;
     const days=[...new Set(rows.map(r=>r.j.date))];
     days.forEach(d=>{const R=rows.filter(r=>r.j.date===d);R.forEach((r,k)=>{html+=`<tr${k===0?' class="dxday"':""}><td class="num">${k===0?esc(DOW[dow(d)]+" "+d2(d)):""}</td><td><b>${esc(dxMName(r.m))}</b>${r.dr?`<br><span class="muted">${r.m.cat==="machine"?"strojník":"vodič"}: ${esc(fullName(r.dr))}</span>`:""}</td><td class="dxw">${showCl?`<div class="dxc">${esc(r.j.client)}</div>`:""}<div class="dxp">${esc([r.j.place,r.j.desc].filter(Boolean).join(" – "))}</div></td>
-      <td class="num r">${dxNum(r.h)}${r.pre?"*":""}</td><td class="num r">${r.km?dxNum(r.km)+(r.pre?"*":""):"–"}</td><td class="num r">${r.own?`<span class="muted">${r.ownAmt?"dohodnutá":""}</span>`:eur(r.ph)}</td><td class="num r">${r.own?"":eur(r.pk)}</td><td class="num r"><b>${eur(r.sum)}</b></td></tr>`});
-      if(R.length>1){const s=dxSum(R);html+=`<tr class="dxsub"><td colspan="3">Spolu ${esc(d2(d))}</td><td class="num r">${dxNum(s.h)}</td><td class="num r">${dxNum(s.km)}</td><td class="num r">${eur(s.ph)}</td><td class="num r">${eur(s.pk)}</td><td class="num r">${eur(s.sum)}</td></tr>`}});
-    table=`<table class="dxt"><thead><tr><th>Dátum</th><th>Stroj / vozidlo</th><th>${showCl?"Objednávateľ / miesto":"Miesto / práca"}</th><th class="r">Hodiny</th><th class="r">Km</th><th class="r">Za hodiny</th><th class="r">Za km</th><th class="r">Spolu</th></tr></thead><tbody>${html}</tbody>
-      <tfoot><tr><td colspan="3">Spolu za obdobie</td><td class="num r">${dxNum(T.h)}</td><td class="num r">${dxNum(T.km)}</td><td class="num r">${eur(T.ph)}</td><td class="num r">${eur(T.pk)}</td><td class="num r">${eur(T.sum)}</td></tr></tfoot></table>`}
+      <td class="num r">${dxNum(r.h)}${r.pre?"*":""}</td><td class="num r">${r.km?dxNum(r.km)+(r.pre?"*":""):"–"}</td><td class="num r">${r.own?`<span class="muted">${r.ownAmt?"dohodnutá":""}</span>`:eur(r.ph)}</td><td class="num r">${r.own?"":eur(r.pk)}</td>${T.px?`<td class="num r">${r.own||!r.px?"–":eur(r.px)}</td>`:""}<td class="num r"><b>${eur(r.sum)}</b></td></tr>`});
+      if(R.length>1){const s=dxSum(R);html+=`<tr class="dxsub"><td colspan="3">Spolu ${esc(d2(d))}</td><td class="num r">${dxNum(s.h)}</td><td class="num r">${dxNum(s.km)}</td><td class="num r">${eur(s.ph)}</td><td class="num r">${eur(s.pk)}</td>${T.px?`<td class="num r">${eur(s.px)}</td>`:""}<td class="num r">${eur(s.sum)}</td></tr>`}});
+    table=`<table class="dxt"><thead><tr><th>Dátum</th><th>Stroj / vozidlo</th><th>${showCl?"Objednávateľ / miesto":"Miesto / práca"}</th><th class="r">Hodiny</th><th class="r">Km</th><th class="r">Za hodiny</th><th class="r">Za km</th>${T.px?`<th class="r">Deň a iné</th>`:""}<th class="r">Spolu</th></tr></thead><tbody>${html}</tbody>
+      <tfoot><tr><td colspan="3">Spolu za obdobie</td><td class="num r">${dxNum(T.h)}</td><td class="num r">${dxNum(T.km)}</td><td class="num r">${eur(T.ph)}</td><td class="num r">${eur(T.pk)}</td>${T.px?`<td class="num r">${eur(T.px)}</td>`:""}<td class="num r">${eur(T.sum)}</td></tr></tfoot></table>`}
   else if(rows.length){const G=dxSummary(rows);
-    table=`<table class="dxt"><thead><tr><th>Stroj / vozidlo</th><th class="r">Dní</th><th class="r">Hodiny</th><th class="r">Sadzba / h</th><th class="r">Za hodiny</th><th class="r">Km</th><th class="r">Sadzba / km</th><th class="r">Za km</th>${T.own?`<th class="r">Dohodnuté ceny</th>`:""}<th class="r">Spolu</th></tr></thead><tbody>
-      ${G.map(g=>`<tr><td><b>${esc(g.m.name)}</b>${g.m.ecv?`<br><span class="muted num">${esc(g.m.ecv)}</span>`:""}</td><td class="num r">${g.days}</td><td class="num r">${dxNum(g.h)}${g.pre?"*":""}</td><td class="num r">${g.m.rate?eur(g.m.rate):"–"}</td><td class="num r">${eur(g.ph)}</td><td class="num r">${dxNum(g.km)}${g.pre&&g.km?"*":""}</td><td class="num r">${g.m.rateKm?eur(g.m.rateKm):"–"}</td><td class="num r">${eur(g.pk)}</td>${T.own?`<td class="num r">${g.own?eur(g.own):"–"}</td>`:""}<td class="num r"><b>${eur(g.sum)}</b></td></tr>`).join("")}</tbody>
-      <tfoot><tr><td>Spolu</td><td class="num r">${new Set(rows.map(r=>r.j.date)).size}</td><td class="num r">${dxNum(T.h)}</td><td></td><td class="num r">${eur(T.ph)}</td><td class="num r">${dxNum(T.km)}</td><td></td><td class="num r">${eur(T.pk)}</td>${T.own?`<td class="num r">${eur(T.own)}</td>`:""}<td class="num r">${eur(T.sum)}</td></tr></tfoot></table>`}
+    table=`<table class="dxt"><thead><tr><th>Stroj / vozidlo</th><th class="r">Dní</th><th class="r">Hodiny</th><th class="r">Sadzba / h</th><th class="r">Za hodiny</th><th class="r">Km</th><th class="r">Sadzba / km</th><th class="r">Za km</th>${T.px?`<th class="r">Deň a iné</th>`:""}${T.own?`<th class="r">Dohodnuté ceny</th>`:""}<th class="r">Spolu</th></tr></thead><tbody>
+      ${G.map(g=>`<tr><td><b>${esc(g.m.name)}</b>${g.m.ecv?`<br><span class="muted num">${esc(g.m.ecv)}</span>`:""}</td><td class="num r">${g.days}</td><td class="num r">${dxNum(g.h)}${g.pre?"*":""}</td><td class="num r">${g.m.rate?eur(g.m.rate):"–"}</td><td class="num r">${eur(g.ph)}</td><td class="num r">${dxNum(g.km)}${g.pre&&g.km?"*":""}</td><td class="num r">${g.m.rateKm?eur(g.m.rateKm):"–"}</td><td class="num r">${eur(g.pk)}</td>${T.px?`<td class="num r">${g.px?eur(g.px):"–"}</td>`:""}${T.own?`<td class="num r">${g.own?eur(g.own):"–"}</td>`:""}<td class="num r"><b>${eur(g.sum)}</b></td></tr>`).join("")}</tbody>
+      <tfoot><tr><td>Spolu</td><td class="num r">${new Set(rows.map(r=>r.j.date)).size}</td><td class="num r">${dxNum(T.h)}</td><td></td><td class="num r">${eur(T.ph)}</td><td class="num r">${dxNum(T.km)}</td><td></td><td class="num r">${eur(T.pk)}</td>${T.px?`<td class="num r">${eur(T.px)}</td>`:""}${T.own?`<td class="num r">${eur(T.own)}</td>`:""}<td class="num r">${eur(T.sum)}</td></tr></tfoot></table>`}
   return `<div class="stack">
     <div class="card stack dxcard"><form class="stack" id="dxForm" onsubmit="return false"><h3>Súpis výkonov strojov</h3>
       <div class="muted" style="font-size:13px">Odpracované hodiny a prejdené km za každý stroj ako podklad k faktúre. Údaje sa berú z naplánovaných úloh a ich knihy jázd.</div>
@@ -3192,17 +3198,17 @@ function dxPDF(mode){const X=dxState(),rows=dxRows(X);if(!rows.length){toast("Ž
   const R={halign:"right"};
   if(mode==="days"){const body=[];[...new Set(rows.map(r=>r.j.date))].forEach(d=>{const Rs=rows.filter(r=>r.j.date===d);
       Rs.forEach((r,k)=>body.push([k===0?plain(d2(d)):"",dxMName(r.m),...(showCl?[r.j.client||""]:[]),[r.j.place,r.j.desc].filter(Boolean).join(" – "),r.dr?fullName(r.dr):"",
-        dxNum(r.h)+(r.pre?"*":""),r.km?dxNum(r.km)+(r.pre?"*":""):"",r.own?(r.ownAmt?"dohodnutá":""):M(r.ph),r.own?"":M(r.pk),M(r.sum)]));
-      if(Rs.length>1){const s=dxSum(Rs);body.push([{content:`Spolu ${plain(d2(d))}`,colSpan:showCl?5:4,styles:{fontStyle:"bold"}},dxNum(s.h),dxNum(s.km),M(s.ph),M(s.pk),M(s.sum)].map(c=>typeof c==="string"?{content:c,styles:{fontStyle:"bold",fillColor:[245,246,247]}}:{...c,styles:{...c.styles,fillColor:[245,246,247]}}))}});
+        dxNum(r.h)+(r.pre?"*":""),r.km?dxNum(r.km)+(r.pre?"*":""):"",r.own?(r.ownAmt?"dohodnutá":""):M(r.ph),r.own?"":M(r.pk),...(T.px?[r.own||!r.px?"":M(r.px)]:[]),M(r.sum)]));
+      if(Rs.length>1){const s=dxSum(Rs);body.push([{content:`Spolu ${plain(d2(d))}`,colSpan:showCl?5:4,styles:{fontStyle:"bold"}},dxNum(s.h),dxNum(s.km),M(s.ph),M(s.pk),...(T.px?[M(s.px)]:[]),M(s.sum)].map(c=>typeof c==="string"?{content:c,styles:{fontStyle:"bold",fillColor:[245,246,247]}}:{...c,styles:{...c.styles,fillColor:[245,246,247]}}))}});
     const n0=showCl?5:4;
-    doc.autoTable({...base,head:[["Dátum","Stroj / vozidlo",...(showCl?["Objednávateľ"]:[]),"Miesto / práca","Vodič / strojník","Hodiny","Km","Za hodiny","Za km","Spolu"]],body,
-      foot:[[{content:"Spolu za obdobie",colSpan:n0},dxNum(T.h),dxNum(T.km),M(T.ph),M(T.pk),M(T.sum)]],
+    doc.autoTable({...base,head:[["Dátum","Stroj / vozidlo",...(showCl?["Objednávateľ"]:[]),"Miesto / práca","Vodič / strojník","Hodiny","Km","Za hodiny","Za km",...(T.px?["Deň a iné"]:[]),"Spolu"]],body,
+      foot:[[{content:"Spolu za obdobie",colSpan:n0},dxNum(T.h),dxNum(T.km),M(T.ph),M(T.pk),...(T.px?[M(T.px)]:[]),M(T.sum)]],
       columnStyles:{0:{cellWidth:20},[n0]:{...R,cellWidth:15},[n0+1]:{...R,cellWidth:15},[n0+2]:{...R,cellWidth:22},[n0+3]:{...R,cellWidth:22},[n0+4]:{...R,cellWidth:24}},
       didParseCell:h=>{if(h.section==="foot"&&h.column.index>=n0)h.cell.styles.halign="right"}})}
   else{const G=dxSummary(rows),own=T.own>0;
-    const body=G.map(g=>[dxMName(g.m),String(g.days),dxNum(g.h)+(g.pre?"*":""),g.m.rate?M(g.m.rate):"–",M(g.ph),dxNum(g.km)+(g.pre&&g.km?"*":""),g.m.rateKm?M(g.m.rateKm):"–",M(g.pk),...(own?[g.own?M(g.own):"–"]:[]),M(g.sum)]);
-    doc.autoTable({...base,head:[["Stroj / vozidlo","Dní","Hodiny","Sadzba / h","Za hodiny","Km","Sadzba / km","Za km",...(own?["Dohodnuté ceny"]:[]),"Spolu"]],body,
-      foot:[["Spolu",String(new Set(rows.map(r=>r.j.date)).size),dxNum(T.h),"",M(T.ph),dxNum(T.km),"",M(T.pk),...(own?[M(T.own)]:[]),M(T.sum)]],
+    const body=G.map(g=>[dxMName(g.m),String(g.days),dxNum(g.h)+(g.pre?"*":""),g.m.rate?M(g.m.rate):"–",M(g.ph),dxNum(g.km)+(g.pre&&g.km?"*":""),g.m.rateKm?M(g.m.rateKm):"–",M(g.pk),...(T.px?[g.px?M(g.px):"–"]:[]),...(own?[g.own?M(g.own):"–"]:[]),M(g.sum)]);
+    doc.autoTable({...base,head:[["Stroj / vozidlo","Dní","Hodiny","Sadzba / h","Za hodiny","Km","Sadzba / km","Za km",...(T.px?["Deň a iné"]:[]),...(own?["Dohodnuté ceny"]:[]),"Spolu"]],body,
+      foot:[["Spolu",String(new Set(rows.map(r=>r.j.date)).size),dxNum(T.h),"",M(T.ph),dxNum(T.km),"",M(T.pk),...(T.px?[M(T.px)]:[]),...(own?[M(T.own)]:[]),M(T.sum)]],
       columnStyles:Object.fromEntries([1,2,3,4,5,6,7,8,9].map(i=>[i,R])),didParseCell:h=>{if(h.section==="foot"&&h.column.index>0)h.cell.styles.halign="right"}})}
   let y=doc.lastAutoTable.finalY+6;doc.setFontSize(8);
   if(pre){doc.text("* predbežné – úloha nemá vyplnenú knihu jázd (hodiny z času úlohy, km z odhadu).",10,y);y+=4.5}
@@ -3214,12 +3220,12 @@ function dxPDF(mode){const X=dxState(),rows=dxRows(X);if(!rows.length){toast("Ž
 function dxFile(X,suf){return `Supis_strojov_${X.client||"vsetci"}_${X.from}_${X.to}_${suf}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_")}
 function dxXLS(){const X=dxState(),rows=dxRows(X);if(!rows.length){toast("Žiadne údaje na export");return}if(!window.XLSX){toast("Knižnica na Excel sa nenačítala. Skús stránku obnoviť.");return}
   const r2=v=>Math.round(v*100)/100,r1=v=>Math.round(v*10)/10,T=dxSum(rows);
-  const a1=[["Súpis výkonov strojov – po dňoch"],[plain(dxSubtitle(X))],[],["Dátum","Stroj / vozidlo","EČV","Objednávateľ","Miesto / práca","Vodič / strojník","Hodiny","Km","Predbežné","Za hodiny €","Za km €","Dohodnutá cena €","Spolu €"]];
-  rows.forEach(r=>a1.push([d2(r.j.date),r.m.name,r.m.ecv||"",r.j.client||"",[r.j.place,r.j.desc].filter(Boolean).join(" – "),r.dr?fullName(r.dr):"",r1(r.h),r1(r.km),r.pre?"áno":"",r2(r.ph),r2(r.pk),r.ownAmt?r2(r.ownAmt):"",r2(r.sum)]));
-  a1.push(["Spolu","","","","","",r1(T.h),r1(T.km),"",r2(T.ph),r2(T.pk),r2(T.own),r2(T.sum)]);
-  const a2=[["Súpis výkonov strojov – sumár"],[plain(dxSubtitle(X))],[],["Stroj / vozidlo","EČV","Dní","Hodiny","Sadzba / h €","Za hodiny €","Km","Sadzba / km €","Za km €","Dohodnuté ceny €","Spolu €"]];
-  dxSummary(rows).forEach(g=>a2.push([g.m.name,g.m.ecv||"",g.days,r1(g.h),g.m.rate||0,r2(g.ph),r1(g.km),g.m.rateKm||0,r2(g.pk),r2(g.own),r2(g.sum)]));
-  a2.push(["Spolu","",new Set(rows.map(r=>r.j.date)).size,r1(T.h),"",r2(T.ph),r1(T.km),"",r2(T.pk),r2(T.own),r2(T.sum)]);
+  const a1=[["Súpis výkonov strojov – po dňoch"],[plain(dxSubtitle(X))],[],["Dátum","Stroj / vozidlo","EČV","Objednávateľ","Miesto / práca","Vodič / strojník","Hodiny","Km","Predbežné","Za hodiny €","Za km €","Deň a iné €","Dohodnutá cena €","Spolu €"]];
+  rows.forEach(r=>a1.push([d2(r.j.date),r.m.name,r.m.ecv||"",r.j.client||"",[r.j.place,r.j.desc].filter(Boolean).join(" – "),r.dr?fullName(r.dr):"",r1(r.h),r1(r.km),r.pre?"áno":"",r2(r.ph),r2(r.pk),r2(r.px||0),r.ownAmt?r2(r.ownAmt):"",r2(r.sum)]));
+  a1.push(["Spolu","","","","","",r1(T.h),r1(T.km),"",r2(T.ph),r2(T.pk),r2(T.px),r2(T.own),r2(T.sum)]);
+  const a2=[["Súpis výkonov strojov – sumár"],[plain(dxSubtitle(X))],[],["Stroj / vozidlo","EČV","Dní","Hodiny","Sadzba / h €","Za hodiny €","Km","Sadzba / km €","Za km €","Deň a iné €","Dohodnuté ceny €","Spolu €"]];
+  dxSummary(rows).forEach(g=>a2.push([g.m.name,g.m.ecv||"",g.days,r1(g.h),g.m.rate||0,r2(g.ph),r1(g.km),g.m.rateKm||0,r2(g.pk),r2(g.px),r2(g.own),r2(g.sum)]));
+  a2.push(["Spolu","",new Set(rows.map(r=>r.j.date)).size,r1(T.h),"",r2(T.ph),r1(T.km),"",r2(T.pk),r2(T.px),r2(T.own),r2(T.sum)]);
   const wb=XLSX.utils.book_new(),s1=XLSX.utils.aoa_to_sheet(a1),s2=XLSX.utils.aoa_to_sheet(a2);
   s1["!cols"]=[12,26,11,22,34,20,8,8,10,11,10,14,11].map(w=>({wch:w}));s2["!cols"]=[28,11,6,8,11,11,8,12,10,14,11].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb,s1,"Po dňoch");XLSX.utils.book_append_sheet(wb,s2,"Sumár");
@@ -5079,7 +5085,7 @@ const numIn=v=>+String(v??"").replace(/\s/g,"").replace(",",".")||0;
 function econAuto(p){const es=S.diary.filter(d=>d.projectId===p.id);let ph=0,pc=0,cntH=0,mh=0,mc=0;
   es.forEach(e=>{(e.crew||[]).forEach(c=>{const hh=hours(c);ph+=hh;pc+=hh*workerRate(worker(c.workerId))});
     (e.crewC||[]).forEach(c=>{const hh=GROUPS.crewC.hrs(c);ph+=hh;cntH+=hh});
-    (e.mach||[]).forEach(c=>{const hh=+c.hours||0;mh+=hh;mc+=hh*(machine(c.machineId)?.rate||0)});
+    (e.mach||[]).forEach(c=>{const hh=+c.hours||0,mm=machine(c.machineId);mh+=hh;mc+=hh*(mm?.rate||0)+(mm?.rateDay||0)});
     (e.machC||[]).forEach(c=>{mh+=GROUPS.machC.hrs(c)})});
   const jobs=(S.jobs||[]).filter(j=>j.projectId===p.id),jc=jobs.reduce((s,j)=>s+jobCennik(j),0),jh=jobs.reduce((s,j)=>s+jobHours(j)*Math.max(1,(j.machines||[]).length),0);
   return {ph,pc,cntH,mh,mc,jobs,jc,jh}}
@@ -5338,7 +5344,8 @@ document.addEventListener("submit",ev=>{
     else{S.workers.push({id:uid("w"),active:true,wageType:"hour",wage:0,sizes:{},oopp:[],...d});toast("Zamestnanec pridaný")}
     view.fzEdit=null;save();render()}
   else if(f==="fmForm"){if(!(isAdmin(me)||canEdit("doprava")))return;const v=id=>($("#"+id)?.value||"").trim();if(moneyVal("fmRate")===null||moneyVal("fmRateKm")===null){toast("Sadzbu zadaj ako číslo, napr. 42 alebo 0,90");return}
-    const d={name:v("fmName"),cat:v("fmCat"),type:v("fmType"),rate:rateVal("fmRate"),rateKm:rateVal("fmRateKm")};if(!d.name){toast("Zadaj názov stroja");return}
+    for(const k of ["fmRate","fmRateKm","fmRateDay","fmOther"])if(moneyVal(k)===null){toast("Cenu zadaj ako číslo, napr. 35 alebo 1,20");return}
+    const d={name:v("fmName"),cat:v("fmCat"),type:v("fmType"),rate:rateVal("fmRate"),rateKm:rateVal("fmRateKm"),rateDay:rateVal("fmRateDay"),rateOther:rateVal("fmOther"),otherName:v("fmOtherName"),otherUnit:v("fmOtherUnit")};if(!d.name){toast("Zadaj názov stroja");return}
     const id=ev.target.dataset.id;if(id){Object.assign(S.machines.find(x=>x.id===id),d);toast("Zmeny uložené")}else{(S.machines=S.machines||[]).push({id:uid("m"),...d});toast("Stroj pridaný")}
     view.fmEdit=null;save();render()}
   else if(f==="machineForm"){(S.machines=S.machines||[]).push({id:uid("m"),name:$("#mName").value.trim(),type:$("#mType").value.trim(),rate:+$("#mRate").value||0});save();toast("Stroj pridaný");render()}
