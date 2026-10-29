@@ -2146,9 +2146,9 @@ const DOW=["Ne","Po","Ut","St","Št","Pi","So"];
 function daysBetween(a,b){const out=[];let d=new Date(a+"T12:00");const e=new Date(b+"T12:00");while(d<=e){out.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1)}return out}
 function monthDays(ym){const [y,m]=ym.split("-").map(Number);const n=new Date(y,m,0).getDate();return daysBetween(`${ym}-01`,`${ym}-${String(n).padStart(2,"0")}`)}
 const attOf=(wid,d)=>((S.att||{})[wid]||{})[d];
-function attSummary(wid,days){const s={h:0,D:0,PN:0,OCR:0,P:0,PS:0,PI:0,SC:0,NV:0,NPV:0,A:0,fond:0};
+function attSummary(wid,days){const s={h:0,D:0,PN:0,OCR:0,P:0,PL:0,PS:0,PI:0,SC:0,NV:0,NPV:0,A:0,fond:0};
   days.forEach(d=>{if(!isWeekend(d)&&!holiday(d))s.fond+=8;const a=attOf(wid,d);if(!a)return;
-    if(a.t==="W")s.h+=+a.h||0;else if(a.t==="SC"){s.h+=+a.h||0;s.SC+=1}else if(a.t==="D")s.D+=(+a.h||8)/8;else if(a.t==="P"||a.t==="PS"||a.t==="PI"){s.P+=+a.h||0;s[a.t]+=+a.h||0}else s[a.t]=(s[a.t]||0)+1});return s}
+    if(a.t==="W")s.h+=+a.h||0;else if(a.t==="SC"){s.h+=+a.h||0;s.SC+=1}else if(a.t==="D")s.D+=(+a.h||8)/8;else if(a.t==="P"||a.t==="PS"||a.t==="PI"){s.P+=+a.h||0;s[a.t==="P"?"PL":a.t]+=+a.h||0}else s[a.t]=(s[a.t]||0)+1});return s}
 const nf1=n=>Number(n).toLocaleString("sk-SK",{maximumFractionDigits:1});
 function attCellText(a){if(!a)return "";if(a.t==="W")return nf1(a.h);if(a.t==="D"&&+a.h&&+a.h<8)return "½D";return ATT[a.t]?ATT[a.t].s:a.t}
 
