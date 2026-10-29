@@ -740,6 +740,11 @@ table.logi td.lcell{vertical-align:top;padding:4px;min-width:128px;height:56px;t
 table.logi td.lcell.off{background:repeating-linear-gradient(45deg,var(--bg) 0 6px,transparent 6px 12px)}
 .offtag{display:inline-block;font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-bottom:3px}
 .jchip{display:flex;flex-direction:column;width:100%;text-align:left;background:var(--tint);border:1px solid var(--accent-soft);border-left:3px solid var(--accent);border-radius:6px;padding:3px 6px;margin-bottom:3px;cursor:pointer;color:var(--fg);font-size:11px;line-height:1.3}
+.billmark{color:#1d7a4a;font-weight:600}.billwarn{color:var(--bad);font-weight:700}
+.matchcard{border-left:4px solid var(--accent)}.matchlist{list-style:none;margin:0;padding:0}.matchlist li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.note.okn{background:var(--ok-bg);color:var(--ok);border-color:transparent}.note.warnn{background:#fbe1de;color:var(--bad)}
+.billask{background:var(--tint);border-radius:10px;padding:10px 12px;align-items:flex-end}.billask label{min-width:160px}
+.jfown{align-self:flex-start}
 .jchip b{font-size:11px}.jchip span{white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.jchip small{color:var(--muted)}
 .cnote{border-left-color:var(--warn);background:var(--warn-bg)}.cnote.hard{border-left-width:5px}.cconfirm{background:var(--warn-bg);border:1px solid var(--warn);border-radius:8px;padding:10px 12px}
 .dxsel input,.dxsel select{height:42px;box-sizing:border-box;margin:0;width:100%}.wnet{display:flex;flex-direction:column;justify-content:center;gap:2px;background:var(--tint);border-radius:8px;padding:6px 12px;min-height:42px;align-self:end}.wnet span{font-size:12px;color:var(--muted)}.wnet b{font-size:17px}
@@ -1578,6 +1583,7 @@ function tasksPaneHTML(){
       <span class="tp-chev" aria-hidden="true">▴</span></div>
     <div class="tp-body">
       <div class="tpseg" role="tablist"><button role="tab" class="${tab==="mine"?"on":""}" data-a="taskTab" data-tab="mine">Moje <span class="num">${mine.length}</span></button>${assigner?`<button role="tab" class="${tab==="all"?"on":""}" data-a="taskTab" data-tab="all">Všetky <span class="num">${all.length}</span></button>`:""}</div>
+      ${billAlertsHTML()}
       ${urgL.length?sec(`Urgentné <span class="num">${urgL.length}</span>`,"urg",`<ul class="tasklist">${urgL.map(t=>taskRow(t,showWho)).join("")}</ul>`):""}
       ${review.length?sec(`Na kontrolu <span class="num">${review.length}</span>`,"rev",`<ul class="tasklist">${review.map(reviewRow).join("")}</ul>`):""}
       ${restL.length?sec(urgL.length||review.length?`Ostatné <span class="num">${restL.length}</span>`:(tab==="all"?"Otvorené úlohy":"Moje úlohy"),"rest",`<ul class="tasklist">${restL.map(t=>taskRow(t,showWho)).join("")}</ul>`):""}
@@ -2279,7 +2285,7 @@ document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||!["odGps",
 const NB_MODS=[["personal","Personalistika"],["doprava","Doprava a logistika"],["pozicovna","Požičovňa"],["stavba","Stavba"]];
 const NB_ITEMS={
   personal:[["skol","Končiace platnosti školení"],["att","Nevyplnená dochádzka"],["cash","Peniaze na výplatu za minulý mesiac"]],
-  doprava:[["fleet","Termíny údržby a servisu"],["jobs","Zákazky na dnes a zajtra"],["weigh","Dnešné váženie"]],
+  doprava:[["fleet","Termíny údržby a servisu"],["jobs","Zákazky na dnes a zajtra"],["bill","Lehota na fakturáciu výkonov"],["weigh","Dnešné váženie"]],
   pozicovna:[["rentOver","Výpožičky po termíne vrátenia"],["rentToday","Dnešné vydania a vrátenia"]],
   stavba:[["inv","Súpisy prác na odsúhlasenie"],["diary","Stavby bez denného záznamu"]]};
 const nbOn=k=>{const D=(S.firm||{}).dash;return !D||D[k]!==false};
@@ -2334,7 +2340,10 @@ function nbDiary(){let d=isoShift(todayIso(),-1);while(!isWorkday(d))d=isoShift(
   const rows=act.filter(p=>!S.diary.some(e=>e.projectId===p.id&&e.date===d)).map(p=>{const last=S.diary.filter(e=>e.projectId===p.id).map(e=>e.date).sort().pop();
     return {st:"soon",main:p.name,sub:last?`posledný záznam ${d2(last)}`:"zatiaľ bez záznamu",when:"",go:{sec:"project",proj:p.id,ptab2:"dennik"}}});
   return nbBubble("stavba",`Bez denného záznamu za ${d2(d)}`,pill(rows.length,"s-open","stavieb")||`<span class="pill s-ok">Všetko zapísané</span>`,rows,"Všetky aktívne stavby majú denný záznam.",{sec:"home"})}
-const NB_RENDER={skol:nbSkol,att:nbAtt,cash:nbCash,fleet:dashFleetHTML,jobs:nbJobs,weigh:nbWeigh,rentOver:nbRentOver,rentToday:nbRentToday,inv:nbInv,diary:nbDiary};
+function nbBill(){const A=billAlerts(),bad=A.filter(x=>x.st==="bad").length;
+  return nbBubble("doprava","Lehota na fakturáciu výkonov",pill(bad,"s-ret","po lehote")+pill(A.length-bad,"s-open","končí zajtra")||`<span class="pill s-ok">Všetko fakturované</span>`,
+    A.map(x=>({st:x.st,main:x.j.client,sub:`${d2(x.j.date)} · ${x.j.place||x.j.desc||""} · ${eur(jobPrice(x.j))}`,when:x.left<0?`${-x.left} d po lehote`:x.left===0?"dnes":"zajtra",go:{sec:"doprava",dtab:"export"}})),`Žiadny výkon nečaká na fakturáciu dlhšie ako ${billDays()-1} dní.`,{sec:"doprava",dtab:"export"})}
+const NB_RENDER={bill:nbBill,skol:nbSkol,att:nbAtt,cash:nbCash,fleet:dashFleetHTML,jobs:nbJobs,weigh:nbWeigh,rentOver:nbRentOver,rentToday:nbRentToday,inv:nbInv,diary:nbDiary};
 function nbBubbles(){const out=[];NB_MODS.forEach(([m])=>{if(!nbModOk(m))return;NB_ITEMS[m].forEach(([k])=>{if(!nbOn(k))return;try{const h=NB_RENDER[k]();if(h)out.push(h)}catch(e){console.error("nástenka",k,e)}})});return out}
 
 document.addEventListener("change",ev=>{const t=ev.target;if(!me||!t.dataset||!t.dataset.nb||me.companyRole!=="admin")return;S.firm.dash={...(S.firm.dash||{}),[t.dataset.nb]:t.checked};save();toast("Nástenka upravená")});
@@ -2651,12 +2660,31 @@ function jobConflicts(j){return jobConflictList(j).map(x=>x.t)}
 function conflictNote(c,form){if(!c.length)return "";const hard=c.some(x=>x.hard);
   return `<div class="note cnote ${hard?"hard":""}"><b>${hard?"Pozor – súbežné úlohy v rovnakom čase":"Upozornenie – viac úloh v ten istý deň"}</b><br>${c.map(x=>`${x.hard?"⚠":"•"} ${esc(x.t)}`).join("<br>")}
     ${form?`<div class="hint" style="margin-top:6px">Úlohu je možné uložiť aj tak – napr. ak auto alebo stroj robí súčasne pre dvoch objednávateľov.</div>`:""}</div>`}
+/* ---------- Plánovač: vlastná stavba, zjednotenie názvov, fakturácia a lehota ---------- */
+const BILL_STOP=new Set("a v vo na do z zo s so k ku pre pri o od za po mesto meste mesta obec obci ulica ulici ul stavba stavby stavbe akcia rekonstrukcia".split(" "));
+/* podobnosť textov bez diakritiky, pádov (prvých 5 písmen) a poradia slov */
+const nameTokens=s=>new Set(normText(s).replace(/[^a-z0-9 ]+/g," ").split(" ").filter(w=>w.length>2&&!BILL_STOP.has(w)).map(w=>w.slice(0,5)));
+function nameScore(a,b){const A=nameTokens(a),B=nameTokens(b);if(!A.size||!B.size)return 0;let c=0;A.forEach(t=>{if(B.has(t))c++});return c<2&&Math.min(A.size,B.size)>1?c/Math.max(A.size,B.size):c/Math.min(A.size,B.size)}
+const activeProjects=()=>S.projects.filter(p=>!p.closed&&p.status!=="done");
+function projGuess(texts){texts=(Array.isArray(texts)?texts:[texts]).filter(Boolean);let best=null;activeProjects().forEach(p=>texts.forEach(text=>{const s=Math.max(nameScore(text,p.name),nameScore(text,[p.name,placeText(p)].join(" ")));if(s>=.6&&(!best||s>best.s))best={p,s}}));return best}
+const jobText=j=>[j.place,j.desc,[j.place,j.desc].filter(Boolean).join(" "),j.client].filter(Boolean);
+/* úlohy bez priradenej stavby, ktoré sa názvom podobajú na stavbu */
+function jobMatchSuggest(){return (S.jobs||[]).filter(j=>!j.projectId&&!(j.noMatch||[]).length&&!j.matchNo).map(j=>({j,g:projGuess(jobText(j))})).filter(x=>x.g)}
+/* fakturácia výkonov: lehota (dni od výkonu) – predvolene 15 dní podľa § 73 zákona o DPH */
+const billDays=()=>+((S.firm||{}).billDays)||15;
+const jobBillable=j=>j.date<=todayIso()&&!j.billed&&j.status!=="cancelled"&&jobPrice(j)>0;
+const billDeadline=j=>addD(j.date,billDays());
+function billAlerts(){const t=todayIso();return (S.jobs||[]).filter(jobBillable).map(j=>{const dl=billDeadline(j),left=daysTo(dl);return {j,dl,left,st:left<0?"bad":left<=1?"soon":"ok"}}).filter(x=>x.st!=="ok").sort((a,b)=>a.dl.localeCompare(b.dl))}
+function billAlertsHTML(){if(!(hasMod("doprava")&&canEdit("doprava")))return "";const A=billAlerts();if(!A.length)return "";
+  return `<div class="tp-sec urg billsec"><h4>Fakturácia výkonov <span class="num">${A.length}</span></h4><ul class="tasklist">${A.slice(0,6).map(x=>`<li class="task ${x.st}"><button class="task-main" data-a="billGo" data-id="${x.j.id}"><b>${esc(x.j.client)}${x.j.place?` – ${esc(x.j.place)}`:""}</b>
+    <span class="muted">${esc(d2(x.j.date))} · ${eur(jobPrice(x.j))} · ${x.left<0?`lehota uplynula ${esc(d2(x.dl))}`:x.left===0?"lehota uplynie dnes":"zajtra uplynie lehota na fakturáciu"}</span></button></li>`).join("")}</ul>${A.length>6?`<button class="btn small ghost" data-a="billGo" data-id="">Všetky v súpise pre fakturáciu (${A.length})</button>`:""}</div>`}
+function markBilled(js,no){const at=nowIso();js.forEach(j=>{j.billed={at,by:me.id,no:no||""}})}
 function logiHTML(){
   const ws0=view.logWeek||weekStart(todayIso()),days=[0,1,2,3,4,5,6].map(i=>addD(ws0,i)),mode=view.logMode||"mach",ed=canEdit("doprava");
   const label=`${d2(days[0])} – ${d2(days[6])}`;
   const rowsM=(S.machines||[]).slice().sort((a,b)=>CAT_ORDER.indexOf(a.cat||"other")-CAT_ORDER.indexOf(b.cat||"other")||(a.name||"").localeCompare(b.name||"","sk"));
   const rowsW=S.workers.filter(w=>w.active!==false).sort((a,b)=>(a.lastName||"").localeCompare(b.lastName||"","sk"));
-  const chip=(j,extra)=>{const c=jobConflicts(j).length;return `<button class="jchip ${j.status==="done"?"done":""} ${c?"warn":""}" data-a="jobOpen" data-id="${j.id}" title="${esc(`${j.from}–${j.to} · ${j.place||""} · ${j.client}`)}"><b>${esc(j.from)}–${esc(j.to)}</b><span>${esc(j.place||j.client)}</span>${extra?`<small>${esc(extra)}</small>`:""}${j.log&&Object.keys(j.log).length?`<small class="logmark">✓ kniha jázd</small>`:""}</button>`};
+  const chip=(j,extra)=>{const c=jobConflicts(j).length;return `<button class="jchip ${j.status==="done"?"done":""} ${c?"warn":""}" data-a="jobOpen" data-id="${j.id}" title="${esc(`${j.from}–${j.to} · ${j.place||""} · ${j.client}`)}"><b>${esc(j.from)}–${esc(j.to)}</b><span>${esc(j.place||j.client)}</span>${extra?`<small>${esc(extra)}</small>`:""}${j.log&&Object.keys(j.log).length?`<small class="logmark">✓ kniha jázd</small>`:""}${j.billed?`<small class="billmark">€ fakturované</small>`:jobBillable(j)&&daysTo(billDeadline(j))<=1?`<small class="billwarn">€ fakturovať!</small>`:""}</button>`};
   const head=days.map(d=>`<th class="lday ${isWeekend(d)?"we":""} ${d===todayIso()?"today":""}"><span>${DOW[dow(d)]}</span> ${esc(d2(d).replace(/ \d{4}$/,""))}${holiday(d)?`<small>${esc(holiday(d))}</small>`:""}</th>`).join("");
   const body=mode==="mach"?rowsM.map(m=>`<tr><th class="ename"><b>${esc(m.name)}</b><small>${esc(catOf(m).l)}${m.rate?` · ${eur(m.rate)}/h`:""}${m.rateKm?` · ${eur(m.rateKm)}/km`:""}</small></th>${days.map(d=>{const js=jobsOn(d).filter(j=>(j.machines||[]).some(x=>x.machineId===m.id));
       return `<td class="lcell ${isWeekend(d)?"we":""}" ${ed?`data-a="jobNewAt" data-d="${d}" data-m="${m.id}"`:""}>${js.map(j=>{const x=j.machines.find(x=>x.machineId===m.id);const dr=worker(x.driverId);return chip(j,dr?`${dr.lastName} ${dr.firstName[0]||""}.`:"bez vodiča!")}).join("")}</td>`}).join("")}</tr>`).join("")
@@ -2669,18 +2697,27 @@ function logiHTML(){
       <div class="row"><div class="tpseg" role="tablist" style="min-width:220px"><button class="${mode==="mach"?"on":""}" data-a="logMode" data-m="mach">Stroje a vozidlá</button><button class="${mode==="ppl"?"on":""}" data-a="logMode" data-m="ppl">Zamestnanci</button></div>
         ${ed?`<button class="btn primary small" data-a="jobNewAt" data-d="${days.includes(todayIso())?todayIso():days[0]}">+ Naplánovať úlohu</button>`:""}</div></div>
     ${view.jobEdit!==undefined&&ed?jobForm():sel?jobDetail(sel,ed):""}
+    ${ed?matchBannerHTML():""}
     <div class="card attwrap"><table class="att logi"><thead><tr><th class="ename">${mode==="mach"?"Stroj / vozidlo":"Zamestnanec"}</th>${head}</tr></thead><tbody>${body||`<tr><td colspan="8" class="muted" style="padding:12px">Zatiaľ tu nič nie je. Pridaj stroje vo Firma → Strojový a vozový park alebo zamestnancov.</td></tr>`}</tbody></table></div>
     <div class="row muted" style="font-size:13px"><span>${weekJobs.length} ${pl(weekJobs.length,"úloha","úlohy","úloh")} v týždni · spolu ${eur(weekSum)} bez DPH</span>${ed?`<span>· Kliknutím do políčka naplánuješ úlohu pre daný deň a stroj alebo človeka.</span>`:""}</div>
   </div>`}
+function matchBannerHTML(){const M=jobMatchSuggest();if(!M.length)return "";const open=view.matchOpen;
+  return `<div class="card stack matchcard"><div class="entry-head"><div><b>${M.length} ${pl(M.length,"úloha vyzerá","úlohy vyzerajú","úloh vyzerá")}, že ${M.length===1?"patrí":"patria"} k vlastnej stavbe</b><div class="muted" style="font-size:13px">Názov sa líši od názvu stavby. Po priradení sa úlohy rátajú do nákladov stavby a nebude ich treba hľadať podľa textu.</div></div>
+    <button class="btn small" data-a="matchToggle">${open?"Skryť":"Skontrolovať"}</button></div>
+    ${open?`<ul class="matchlist">${M.map(({j,g})=>`<li><div><b>${esc(d2(j.date))}</b> · ${esc([j.client,j.place,j.desc].filter(Boolean).join(" · "))}<div class="muted" style="font-size:13px">→ stavba <b>${esc(g.p.name)}</b> (zhoda ${Math.round(g.s*100)} %)</div></div>
+      <div class="row"><button class="btn small primary" data-a="matchYes" data-id="${j.id}" data-p="${g.p.id}">Priradiť</button><button class="btn small ghost" data-a="matchNo" data-id="${j.id}">Nepatrí</button></div></li>`).join("")}</ul>
+      ${M.length>1?`<button class="btn small" data-a="matchAll" style="align-self:flex-start">Priradiť všetky</button>`:""}`:""}</div>`}
 function jobDetail(j,ed){const c=jobConflictList(j),proj=j.projectId&&S.projects.find(p=>p.id===j.projectId);
   return `<div class="card stack jobcard"><div class="entry-head"><div><div class="eyebrow">Naplánovaná úloha</div><h3>${esc(fmtDate(j.date))} · ${esc(j.from)} – ${esc(j.to)}</h3><div class="muted">${esc(j.place||"")}${proj?` · stavba ${esc(proj.name)}`:""}</div></div>
       <div class="row">${j.status==="done"?`<span class="pill s-ok">Hotové</span>`:`<span class="pill s-wait">Naplánované</span>`}<button class="btn small ghost" data-a="jobClose">Zavrieť</button></div></div>
     ${conflictNote(c,false)}
-    <dl class="dl">${[["Tím",teamOf(j.teamId)?.name],["Objednávateľ",j.client],["Práca",j.desc],["Cena",`${eur(jobPrice(j))} bez DPH · ${j.priceMode==="own"?"vlastná cena":`podľa cenníka – ${cennikText(j)}`}`],["Poznámka",j.note]].filter(r=>r[1]).map(([l,v])=>`<dt>${l}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    ${j.billed?`<div class="note okn">€ Fakturované ${esc(dt(j.billed.at))}${j.billed.no?` · faktúra ${esc(j.billed.no)}`:""}${user(j.billed.by)?` · ${esc(user(j.billed.by).name)}`:""}</div>`:jobBillable(j)?`<div class="note ${daysTo(billDeadline(j))<=1?"warnn":""}">Nefakturované · lehota na fakturáciu do ${esc(d2(billDeadline(j)))}</div>`:""}
+    ${!j.projectId&&ed&&projGuess(jobText(j))?(()=>{const g=projGuess(jobText(j));return `<div class="note">Vyzerá to na vlastnú stavbu <b>${esc(g.p.name)}</b>. <button class="btn small" data-a="matchYes" data-id="${j.id}" data-p="${g.p.id}">Priradiť k stavbe</button></div>`})():""}
+    <dl class="dl">${[["Tím",teamOf(j.teamId)?.name],["Objednávateľ",j.own?`${j.client} (vlastná stavba)`:j.client],["Práca",j.desc],["Cena",`${eur(jobPrice(j))} bez DPH · ${j.priceMode==="own"?"vlastná cena":`podľa cenníka – ${cennikText(j)}`}`],["Poznámka",j.note]].filter(r=>r[1]).map(([l,v])=>`<dt>${l}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
     <div class="jobm">${(j.machines||[]).map(x=>{const m=machine(x.machineId),w=worker(x.driverId);return `<div class="jm">${icon("doprava")}<b>${esc(m?.name||"?")}</b><span class="muted">${m&&NEEDS_DRIVER.includes(m.cat)?(m.cat==="machine"?"strojník":"vodič"):"obsluha"}: ${w?esc(fullName(w)):'<span class="bad">nezadaný</span>'}</span></div>`}).join("")}
       ${(j.workers||[]).map(id=>{const w=worker(id);return `<div class="jm">${icon("personal")}<b>${esc(w?fullName(w):"?")}</b><span class="muted">${esc(w?.profession||"")}</span></div>`}).join("")}</div>
     ${jobLogHTML(j,ed)}
-    ${ed?`<div class="row"><button class="btn small" data-a="jobEdit" data-id="${j.id}">Upraviť</button><button class="btn small" data-a="jobCopy" data-id="${j.id}">Kopírovať na ďalší deň</button>${j.status==="done"?`<button class="btn small" data-a="jobUndone" data-id="${j.id}">Vrátiť medzi plánované</button>`:`<button class="btn small" data-a="jobDone" data-id="${j.id}">Označiť ako hotové</button>`}<button class="btn small ghost" data-a="jobDel" data-id="${j.id}" style="margin-left:auto;color:var(--bad)">Zmazať</button></div>`:""}</div>`}
+    ${ed?`<div class="row"><button class="btn small" data-a="jobEdit" data-id="${j.id}">Upraviť</button><button class="btn small" data-a="jobCopy" data-id="${j.id}">Kopírovať na ďalší deň</button>${j.status==="done"?`<button class="btn small" data-a="jobUndone" data-id="${j.id}">Vrátiť medzi plánované</button>`:`<button class="btn small" data-a="jobDone" data-id="${j.id}">Označiť ako hotové</button>`}${j.billed?`<button class="btn small" data-a="jobUnbill" data-id="${j.id}">Zrušiť označenie fakturované</button>`:`<button class="btn small" data-a="jobBill" data-id="${j.id}">€ Označiť ako fakturované</button>`}<button class="btn small ghost" data-a="jobDel" data-id="${j.id}" style="margin-left:auto;color:var(--bad)">Zmazať</button></div>`:""}</div>`}
 function jobForm(){
   const j0=view.jobEdit&&view.jobEdit!=="__new"?(S.jobs||[]).find(x=>x.id===view.jobEdit):null;
   const D=view.jobDraft||(view.jobDraft=j0?JSON.parse(JSON.stringify(j0)):{date:todayIso(),from:"07:00",to:"15:30",client:"",projectId:"",place:"",desc:"",machines:[],workers:[],priceMode:"cennik",price:"",note:""});
@@ -2691,8 +2728,11 @@ function jobForm(){
   return `<form class="card stack jobform" id="jobForm" data-id="${j0?j0.id:""}"><h3>${j0?"Upraviť úlohu":"Nová naplánovaná úloha"}</h3>
     ${(S.teams||[]).length?`<label>Tím<select data-jf="teamId"><option value="">— bez tímu —</option>${(S.teams||[]).map(t=>`<option value="${t.id}" ${D.teamId===t.id?"selected":""}>${esc(t.name)}</option>`).join("")}</select>${D.teamId?`<span class="hint">Ľudia, auto a náradie sa doplnili z tímu – môžeš ich upraviť.</span>`:""}</label>`:""}
     <div class="grid3"><label>Dátum *<input type="date" data-jf="date" value="${esc(D.date)}" required></label><label>Od *<input type="time" data-jf="from" value="${esc(D.from)}" required></label><label>Do *<input type="time" data-jf="to" value="${esc(D.to)}" required></label></div>
-    <div class="grid2"><label>Objednávateľ *<input data-jf="client" value="${esc(D.client)}" list="jfClients" required placeholder="kto prácu objednal"></label>
+    <div class="seg jfown" role="radiogroup" aria-label="Objednávateľ"><label><input type="radio" name="jfOwn" value="0" ${D.own?"":"checked"}><span>Externý objednávateľ</span></label><label><input type="radio" name="jfOwn" value="1" ${D.own?"checked":""}><span>Vlastná stavba</span></label></div>
+    ${D.own?`<label>Vlastná stavba *<select data-jf="projectId" required><option value="">— vyber stavbu —</option>${activeProjects().map(p=>`<option value="${p.id}" ${D.projectId===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select><span class="hint">Úloha sa započíta do nákladov vybranej stavby (Ekonomika).</span></label>`
+    :`<div class="grid2"><label>Objednávateľ *<input data-jf="client" value="${esc(D.client)}" list="jfClients" required placeholder="kto prácu objednal"></label>
       <label>Stavba<select data-jf="projectId"><option value="">— iné miesto —</option>${S.projects.map(p=>`<option value="${p.id}" ${D.projectId===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></label></div>
+      ${!D.projectId&&projGuess(jobText(D))?(()=>{const g=projGuess(jobText(D));return `<div class="note">Názov sa podobá na vlastnú stavbu <b>${esc(g.p.name)}</b>. <button type="button" class="btn small" data-a="jfUseProj" data-p="${g.p.id}">Použiť túto stavbu</button></div>`})():""}`}
     <datalist id="jfClients">${clients.map(c=>`<option value="${esc(c)}">`).join("")}</datalist>
     <div class="grid2"><label>Miesto<input data-jf="place" value="${esc(D.place)}" placeholder="napr. Tornaľa, rekonštrukcia chodníkov"></label><label>Popis práce<input data-jf="desc" value="${esc(D.desc)}" placeholder="napr. odvoz sutiny, búracie práce"></label></div>
     <fieldset class="modes"><legend>Stroje a vozidlá</legend>
@@ -2715,6 +2755,8 @@ function readJobForm(){const D=view.jobDraft;if(!D||!$("#jobForm"))return;docume
   document.querySelectorAll("#jobForm [data-jm]").forEach(el=>{const x=D.machines[+el.dataset.jm];if(x&&!el.disabled)x[el.dataset.k]=el.value});
   const chk=[...document.querySelectorAll("#jobForm [data-jw]")];if(chk.length||!D.workers.length)D.workers=chk.filter(x=>x.checked).map(x=>x.dataset.jw);
   const pm=document.querySelector('input[name="jfPrice"]:checked');if(pm)D.priceMode=pm.value;
+  const ow=document.querySelector('input[name="jfOwn"]:checked');if(ow)D.own=ow.value==="1";
+  if(D.own){const p=S.projects.find(x=>x.id===D.projectId);D.client=(S.firm&&S.firm.name)||S.company||"Vlastná stavba";if(p&&!D.place)D.place=p.name}
   const dr=new Set(D.machines.map(x=>x.driverId));D.workers=D.workers.filter(w=>!dr.has(w));
   if(D.projectId&&!D.place){const p=S.projects.find(x=>x.id===D.projectId);if(p)D.place=[placeText(p)?.split(" · ")[0],p.name].filter(Boolean).join(", ")}
   if(D.projectId&&!D.client){const p=S.projects.find(x=>x.id===D.projectId);if(p)D.client=p.client}}
@@ -2735,7 +2777,14 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
   else if(a==="jfmDel"){readJobForm();view.jobDraft.machines.splice(+b.dataset.i,1);render()}
   else if(a==="jobDone"||a==="jobUndone"){J(b.dataset.id).status=a==="jobDone"?"done":"planned";save();render()}
   else if(a==="jobCopy"){const j=J(b.dataset.id);const n={...JSON.parse(JSON.stringify(j)),id:uid("jb"),date:addD(j.date,1),status:"planned"};delete n.log;(S.jobs=S.jobs||[]).push(n);view.jobOpen=n.id;save();const cc=jobConflicts(n).length;toast(cc?`Skopírované na ${d2(n.date)} – pozor, ${cc} ${pl(cc,"prekryv","prekryvy","prekryvov")} s inými úlohami`:`Skopírované na ${d2(n.date)}`);render()}
-  else if(a==="jobDel"){S.jobs=S.jobs.filter(x=>x.id!==b.dataset.id);view.jobOpen=null;save();toast("Úloha zmazaná");render()}});
+  else if(a==="jobDel"){S.jobs=S.jobs.filter(x=>x.id!==b.dataset.id);view.jobOpen=null;save();toast("Úloha zmazaná");render()}
+  else if(a==="jobBill"){markBilled([J(b.dataset.id)],"");save();toast("Označené ako fakturované");render()}
+  else if(a==="jobUnbill"){delete J(b.dataset.id).billed;save();toast("Označenie zrušené");render()}
+  else if(a==="jfUseProj"){readJobForm();view.jobDraft.projectId=b.dataset.p;render()}
+  else if(a==="matchToggle"){view.matchOpen=!view.matchOpen;render()}
+  else if(a==="matchYes"){const j=J(b.dataset.id),p=S.projects.find(x=>x.id===b.dataset.p);if(j&&p){j.projectId=p.id;j.own=true;save();toast(`Priradené k stavbe ${p.name}`);render()}}
+  else if(a==="matchNo"){const j=J(b.dataset.id);if(j){j.matchNo=true;save();render()}}
+  else if(a==="matchAll"){const M=jobMatchSuggest();M.forEach(({j,g})=>{j.projectId=g.p.id;j.own=true});save();toast(`Priradených ${M.length} úloh k stavbám`);render()}});
 document.addEventListener("change",ev=>{const t=ev.target;if(!me||!t.closest||!t.closest("#jobForm"))return;readJobForm();view.jobWarn=false;
   if(t.dataset.jm!==undefined&&t.dataset.k==="machineId"){const x=view.jobDraft.machines[+t.dataset.jm],m=machine(t.value);if(x&&m&&m.resp&&!x.driverId)x.driverId=m.resp}
   if(t.dataset.jf==="teamId"){const tm=teamOf(t.value);if(tm)teamApply(view.jobDraft,tm)}
@@ -2743,6 +2792,7 @@ document.addEventListener("change",ev=>{const t=ev.target;if(!me||!t.closest||!t
   render()});
 document.addEventListener("submit",ev=>{if(ev.target.id!=="jobForm"||!me)return;ev.preventDefault();if(!canEdit("doprava"))return;readJobForm();const D=view.jobDraft;
   if(!D.date||!D.from||!D.to){toast("Zadaj dátum a čas");return}if(tmin(D.to)<=tmin(D.from)){toast("Čas Do musí byť po čase Od");return}
+  if(D.own&&!D.projectId){toast("Vyber vlastnú stavbu");return}
   if(!D.client.trim()){toast("Zadaj objednávateľa");return}
   const miss=D.machines.find(x=>{const m=machine(x.machineId);return m&&NEEDS_DRIVER.includes(m.cat)&&!x.driverId});if(miss){const m=machine(miss.machineId);toast(`Zadaj ${m.cat==="machine"?"strojníka":"vodiča"} pre ${m.name}`);return}
   if(!D.machines.length&&!D.workers.length){toast("Pridaj aspoň jeden stroj alebo pracovníka");return}
@@ -2814,12 +2864,19 @@ document.addEventListener("submit",ev=>{const f=ev.target.id;if(!me)return;
 
 
 /* ---------- Doprava: Export – súpis hodín a km strojov ako podklad k faktúre ---------- */
-function dxState(){const ym=todayIso().slice(0,7);return view.dx||(view.dx={from:ym+"-01",to:monthDays(ym).at(-1),all:true,ms:[],client:"",mode:"days"})}
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(a==="dxBillAsk"){view.dxBillAsk=true;render();const e=$("#dxBillNo");if(e)e.focus()}
+  else if(a==="dxBillNo"){view.dxBillAsk=false;render()}
+  else if(a==="billGo"){view={screen:"doprava",dTab:"export"};const j=(S.jobs||[]).find(x=>x.id===b.dataset.id);const X=dxState();X.unbilled=true;if(j){X.from=j.date.slice(0,8)+"01";X.to=monthDays(j.date.slice(0,7)).at(-1);X.client=j.client}render();window.scrollTo(0,0)}});
+document.addEventListener("submit",ev=>{if(ev.target.id!=="dxBillForm"||!me)return;ev.preventDefault();if(!canEdit("doprava"))return;const X=dxState(),js=[...new Set(dxRows(X).map(r=>r.j))].filter(j=>!j.billed&&j.date<=todayIso());
+  markBilled(js,$("#dxBillNo").value.trim());view.dxBillAsk=false;save();toast(`${js.length} ${pl(js.length,"úkon označený","úkony označené","úkonov označených")} ako fakturované`);render()});
+document.addEventListener("change",ev=>{if(ev.target.id==="dxUnbilled"&&me){dxState().unbilled=ev.target.checked;render()}});
+function dxState(){const ym=todayIso().slice(0,7);return view.dx||(view.dx={from:ym+"-01",to:monthDays(ym).at(-1),all:true,ms:[],client:"",mode:"days",unbilled:true})}
 function dxClients(){return [...new Set((S.jobs||[]).map(j=>j.client).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"sk"))}
 function dxMachines(){return (S.machines||[]).slice().sort((a,b)=>CAT_ORDER.indexOf(a.cat||"other")-CAT_ORDER.indexOf(b.cat||"other")||(a.name||"").localeCompare(b.name||"","sk"))}
 /* riadok = stroj na úlohe; hodiny a km z knihy jázd, inak predbežne (čas úlohy, odhad km); pri dohodnutej cene úlohy sa suma uvedie raz */
 function dxRows(X){const sel=X.all?null:new Set(X.ms),out=[];
-  (S.jobs||[]).filter(j=>j.date>=X.from&&j.date<=X.to&&(!X.client||j.client===X.client)).sort((a,b)=>(a.date+a.from).localeCompare(b.date+b.from)).forEach(j=>{
+  (S.jobs||[]).filter(j=>j.date>=X.from&&j.date<=X.to&&(!X.client||j.client===X.client)&&(!X.unbilled||!j.billed)).sort((a,b)=>(a.date+a.from).localeCompare(b.date+b.from)).forEach(j=>{
     const parts=jobCennikParts(j),own=j.priceMode==="own";let ownDone=false;
     (j.machines||[]).forEach(x=>{if(sel&&!sel.has(x.machineId))return;const p=parts.find(q=>q.m.id===x.machineId);if(!p)return;
       const r={j,m:p.m,dr:worker(x.driverId),h:p.h,km:p.km,pre:p.src!=="log",own,ph:own?0:p.ph,pk:own?0:p.pk,ownAmt:0};
@@ -2851,7 +2908,8 @@ function dxHTML(){const X=dxState(),cl=dxClients(),ms=dxMachines();
       <div class="muted" style="font-size:13px">Odpracované hodiny a prejdené km za každý stroj ako podklad k faktúre. Údaje sa berú z naplánovaných úloh a ich knihy jázd.</div>
       <div class="grid3 dxsel"><label>Objednávateľ<select id="dxClient"><option value="">— všetci objednávatelia —</option>${cl.map(c=>`<option ${X.client===c?"selected":""}>${esc(c)}</option>`).join("")}</select></label>
         <label>Od<input type="date" id="dxFrom" value="${esc(X.from)}"></label><label>Do<input type="date" id="dxTo" value="${esc(X.to)}"></label></div>
-      <div class="row"><button type="button" class="btn small ghost" data-a="dxMonth" data-d="0">Tento mesiac</button><button type="button" class="btn small ghost" data-a="dxMonth" data-d="-1">Minulý mesiac</button></div>
+      <div class="row"><button type="button" class="btn small ghost" data-a="dxMonth" data-d="0">Tento mesiac</button><button type="button" class="btn small ghost" data-a="dxMonth" data-d="-1">Minulý mesiac</button>
+        <label class="chk" style="margin-left:auto"><input type="checkbox" id="dxUnbilled" ${X.unbilled?"checked":""}> Len nefakturované úkony</label></div>
       <fieldset class="modes"><legend>Stroje a vozidlá</legend>
         <div class="seg" role="radiogroup"><label><input type="radio" name="dxAll" value="1" ${X.all?"checked":""}><span>Všetky</span></label><label><input type="radio" name="dxAll" value="0" ${X.all?"":"checked"}><span>Vybrané</span></label></div>
         ${X.all?"":`<div class="skchecks">${ms.map(m=>`<label class="chk"><input type="checkbox" data-dxm="${m.id}" ${X.ms.includes(m.id)?"checked":""}> ${esc(dxMName(m))}</label>`).join("")}</div>
@@ -2862,6 +2920,8 @@ function dxHTML(){const X=dxState(),cl=dxClients(),ms=dxMachines();
         ${rows.length?`<div class="row"><button class="btn small primary" data-a="dxPdf" data-m="days">PDF po dňoch</button><button class="btn small primary" data-a="dxPdf" data-m="sum">PDF sumár</button><button class="btn small" data-a="dxXls">Excel (oba)</button></div>`:""}</div>
       <div class="muted" style="font-size:13px">${esc(dxSubtitle(X))}</div>
       ${!X.all&&!X.ms.length?`<div class="muted">Označ aspoň jeden stroj alebo vozidlo.</div>`:X.from>X.to?`<div class="err">Dátum Od musí byť pred dátumom Do.</div>`:rows.length?`<div class="tablewrap">${table}</div>`:`<div class="muted">V zvolenom období nie sú pre vybrané stroje a objednávateľa žiadne úlohy.</div>`}
+      ${rows.length&&canEdit("doprava")?(()=>{const js=[...new Set(rows.map(r=>r.j))],nb=js.filter(j=>!j.billed&&j.date<=todayIso());return nb.length?(view.dxBillAsk?`<form class="row billask" id="dxBillForm"><b>Označiť ${nb.length} ${pl(nb.length,"úkon","úkony","úkonov")} ako fakturované</b><label>Číslo faktúry<input id="dxBillNo" placeholder="nepovinné"></label><button class="btn small primary" type="submit">Označiť</button><button type="button" class="btn small ghost" data-a="dxBillNo">Zrušiť</button></form>`
+        :`<div class="row"><button class="btn small" data-a="dxBillAsk">€ Označiť všetky úkony v súpise ako fakturované</button><span class="muted" style="font-size:13px">Po vystavení faktúry. Fakturované úkony sa v ďalšom súpise nezobrazia, ak je zapnuté „Len nefakturované“.</span></div>`):(js.some(j=>!j.billed)?`<div class="muted" style="font-size:13px">Úkony s budúcim dátumom sa dajú označiť ako fakturované až po ich vykonaní.</div>`:`<div class="note okn">Všetky úkony v súpise sú označené ako fakturované.</div>`)})():""}
       ${pre?`<div class="hint">* predbežné – úloha ešte nemá vyplnenú knihu jázd, hodiny sú z času úlohy a km z odhadu. Pred fakturáciou doplň knihu jázd.</div>`:""}
       ${T.own?`<div class="hint">Pri úlohách s vlastnou (dohodnutou) cenou sa hodiny a km uvádzajú informatívne a suma je dohodnutá cena úlohy.</div>`:""}
     </div>
