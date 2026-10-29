@@ -490,6 +490,33 @@ main.shell:has(.ld){max-width:none;padding:0;display:block}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ld-stamp{background:rgba(30,33,37,.8);border-color:#8fb2ec;color:#8fb2ec}}
 :root[data-theme="dark"] .ld-stamp{background:rgba(30,33,37,.8);border-color:#8fb2ec;color:#8fb2ec}
 
+.ld-navlink{background:none;border:0;color:var(--l-ink);font-weight:600;font-size:14px;padding:8px 10px;border-radius:8px;cursor:pointer}.ld-navlink:hover{background:var(--l-paper)}.ld-navlink:focus-visible{outline:3px solid var(--l-sig);outline-offset:2px}
+@media (max-width:760px){.ld-navlink{display:none}}
+.ld-herolinks{display:none;gap:14px;margin-top:10px}.ld-herolinks .ld-link{font-size:14px}
+@media (max-width:760px){.ld-herolinks{display:flex}}
+.ld-link{background:none;border:0;padding:0;color:#b8500d;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:inherit}
+#cennik,#kontakt{scroll-margin-top:72px}
+.ld-price{background:var(--l-card)}
+.ld-lead{font-size:17px;color:var(--l-mut);max-width:40em;margin:0 auto 22px;text-align:center}
+.ld-per{display:flex;justify-content:center;gap:0;margin:0 auto 26px;border:1px solid var(--l-line);border-radius:999px;width:max-content;padding:3px;background:var(--l-paper)}
+.ld-per button{border:0;background:none;border-radius:999px;padding:8px 18px;font-weight:600;font-size:14px;color:var(--l-mut);cursor:pointer}.ld-per button small{font-weight:600;color:#1d7a4a;margin-left:4px}
+.ld-per button.on{background:var(--l-card);color:var(--l-ink);box-shadow:0 2px 8px -4px rgba(0,0,0,.3)}
+.ld-pgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+@media (max-width:1100px){.ld-pgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:760px){.ld-pgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media (max-width:480px){.ld-pgrid{grid-template-columns:1fr}}
+.ld-pcard{border:1px solid var(--l-line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px;background:var(--l-paper)}
+.ld-pcard.free{background:var(--l-warm);border-color:color-mix(in srgb,#e8792f 35%,transparent)}
+.ld-ptop{display:flex;align-items:center;gap:8px}.ld-ptop svg{width:22px;height:22px;color:#c4560f}.ld-ptop b{font:700 22px/1 var(--display)}
+.ld-pprice{margin-top:6px}.ld-pprice b{font:700 34px/1 var(--display)}.ld-pprice span{font-size:14px;color:var(--l-mut)}
+.ld-price .py{display:none}.ld-price.year .py{display:inline}.ld-price.year .pm{display:none}
+.ld-pvat{font-size:12px;color:var(--l-mut)}
+.ld-plim{font-weight:600;font-size:14px;padding:8px 0;border-top:1px solid var(--l-line);border-bottom:1px solid var(--l-line);margin:6px 0}.ld-plim small{font-weight:400;color:var(--l-mut)}
+.ld-pcard ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;font-size:13.5px}.ld-pcard li{padding-left:18px;position:relative}.ld-pcard li::before{content:"✓";position:absolute;left:0;color:#1d7a4a;font-weight:700}
+.ld-pnote{text-align:center;color:var(--l-mut);margin:22px 0 0}
+.ld-contact{background:var(--l-card)}
+.ld-ctwo{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}@media (max-width:760px){.ld-ctwo{grid-template-columns:1fr;gap:16px}}
+.ld-ccard{border:1px solid var(--l-line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:4px;background:var(--l-paper)}
+.ld-crow{display:flex;justify-content:space-between;gap:12px;padding:10px 2px;border-bottom:1px solid var(--l-line);color:var(--l-ink);text-decoration:none}.ld-crow span{color:var(--l-mut)}.ld-crow b{text-align:right}
+.ld-ccard .ld-btn{margin-top:10px}
 .ld-start{background:var(--l-paper)}
 .ld-steps{list-style:none;counter-reset:st;margin:28px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
 .ld-steps li{counter-increment:st;display:flex;flex-direction:column;gap:6px;border-top:3px solid var(--l-green);padding-top:14px}
@@ -2375,7 +2402,7 @@ function landingHTML(){
   const cell=(v,k)=>`<i class="c-${v==="8"||v==="10"?"w":v==="½D"?"D":v}" style="--k:${k}">${v}</i>`;
   return `<div class="ld">
   <nav class="ld-nav"><div class="ld-in"><a class="ld-logo" href="#" data-a="landTop"><span class="ld-mark"><svg viewBox="0 0 24 24" aria-hidden="true" class="cone"><path d="M10.4 2.6h3.2l5.2 16.4H5.2z" fill="#e8792f"/><path d="M8.64 8h6.72l.78 2.5H7.86zM6.92 13.5h10.16l.78 2.5H6.14z" fill="#fff"/><rect x="2.5" y="18.6" width="19" height="3" rx="1.2" fill="currentColor"/></svg></span><span class="ld-lt">Stavebná firma</span></a>
-    <div class="ld-navbtn"><button class="ld-btn ghost" data-a="landGo" data-to="login">Prihlásiť sa</button><button class="ld-btn sig" data-a="landGo" data-to="register">Zaregistrovať sa</button></div></div></nav>
+    <div class="ld-navbtn"><button class="ld-navlink" data-a="landScroll" data-to="cennik">Cenník</button><button class="ld-navlink" data-a="landScroll" data-to="kontakt">Kontakt</button><button class="ld-btn ghost" data-a="landGo" data-to="login">Prihlásiť sa</button><button class="ld-btn sig" data-a="landGo" data-to="register">Zaregistrovať sa</button></div></div></nav>
 
   <header class="ld-hero"><div class="ld-in ld-herogrid">
     <div class="ld-herotext">
@@ -2383,6 +2410,7 @@ function landingHTML(){
       <p>Riadenie celej firmy na jednom mieste. Od základnej evidencie dochádzky, cez plánovanie a logistiku dopravy, až po generovanie prehľadov, tlačív a formulárov pripravených na podpis.</p>
       <div class="ld-cta"><button class="ld-btn sig big" data-a="landGo" data-to="register">Vyskúšať 14 dní zadarmo</button><button class="ld-btn line big" data-a="landGo" data-to="login">Mám účet – prihlásiť sa</button></div>
       <p class="ld-small">Pracuj s modulmi, ktoré potrebuješ, a ušetri svoj čas.</p>
+      <div class="ld-herolinks"><button class="ld-link" data-a="landScroll" data-to="cennik">Cenník</button><button class="ld-link" data-a="landScroll" data-to="kontakt">Kontakt</button></div>
     </div>
     <div class="ld-build" aria-label="Aplikácia sa skladá z piatich častí: Firma, Personalistika, Doprava a logistika, Požičovňa a Stavba">
       ${craneSVG(500,500,"wide")}${craneSVG(300,500,"tall")}
@@ -2426,8 +2454,32 @@ function landingHTML(){
       <li><b>Pozvi kolegov</b><span>Vytvor tím a priraď každému rozsah práce a práv, ktoré potrebuje pre svoju časť roboty.</span></li>
     </ol></div></section>
 
+  <section class="ld-sec ld-price" id="cennik"><div class="ld-in">
+    <h2 class="ld-center">Cenník</h2>
+    <p class="ld-lead">Platíš len za moduly, ktoré používaš. Karta Firma je vždy zadarmo a prvých 14 dní si vyskúšaš všetko bez platby.</p>
+    <div class="ld-per" role="group" aria-label="Spôsob platby"><button class="on" data-a="ldPer" data-p="m" aria-pressed="true">Mesačne</button><button data-a="ldPer" data-p="y" aria-pressed="false">Ročne <small>2 mesiace zadarmo</small></button></div>
+    <div class="ld-pgrid">
+      ${[["home","Stavba","do 10 aktívnych stavieb","bez obmedzenia počtu účastníkov stavby",["stavebný denník a kontrolné dni","rozpočet po častiach, súpisy a fakturácia","odsúhlasenie stavebným dozorom","dokumentácia a výkresy"]],
+        ["personal","Personalistika","do 20 zamestnancov","",["dochádzka a podklady pre mzdy","dovolenky, priepustky, PN","služobné cesty a školenia","OOPP a povinné formuláre"]],
+        ["doprava","Doprava a logistika","do 20 strojov a vozidiel","",["plánovač s upozornením na kolízie","kniha jázd a import z GPS","súpisy pre fakturáciu","váženie a štatistiky"]],
+        ["pozicovna","Požičovňa","celý inventár požičovne","",["evidencia náradia a strojov","rezervácie a výpožičky","výpožičný list na podpis","vyťaženosť a prehľady"]]].map(([ic,n,lim,lim2,f])=>`<div class="ld-pcard"><div class="ld-ptop">${icon(ic)}<b>${n}</b></div>
+        <div class="ld-pprice"><span class="pm"><b>49 €</b> / mesiac</span><span class="py"><b>490 €</b> / rok</span></div><div class="ld-pvat">bez DPH</div>
+        <div class="ld-plim">${lim}${lim2?`<br><small>${lim2}</small>`:""}</div><ul>${f.map(x=>`<li>${x}</li>`).join("")}</ul></div>`).join("")}
+      <div class="ld-pcard free"><div class="ld-ptop">${icon("firma")}<b>Firma</b></div><div class="ld-pprice"><b>0 €</b></div><div class="ld-pvat">vždy zadarmo</div>
+        <div class="ld-plim">súčasť každého predplatného</div><ul><li>údaje o firme, logo a pečiatka</li><li>zamestnanci, stroje a vozidlá</li><li>používatelia a prístupy</li><li>nástenka a úlohy</li></ul></div>
+    </div>
+    <p class="ld-pnote">Potrebuješ viac zamestnancov, vozidiel alebo stavieb? <button class="ld-link" data-a="landScroll" data-to="kontakt">Napíš nám</button> a pripravíme ti ponuku na mieru.</p>
+  </div></section>
   <section class="ld-final"><div class="ld-in"><h2>Vyskúšaj to ešte dnes</h2><p>Každá ďalšia hodina práce bez systému je drahá. Začni pracovať ekonomicky a bez chýb.</p>
     <div class="ld-cta"><button class="ld-btn sig big" data-a="landGo" data-to="register">Zaregistrovať sa</button><button class="ld-btn line big" data-a="landGo" data-to="login">Prihlásiť sa</button></div></div></section>
+  <section class="ld-sec ld-contact" id="kontakt"><div class="ld-in ld-ctwo">
+    <div><h2>Kontakt</h2><p class="ld-lead" style="margin-left:0;text-align:left">Ukážeme ti aplikáciu online, pomôžeme s nastavením firmy a prenesením údajov z doterajších programov.</p></div>
+    <div class="ld-ccard">
+      <a class="ld-crow" href="mailto:info@stavebnafirma.eu"><span>E-mail</span><b>info@stavebnafirma.eu</b></a>
+      <a class="ld-crow" href="tel:+421900000000"><span>Telefón</span><b>+421 900 000 000</b></a>
+      <div class="ld-crow"><span>Prevádzkovateľ</span><b>Názov firmy, adresa, IČO</b></div>
+      <a class="ld-btn sig" href="mailto:info@stavebnafirma.eu?subject=Ukážka%20aplikácie%20Stavebná%20firma" style="text-align:center;text-decoration:none">Dohodnúť ukážku</a>
+    </div></div></section>
   <footer class="ld-foot"><div class="ld-in"><span>Stavebná firma · ${new Date().getFullYear()}</span><span>www.stavebnafirma.eu</span></div></footer>
   </div>`}
 function landingInit(){const root=document.querySelector(".ld");if(!root)return;
@@ -2435,6 +2487,9 @@ function landingInit(){const root=document.querySelector(".ld");if(!root)return;
   const secs=root.querySelectorAll(".ld-mock");
   if(!("IntersectionObserver" in window)){secs.forEach(s=>s.classList.add("in"));return}
   const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}}),{threshold:.35});secs.forEach(s=>io.observe(s))}
+document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="ldPer"],[data-a="landScroll"]');if(!b||me)return;ev.preventDefault();
+  if(b.dataset.a==="landScroll"){const el=document.getElementById(b.dataset.to);if(el)el.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});return}
+  const sec=b.closest(".ld-price");sec.classList.toggle("year",b.dataset.p==="y");sec.querySelectorAll("[data-a=ldPer]").forEach(x=>{const on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-pressed",on)})});
 document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="landGo"],[data-a="landTop"]');if(!b||me)return;ev.preventDefault();
   if(b.dataset.a==="landTop"){window.scrollTo({top:0,behavior:"smooth"});return}
   view={screen:"home",auth:b.dataset.to,loginErr:""};render();window.scrollTo(0,0)});
