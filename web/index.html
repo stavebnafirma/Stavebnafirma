@@ -4557,7 +4557,6 @@ function projectTabs(p){
   if(can(p,"econ.view"))tabs.push(["ekonomika","Ekonomika"]);
   if(can(p,"settings"))tabs.push(["nastavenia","Nastavenia"]);
   tabs.push(["dokumentacia","Dokumentácia",0]);
-  if(!isExternal(me))tabs.push(["technika","Technika"]);
   return tabs}
 /* druhý rad menu: podkarty aktuálnej sekcie */
 function subnavRows(){
@@ -4583,7 +4582,6 @@ function projectHTML(){
   else if(view.tab==="rozpocet")body=budgetHTML(p);
   else if(view.tab==="nastavenia")body=settingsHTML(p);
   else if(view.tab==="dokumentacia")body=docsHTML(p);
-  else if(view.tab==="technika")body=techHTML(p);
   else if(view.tab==="kd")body=kdHTML(p);
   else body=invoicesHTML(p);
   return `<div class="stack">
