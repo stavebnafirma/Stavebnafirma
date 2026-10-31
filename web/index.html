@@ -2994,11 +2994,11 @@ function nbSkol(){const rows=[];activeWorkers().forEach(w=>Object.entries(empVal
 function nbAtt(){const ym=todayIso().slice(0,7),rows=[];activeWorkers().forEach(w=>{const A=payAtt(w,ym);if(A.empty.length)rows.push({st:A.empty.length>3?"bad":"soon",main:fullName(w),sub:ranges(A.empty),when:`${A.empty.length} d`})});
   return nbBubble("personal",`Nevyplnená dochádzka – ${ymName(ym)}`,rows.length?pill(rows.length,"s-open","zamestnancov"):`<span class="pill s-ok">Vyplnená</span>`,rows,"Dochádzka je vyplnená do dnešného dňa.",{sec:"personal",ptab:"att"})}
 function nbCash(){const d=new Date(todayIso()+"T12:00");d.setDate(1);d.setMonth(d.getMonth()-1);const ym=d.toISOString().slice(0,7),ws=payWorkers(ym);
-  if(!ws.length)return nbBubble("personal",`Peniaze na výplatu – ${ymName(ym)}`,"",[],"V minulom mesiaci nie sú zamestnanci s dochádzkou.",{sec:"personal",ptab:"mzdy"});
+  if(!ws.length)return nbBubble("personal",`Celkové náklady na mzdy – ${ymName(ym)}`,"",[],"V minulom mesiaci nie sú zamestnanci s dochádzkou.",{sec:"personal",ptab:"mzdy"});
   const C=Object.fromEntries(ws.map(w=>[w.id,payCalc(w,ym)])),R=payCash(ym,ws,C),go={sec:"personal",ptab:"mzdy",pm:ym};
   const rows=[{main:"Čisté mzdy",when:eur(r2(R.payout)),sub:`do ${d2(R.payDate)}`},{main:"Sociálna poisťovňa",when:eur(r2(R.sp)),sub:`do ${d2(R.payDate)}`},
     {main:"Zdravotné poisťovne",when:eur(r2(Object.values(R.zp).reduce((s,x)=>s+x,0))),sub:`najneskôr ${d2(R.zpDate)}`},{main:"Daňový úrad",when:eur(r2(R.tax)),sub:`do ${d2(R.taxDate)}`}];
-  return nbBubble("personal",`Peniaze na výplatu – ${ymName(ym)}`,`<span class="pill s-open">spolu ${eur(R.total)}</span>`,rows,"",go)}
+  return nbBubble("personal",`Celkové náklady na mzdy – ${ymName(ym)}`,`<span class="pill s-open">spolu ${eur(R.total)}</span>`,rows,"",go)}
 function nbJobs(){const t=todayIso(),z=isoShift(t,1),rows=[t,z].flatMap(d=>jobsOn(d).map(j=>{const miss=(j.machines||[]).some(x=>!x.driverId&&NEEDS_DRIVER.includes((machine(x.machineId)||{}).cat));
     return {st:miss?"soon":"",main:[j.client,j.desc].filter(Boolean).join(" – ")||"Zákazka",sub:(j.machines||[]).map(x=>(machine(x.machineId)||{}).name).filter(Boolean).join(", ")+(miss?" · chýba vodič":""),when:`${d===t?"dnes":"zajtra"} ${j.from||""}`,go:{sec:"doprava",dtab:"logi"}}}));
   return nbBubble("doprava","Zákazky na dnes a zajtra",pill(rows.length,"s-open","zákaziek"),rows,"Na dnes a zajtra nie sú naplánované zákazky.",{sec:"doprava",dtab:"logi"})}
