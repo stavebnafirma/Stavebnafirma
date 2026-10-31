@@ -877,6 +877,7 @@ table.jlog input{padding:5px 7px;font-size:13px;min-width:90px}table.jlog input.
 table.jlog tfoot td{font-weight:700;border-bottom:0}
 table.jlog th.r,table.jlog td.r{text-align:right}
 .logmark{color:var(--ok)!important;font-weight:600}
+.delbox{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 5%,var(--surface))}
 .modcard.bill{display:flex;gap:12px;align-items:flex-start}.modcard.bill.on{border-color:var(--accent);background:var(--tint)}.bprice{white-space:nowrap;font-weight:600;font-size:14px}
 .spinner{width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:spin 0.9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .saveind{font-size:12px;color:var(--brand-hi);margin-right:8px;white-space:nowrap}.saveind.off{color:#fff;background:#b3261e;padding:3px 8px;border-radius:999px}
@@ -1562,6 +1563,39 @@ document.addEventListener("submit",ev=>{if(ev.target.id!=="ctrForm"||!me)return;
 /* ---------- Firma: zoznam zamestnancov a strojový a vozový park ---------- */
 function nextPersNo(){const n=S.workers.map(w=>parseInt(w.persNo,10)).filter(x=>!isNaN(x));return String(n.length?Math.max(...n)+1:1).padStart(3,"0")}
 function workerLabel(w){return `${w.persNo?w.persNo+" · ":""}${w.lastName||""} ${w.firstName||""}`.trim()+(w.profession?` – ${w.profession}`:"")}
+/* odstránenie zamestnanca: nedá sa, ak je v stavebnom denníku alebo v hotových/fakturovaných úlohách Dopravy;
+   inak sa zmaže aj jeho dochádzka, mzdové údaje a cestovné príkazy a vyradí sa zo školení, tímov a plánovaných úloh */
+function workerUse(id){
+  return {diary:(S.diary||[]).filter(e=>(e.crew||[]).some(c=>c.workerId===id)).length,
+    jobsDone:(S.jobs||[]).filter(j=>(j.status==="done"||j.billed)&&jobPeople(j).includes(id)).length,
+    att:Object.values((S.att||{})[id]||{}).filter(Boolean).length,
+    sk:(S.trainings||[]).filter(t=>(t.participants||[]).includes(id)).length,
+    tm:(S.teams||[]).filter(t=>t.leaderId===id||(t.members||[]).includes(id)||(t.vehicles||[]).some(v=>v.driverId===id)).length,
+    jp:(S.jobs||[]).filter(j=>!(j.status==="done"||j.billed)&&jobPeople(j).includes(id)).length}}
+function workerDelBtn(w){return w?`<button type="button" class="btn ghost" data-a="wDelAsk" data-id="${w.id}" style="color:var(--bad)">Odstrániť</button>`:""}
+function workerDelBox(w){if(!w||view.wDel!==w.id)return"";const u=workerUse(w.id);
+  const what=[u.att?`dochádzka (${u.att} ${pl(u.att,"deň","dni","dní")})`:"",u.sk?`účasť na školeniach (${u.sk})`:"",u.tm?`členstvo v tímoch (${u.tm})`:"",u.jp?`priradenie v plánovaných úlohách (${u.jp})`:""].filter(Boolean);
+  return `<div class="card stack delbox"><b>Naozaj odstrániť zamestnanca ${esc(fullName(w))}?</b>
+    <div class="muted">${what.length?`Spolu s ním sa odstráni: ${what.join(", ")} a mzdové údaje.`:"Zamestnanec nemá žiadne záznamy v dochádzke, školeniach ani tímoch."} Krok sa nedá vrátiť späť.</div>
+    <div class="row"><button type="button" class="btn" data-a="wDelYes" data-id="${w.id}" style="color:var(--bad)">Odstrániť zamestnanca</button><button type="button" class="btn ghost" data-a="wDelNo">Späť</button></div></div>`}
+function workerDelete(id){
+  S.workers=S.workers.filter(w=>w.id!==id);
+  if(S.att)delete S.att[id];if(S.payProf)delete S.payProf[id];
+  if(S.trips)Object.keys(S.trips).forEach(k=>{if(k.startsWith(id+"|"))delete S.trips[k]});
+  if(S.payMon)Object.keys(S.payMon).forEach(k=>{if(k.endsWith("_"+id))delete S.payMon[k]});
+  (S.trainings||[]).forEach(t=>{if((t.participants||[]).includes(id)){t.participants=t.participants.filter(x=>x!==id);if(t.done)delete t.done[id]}});
+  (S.teams||[]).forEach(t=>{if(t.leaderId===id)t.leaderId="";t.members=(t.members||[]).filter(x=>x!==id);(t.vehicles||[]).forEach(v=>{if(v.driverId===id)v.driverId=""})});
+  (S.jobs||[]).forEach(j=>{if(j.status==="done"||j.billed)return;if(j.workers)j.workers=j.workers.filter(x=>x!==id);(j.machines||[]).forEach(m=>{if(m.driverId===id)m.driverId=""})});
+  (S.machines||[]).forEach(m=>{if(m.resp===id)m.resp=""})}
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(!["wDelAsk","wDelNo","wDelYes"].includes(a))return;
+  if(!(isAdmin(me)||canEdit("personal"))){toast("Na odstránenie zamestnanca nemáš oprávnenie");return}
+  if(a==="wDelNo"){view.wDel=null;render();return}
+  const w=S.workers.find(x=>x.id===b.dataset.id);if(!w)return;const u=workerUse(w.id);
+  if(u.diary||u.jobsDone){toast(`${fullName(w)} je zapísaný ${u.diary?`v ${u.diary} ${pl(u.diary,"dennom zázname","denných záznamoch","denných záznamoch")} stavby`:""}${u.diary&&u.jobsDone?" a ":""}${u.jobsDone?`v ${u.jobsDone} ${pl(u.jobsDone,"vykonanej úlohe","vykonaných úlohách","vykonaných úlohách")} Dopravy`:""} – nedá sa odstrániť. Zruš mu „Aktívny zamestnanec“ a už sa nebude nikde ponúkať.`);return}
+  if((u.tm||u.jp)&&!(isAdmin(me)||canEdit("doprava"))){toast(`${fullName(w)} je v tímoch alebo plánovaných úlohách Dopravy – najprv ho tam musí vyradiť niekto s právom upravovať Dopravu.`);return}
+  if(a==="wDelAsk"){view.wDel=w.id;render();const el=$(".delbox");if(el)el.scrollIntoView({block:"center",behavior:"smooth"});return}
+  workerDelete(w.id);view.wDel=null;view.fzEdit=null;view.empEdit=null;save();toast(`Zamestnanec ${fullName(w)} odstránený`);render()});
 function firmEmployeesHTML(){
   const ed=isAdmin(me)||canEdit("personal"),showAll=!!view.fzAll;
   const list=S.workers.filter(w=>showAll||w.active!==false).slice().sort((a,b)=>String(a.persNo||"").localeCompare(String(b.persNo||""),"sk",{numeric:true})||(a.lastName||"").localeCompare(b.lastName||"","sk"));
@@ -1574,7 +1608,7 @@ function firmEmployeesHTML(){
       <datalist id="posList">${[...new Set(S.workers.map(x=>x.profession).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
       ${w?`<label class="chk"><input type="checkbox" id="fzActive" ${w.active!==false?"checked":""}> Aktívny zamestnanec</label>`:""}
       <div class="row"><button class="btn primary" type="submit">${w?"Uložiť":"Pridať zamestnanca"}</button><button type="button" class="btn ghost" data-a="fzNo">Zrušiť</button>
-        ${w&&hasMod("personal")?`<button type="button" class="btn ghost" data-a="fzCard" data-id="${w.id}" style="margin-left:auto">Karta v Personalistike →</button>`:""}</div></form>`:"";
+        ${w&&hasMod("personal")?`<button type="button" class="btn ghost" data-a="fzCard" data-id="${w.id}" style="margin-left:auto">Karta v Personalistike →</button>`:""}${w?`<span${hasMod("personal")?"":' style="margin-left:auto"'}>${workerDelBtn(w)}</span>`:""}</div>${workerDelBox(w)}</form>`:"";
   const rows=list.map(x=>`<tr${x.active===false?' class="inact"':""}><td class="num">${esc(x.persNo||"")}</td><td><b>${esc(x.lastName)}</b> ${esc(x.firstName)}${x.active===false?' <span class="pill s-lock">neaktívny</span>':""}</td><td>${esc(x.profession||"")}</td>
     ${ed?`<td class="r"><button class="btn small ghost" data-a="fzEdit" data-id="${x.id}">Upraviť</button></td>`:""}</tr>`).join("");
   return `<div class="stack">
@@ -1726,7 +1760,7 @@ function firmMachinesHTML(){
         <label class="fmofr">Poznámka k ponuke<input id="fmOfNote" value="${esc(m?.offerNote||"")}" placeholder="napr. lyžice 30/40/60 cm, svahovka, preprava na stavbu zabezpečíme"></label></fieldset>
       <datalist id="typeList">${[...new Set((S.machines||[]).map(x=>x.type).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
       <div class="row"><button class="btn primary" type="submit">${m?"Uložiť":"Pridať"}</button><button type="button" class="btn ghost" data-a="fmNo">Zrušiť</button>
-        ${m?`<button type="button" class="btn ghost" data-a="fmDel" data-id="${m.id}" style="margin-left:auto;color:var(--bad)">Odstrániť</button>`:""}</div></form>`:"";
+        ${m?`<button type="button" class="btn ghost" data-a="fmDel" data-id="${m.id}" style="margin-left:auto;color:var(--bad)">Odstrániť</button>`:""}</div>${m?machDelBox(m):""}</form>`:"";
   const rows=(S.machines||[]).slice().sort((a,b)=>CAT_ORDER.indexOf(a.cat||"other")-CAT_ORDER.indexOf(b.cat||"other")).map(x=>`<tr><td class="fmname">${x.photo?`<img class="fmthumb" src="${x.photo}" alt="">`:""}<b>${esc(x.name)}</b>${x.offer?` <span class="pill s-ok" style="font-size:11px">v ponuke</span>`:""}${x.ecv?`<br><span class="muted num">${esc(x.ecv)}</span>`:""}</td><td>${esc(catOf(x).l)}${x.type?`<br><span class="muted">${esc(x.type)}</span>`:""}</td><td class="num r">${x.rate?eur(x.rate):"–"}</td><td class="num r">${x.rateKm?eur(x.rateKm):"–"}</td><td class="num r">${x.rateDay?eur(x.rateDay):"–"}</td><td class="r" style="white-space:normal;min-width:130px">${x.rateOther?`<span class="num">${eur(x.rateOther)} / ${esc(x.otherUnit||"j.")}</span>${x.otherName?`<br><span class="muted" style="font-size:12px">${esc(x.otherName)}</span>`:""}`:`<span class="num">–</span>`}</td>${ed?`<td class="r"><button class="btn small ghost" data-a="fmEdit" data-id="${x.id}">Upraviť</button></td>`:""}</tr>`).join("");
   return `<div class="stack">
     <div class="muted">Stroje a vozidlá firmy so základnou sadzbou na mernú jednotku (cenník pre fakturáciu úloh v logistike). Z tohto zoznamu vyberáš do denného záznamu stavieb, zadaná cena sa použije v nákladoch stavby.${hasMod("doprava")&&canSee("doprava")?" Rodný list, termíny a servis sú v module Doprava a logistika.":""}</div>
@@ -1972,7 +2006,7 @@ function vehMainHTML(m){
         :`<label>Výrobné alebo inventárne číslo<input id="vmSerial" value="${esc(m.serial)}"></label>`}
       <label>Zodpovedná osoba<select id="vmResp"><option value="">— nikto —</option>${wo}</select></label>
       <label>Poznámka<input id="vmNote" value="${esc(m.note)}"></label>
-      <div class="row"><button class="btn primary" type="submit">Uložiť</button><button type="button" class="btn ghost" data-a="vehEditNo">Zrušiť</button></div></form>`}
+      <div class="row"><button class="btn primary" type="submit">Uložiť</button><button type="button" class="btn ghost" data-a="vehEditNo">Zrušiť</button><button type="button" class="btn ghost" data-a="fmDel" data-id="${m.id}" style="margin-left:auto;color:var(--bad)">Odstrániť</button></div>${machDelBox(m)}</form>`}
   const rows=[["Druh",C.l],["Typ",m.type],...(C.main?[["EČV",m.ecv],["VIN",m.vin],["Farba",m.color]]:[["Výrobné číslo",m.serial]]),
     ["Zodpovedná osoba",m.resp?workerLabel(worker(m.resp)||{}):""],["Sadzba za hodinu",m.rate?eur(m.rate):""],["Sadzba za km",m.rateKm?eur(m.rateKm):""],["Cena za deň",m.rateDay?eur(m.rateDay):""],["Iná cena",m.rateOther?`${eur(m.rateOther)} / ${m.otherUnit||"j."}${m.otherName?` (${m.otherName})`:""}`:""],["Poznámka",m.note]];
   return `<div class="card stack"><div class="entry-head"><h3>Hlavné údaje</h3><button class="btn small" data-a="vehEdit" data-eo="1">Upraviť</button></div>
@@ -3740,11 +3774,14 @@ const carriers=()=>S.carriers||(S.carriers=[]);
 const carrierByName=n=>{const k=normText(n);return k?carriers().find(c=>normText(c.name)===k):null};
 const carrierAddr=c=>c?[c.street,[c.zip,c.city].filter(Boolean).join(" ")].filter(Boolean).join(", "):"";
 const carrierLine=c=>c&&c.name?[c.name,carrierAddr(c),c.ico?`IČO ${c.ico}`:"",c.dic?`DIČ ${c.dic}`:"",c.icdph?`IČ DPH ${c.icdph}`:""].filter(Boolean).join(", "):"";
+function machDelBox(m){return view.fmDelAsk===m.id?`<div class="card stack delbox"><b>Naozaj odstrániť stroj ${esc(m.name)}${m.ecv?` (${esc(m.ecv)})`:""}?</b>
+  <div class="muted">Zmažú sa aj jeho termíny, servisy, kniha jázd a fotky a vyradí sa z tímov a plánovaných úloh. Krok sa nedá vrátiť späť.</div>
+  <div class="row"><button type="button" class="btn" data-a="fmDel" data-id="${m.id}" style="color:var(--bad)">Odstrániť stroj</button><button type="button" class="btn ghost" data-a="fmDelNo">Späť</button></div></div>`:""}
 function wCarrierHTML(D){const c=D.carrier||{},known=carrierByName(c.name),open=!!c.name&&(!known||view.wCarEdit);
   return `<fieldset class="modes"><legend>Prepravca</legend>
     <label>Firma prepravcu<input data-wc="name" value="${esc(c.name||"")}" list="wCarList" autocomplete="off" placeholder="začni písať názov firmy"></label>
     <datalist id="wCarList">${carriers().slice().sort((a,b)=>a.name.localeCompare(b.name,"sk")).map(x=>`<option value="${esc(x.name)}">${esc([x.city,x.ico?"IČO "+x.ico:""].filter(Boolean).join(" · "))}</option>`).join("")}</datalist>
-    ${known&&!view.wCarEdit?`<div class="hint">${esc(carrierLine(known))} <button type="button" class="btn small ghost" data-a="vzCarEdit">Upraviť údaje</button></div>`:""}
+    ${known&&!view.wCarEdit?`<div class="hint">${esc(carrierLine(known))} <button type="button" class="btn small ghost" data-a="vzCarEdit">Upraviť údaje</button> <button type="button" class="btn small ghost" data-a="vzCarDel" style="color:var(--bad)" title="Prepravca sa prestane ponúkať. Uložené vážne lístky ostanú bez zmeny.">Zabudnúť prepravcu</button></div>`:""}
     ${open?`<div class="grid3 dxsel"><label>Ulica a číslo<input data-wc="street" value="${esc(c.street||"")}"></label><label>PSČ<input data-wc="zip" value="${esc(c.zip||"")}"></label><label>Obec<input data-wc="city" value="${esc(c.city||"")}"></label></div>
       <div class="grid3 dxsel"><label>IČO<input data-wc="ico" value="${esc(c.ico||"")}" inputmode="numeric"></label><label>DIČ<input data-wc="dic" value="${esc(c.dic||"")}"></label><label>IČ DPH<input data-wc="icdph" value="${esc(c.icdph||"")}"></label></div>
       <span class="hint">${known?"Zmena sa uloží k prepravcovi aj pre ďalšie vážne lístky.":"Nový prepravca – údaje sa zapamätajú a nabudúce stačí napísať názov."}</span>`:""}</fieldset>`}
@@ -3767,7 +3804,8 @@ document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.clos
   if(a==="wiNew"){view.wiEdit="__new";render()}else if(a==="wiEdit"){view.wiEdit=b.dataset.id;render()}else if(a==="wiNo"){view.wiEdit=null;render()}
   else if(a==="wiDel"&&canEdit("doprava")){S.wInit=wInits().filter(x=>x.id!==b.dataset.id);view.wiEdit=null;save();render()}
   else if(a==="wLim"){view.wLimit=+b.dataset.n;render()}
-  else if(a==="vzCarEdit"){readWForm();view.wCarEdit=true;render()}});
+  else if(a==="vzCarEdit"){readWForm();view.wCarEdit=true;render()}
+  else if(a==="vzCarDel"&&canEdit("doprava")){readWForm();const D=view.wDraft||{},k=carrierByName((D.carrier||{}).name);if(!k)return;S.carriers=carriers().filter(x=>x!==k);D.carrier={name:""};view.wCarEdit=false;save();toast(`Prepravca ${k.name} zabudnutý – uložené lístky ostali bez zmeny`);render()}});
 document.addEventListener("submit",ev=>{if(ev.target.id!=="wiForm"||!me)return;ev.preventDefault();if(!canEdit("doprava"))return;
   const q=+String($("#wiQty").value).replace(/\s/g,"").replace(",",".");if(!isFinite(q)){toast("Množstvo zadaj ako číslo v tonách");return}
   const d={center:$("#wiCenter").value,material:$("#wiMat").value.trim(),date:$("#wiDate").value,qty:q};if(!d.center||!d.material||!d.date){toast("Vyplň stredisko, materiál a dátum");return}
@@ -5076,7 +5114,8 @@ function employeeForm(w){
     <datalist id="ooppList">${OOPP_ITEMS.map(x=>`<option value="${x}">`).join("")}</datalist>
     <datalist id="sizeList">${SIZE_SUGG.map(x=>`<option value="${x}">`).join("")}</datalist>
     <datalist id="profList2">${[...new Set(S.workers.map(x=>x.profession).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
-    <div class="row"><button class="btn primary" type="submit">${isNew?"Pridať zamestnanca":"Uložiť zmeny"}</button><button type="button" class="btn ghost" data-a="empClose">Zrušiť</button></div>
+    <div class="row"><button class="btn primary" type="submit">${isNew?"Pridať zamestnanca":"Uložiť zmeny"}</button><button type="button" class="btn ghost" data-a="empClose">Zrušiť</button>${!isNew&&w.id&&canEdit("personal")?`<span style="margin-left:auto">${workerDelBtn(w)}</span>`:""}</div>
+    ${!isNew&&w.id?workerDelBox(w):""}
   </form>`}
 function updCost(){const el=$("#eCost");if(!el)return;const w={wageType:document.querySelector('input[name="eWageType"]:checked')?.value,wage:+($("#eWage")?.value||0)};
   el.textContent=costText(w)||"Po zadaní mzdy sa tu zobrazí superhrubá mzda a náklad na hodinu."}
@@ -5188,8 +5227,29 @@ function settingsHTML(p){
     ${projectFields("st",p)}
     ${modeFields("st",p.crewMode,p.machMode)}
     <div class="muted" style="font-size:13px">Zmena platí pre nové denné záznamy. Staré záznamy si ponechajú svoj formát.</div>
-    <button class="btn primary" type="submit" style="align-self:flex-start">Uložiť nastavenia</button></form>`;
+    <button class="btn primary" type="submit" style="align-self:flex-start">Uložiť nastavenia</button></form>${projDelHTML(p)}`;
 }
+/* odstránenie celej stavby – iba administrátor alebo správca firmy, s potvrdením napísaním slova */
+const canDelProj=()=>!!me&&(isAdmin(me)||me.companyRole==="spravca");
+function projDelHTML(p){if(!canDelProj())return"";
+  if(view.projDel!==p.id)return `<div class="card stack"><h3>Odstránenie stavby</h3><div class="muted" style="font-size:13px">Odstráni stavbu so všetkými dennými záznamami, kontrolnými dňami, súpismi prác, nákladmi a dokumentáciou. Použi to len pri stavbe založenej omylom alebo skúšobnej.</div>
+    <button type="button" class="btn ghost" data-a="projDelAsk" style="align-self:flex-start;color:var(--bad)">Odstrániť stavbu…</button></div>`;
+  const nd=S.diary.filter(e=>e.projectId===p.id).length,ni=(p.invoices||[]).length,nk=(p.inspections||[]).length,nc=costsOf(p).length,nf=(p.docs||[]).length;
+  const what=[nd?`${nd} ${pl(nd,"denný záznam","denné záznamy","denných záznamov")}`:"",nk?`${nk} ${pl(nk,"kontrolný deň","kontrolné dni","kontrolných dní")}`:"",ni?`${ni} ${pl(ni,"súpis prác","súpisy prác","súpisov prác")}`:"",nc?`${nc} ${pl(nc,"náklad","náklady","nákladov")}`:"",nf?`${nf} ${pl(nf,"súbor dokumentácie","súbory dokumentácie","súborov dokumentácie")}`:""].filter(Boolean);
+  return `<div class="card stack delbox"><b>Naozaj odstrániť stavbu ${esc(p.name)}?</b>
+    <div class="muted">${what.length?`Spolu so stavbou sa natrvalo odstráni: ${what.join(", ")}.`:"Stavba zatiaľ nemá žiadne záznamy."} Krok sa nedá vrátiť späť${nd||ni?" – ak záznamy budeš potrebovať, stiahni si najprv stavebný denník a súpisy do PDF":""}.</div>
+    <label>Na potvrdenie napíš <b>ODSTRÁNIŤ</b><input id="projDelTxt" autocomplete="off" style="max-width:220px"></label>
+    <div class="row"><button type="button" class="btn" data-a="projDelYes" style="color:var(--bad)">Odstrániť stavbu</button><button type="button" class="btn ghost" data-a="projDelNo">Späť</button></div></div>`}
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(!["projDelAsk","projDelNo","projDelYes"].includes(a))return;const p=S.projects.find(x=>x.id===view.projectId);if(!p||!canDelProj())return;
+  if(a==="projDelNo"){view.projDel=null;render();return}
+  if(a==="projDelAsk"){view.projDel=p.id;render();const el=$("#projDelTxt");if(el){el.scrollIntoView({block:"center",behavior:"smooth"});el.focus()}return}
+  if(normText(($("#projDelTxt")||{}).value||"").trim()!=="odstranit"){toast("Na potvrdenie napíš slovo ODSTRÁNIŤ");const el=$("#projDelTxt");if(el)el.focus();return}
+  const files=[...(p.docs||[]).map(d=>d.path),...costsOf(p).map(c=>c.file&&c.file.path)].filter(Boolean);
+  files.forEach(f=>FILESTORE.del(f).catch(()=>{}));
+  S.projects=S.projects.filter(x=>x.id!==p.id);S.diary=S.diary.filter(e=>e.projectId!==p.id);S.costs=(S.costs||[]).filter(c=>c.projectId!==p.id);
+  S.tasks=(S.tasks||[]).filter(t=>!((t.src&&t.src.p===p.id)||String(t.key||"").split(":")[1]===p.id));
+  view={screen:"home"};save();toast(`Stavba ${p.name} odstránená`);render();window.scrollTo(0,0)});
 
 function teamHTML(p){
   const rows=p.members.map(m=>{const u=user(m.userId)||{id:m.userId,name:"(odstránený používateľ)",email:""};
@@ -5735,14 +5795,23 @@ document.addEventListener("click",ev=>{
     if(b.dataset.tab){view.firmTab=b.dataset.tab;if(b.dataset.tab==="udaje"&&me.companyRole==="admin"&&firmMissing(S.firm).length){view.firmEditing=true;view.firmDraft=null}}
     render();window.scrollTo(0,0)}
   else if(a==="fzNew"){view.fzEdit="__new";render();const e=$("#fzFirst");if(e)e.focus()}
-  else if(a==="fzEdit"){view.fzEdit=b.dataset.id;render();window.scrollTo(0,0)}
-  else if(a==="fzNo"){view.fzEdit=null;render()}
+  else if(a==="fzEdit"){view.fzEdit=b.dataset.id;view.wDel=null;render();window.scrollTo(0,0)}
+  else if(a==="fzNo"){view.fzEdit=null;view.wDel=null;render()}
   else if(a==="fzCard"){view={screen:"personal",empEdit:b.dataset.id};render();window.scrollTo(0,0)}
   else if(a==="fmNew"){view.fmEdit="__new";fmReset();render();const e=$("#fmName");if(e)e.focus()}
   else if(a==="fmEdit"){view.fmEdit=b.dataset.id;fmReset();render();window.scrollTo(0,0)}
   else if(a==="fmNo"){view.fmEdit=null;fmReset();render()}
-  else if(a==="fmDel"){const id=b.dataset.id;if(S.diary.some(e=>(e.mach||[]).some(c=>c.machineId===id))){toast("Stroj je použitý v denných záznamoch, nedá sa odstrániť.");return}
-    S.machines=S.machines.filter(x=>x.id!==id);view.fmEdit=null;save();toast("Stroj odstránený");render()}
+  else if(a==="fmDel"){const id=b.dataset.id,m=(S.machines||[]).find(x=>x.id===id);if(!m)return;
+    if(!(isAdmin(me)||canEdit("doprava"))){toast("Na odstránenie stroja nemáš oprávnenie");return}
+    const nd=S.diary.filter(e=>(e.mach||[]).some(c=>c.machineId===id)).length,nj=(S.jobs||[]).filter(j=>(j.status==="done"||j.billed)&&(j.machines||[]).some(x=>x.machineId===id)).length;
+    if(nd||nj){toast(`${m.name} je použitý ${[nd?`v ${nd} ${pl(nd,"dennom zázname","denných záznamoch","denných záznamoch")} stavby`:"",nj?`v ${nj} ${pl(nj,"vykonanej úlohe","vykonaných úlohách","vykonaných úlohách")} Dopravy`:""].filter(Boolean).join(" a ")} – nedá sa odstrániť, tieto záznamy musia ostať úplné.`);return}
+    if(view.fmDelAsk!==id){view.fmDelAsk=id;render();return}
+    S.machines=S.machines.filter(x=>x.id!==id);
+    (S.teams||[]).forEach(t=>{t.vehicles=(t.vehicles||[]).filter(v=>v.machineId!==id);if(t.tools)t.tools=t.tools.filter(x=>x!==id)});
+    (S.jobs||[]).forEach(j=>{if(!(j.status==="done"||j.billed)&&j.machines)j.machines=j.machines.filter(x=>x.machineId!==id)});
+    (S.tasks||[]).forEach(t=>{if(t.status==="open"&&t.src&&t.src.m===id)t.status="done"});
+    view.fmEdit=null;view.fmDelAsk=null;if(view.vehId===id){view.vehId=null;view.vehEdit=false}save();toast(`Stroj ${m.name} odstránený`);render()}
+  else if(a==="fmDelNo"){view.fmDelAsk=null;render()}
   else if(a==="firmTab"){view.firmTab=b.dataset.tab;view.firmEditing=false;view.firmDraft=null;render()}
   else if(a==="firmEdit"){view.firmEditing=true;view.firmDraft=null;view.firmErr="";render()}
   else if(a==="firmCancel"){view.firmEditing=false;view.firmDraft=null;view.firmErr="";render()}
@@ -5753,8 +5822,8 @@ document.addEventListener("click",ev=>{
   else if(a==="dropCompanyRole"){const u=user(b.dataset.id);if(me.companyRole==="admin"&&u&&u.id!==me.id){u.companyRole="clen";save();toast("Firemná rola odobratá");render()}}
   else if(a==="dbTab"){view.dbTab=b.dataset.tab;view.empEdit=null;render()}
   else if(a==="empNew"){view.empEdit="__new";render();window.scrollTo(0,0)}
-  else if(a==="empOpen"){view.empEdit=b.dataset.id;render();window.scrollTo(0,0)}
-  else if(a==="empClose"){view.empEdit=null;render()}
+  else if(a==="empOpen"){view.empEdit=b.dataset.id;view.wDel=null;render();window.scrollTo(0,0)}
+  else if(a==="empClose"){view.empEdit=null;view.wDel=null;render()}
   else if(a==="addOopp"){const box=$("#ooppBox");box.insertAdjacentHTML("beforeend",ooppRow({}));box.lastElementChild.querySelector("input").focus()}
   else if(a==="delOopp"){b.closest(".oprow").remove()}
   else if(a==="roles"){view={screen:"firma",firmTab:"role"};render()}
