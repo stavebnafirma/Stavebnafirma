@@ -189,6 +189,12 @@ table.budget td.code,table.budget .code,table.budget.inv td.desc .code{font-size
 table.budget tbody tr:not(.part):not(.sec)>td{border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
 table.budget .upc{background:color-mix(in srgb,var(--ok) 9%,transparent);color:var(--ok)}table.budget th.upc{color:var(--ok)}
 table.budget tr.bad .upc{color:inherit}
+table.budget.inv{table-layout:fixed;width:100%;min-width:860px}
+table.budget.inv col.c-no{width:3%}table.budget.inv col.c-desc{width:17.7%}table.budget.inv col.c-mj{width:4%}table.budget.inv col.c-jc{width:6.5%}table.budget.inv col.c-q{width:7.75%}table.budget.inv col.c-s{width:9.45%}
+table.budget.inv td,table.budget.inv th{overflow-wrap:anywhere}table.budget.inv td.num,table.budget.inv th.r{white-space:nowrap}
+table.budget.inv .qin{width:100%;max-width:90px;box-sizing:border-box}
+table.budget .upc,table.budget th.upc{text-align:center}
+.bparts td.num,.bparts .num,.proj .num,.kpis .muted.num{font-family:inherit;font-variant-numeric:tabular-nums}
 .seenline{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ok);font-weight:600}.dexp summary{cursor:pointer}
 .bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
 table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
@@ -5236,8 +5242,8 @@ function invDetailHTML(p,inv){
       <span style="flex:1"></span>
       <button class="btn small" data-a="pdf">PDF na A4 na šírku</button><button class="btn small" data-a="xlsxOut">Excel</button>
     </div>
-    <div class="card tablewrap" style="padding:6px 8px"><table class="budget inv">
-      <thead><tr><th rowspan="2">Č.</th><th rowspan="2">Kód / popis</th><th rowspan="2">MJ</th><th rowspan="2" class="r upc">J. cena</th><th colspan="2" class="grp g1">Rozpočet</th><th colspan="2" class="grp">Predošlé obdobie</th><th colspan="2" class="grp g2">Aktuálne obdobie</th><th colspan="2" class="grp">Zostatok</th></tr>
+    <div class="card tablewrap" style="padding:6px 8px"><table class="budget inv"><colgroup><col class="c-no"><col class="c-desc"><col class="c-mj"><col class="c-jc"><col class="c-q"><col class="c-s"><col class="c-q"><col class="c-s"><col class="c-q"><col class="c-s"><col class="c-q"><col class="c-s"></colgroup>
+      <thead><tr><th rowspan="2">Č.</th><th rowspan="2">Kód / popis</th><th rowspan="2">MJ</th><th rowspan="2" class="upc">J. cena</th><th colspan="2" class="grp g1">Rozpočet</th><th colspan="2" class="grp">Predošlé obdobie</th><th colspan="2" class="grp g2">Aktuálne obdobie</th><th colspan="2" class="grp">Zostatok</th></tr>
       <tr><th class="r g1">Množ.</th><th class="r g1">Suma</th><th class="r">Množ.</th><th class="r">Suma</th><th class="r g2">Množ.</th><th class="r g2">Suma</th><th class="r">Množ.</th><th class="r">Suma</th></tr></thead>
       <tbody>${rows||`<tr><td colspan="12" class="muted">V tomto súpise zatiaľ nie je čerpaná žiadna položka.</td></tr>`}</tbody>
       <tfoot><tr><td colspan="5"><b>Spolu bez DPH</b></td><td class="num r"><b>${eur(T.b)}</b></td><td></td><td class="num r"><b>${eur(T.pr)}</b></td><td></td><td class="num r"><b id="tCur">${eur(T.cu)}</b></td><td></td><td class="num r"><b id="tZo">${eur(T.zo)}</b></td></tr></tfoot>
