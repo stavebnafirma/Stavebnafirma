@@ -184,6 +184,11 @@ fieldset:has(#fmOffer:not(:checked)) .fmofr{display:none}
   .tp-strip{width:100%;display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 0 16px;background:none;border:0;color:var(--ink);cursor:pointer;font:inherit}
   .tp-strip svg{width:22px;height:22px;color:var(--accent)}.tp-strip .tp-arr{font-size:20px;color:var(--muted);line-height:1}.tp-strip:hover .tp-arr{color:var(--accent)}
   .tp-vlab{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:700;font-size:13px;color:var(--muted);letter-spacing:.04em}}
+table.budget td,table.budget td.num,table.budget td.code,table.budget .code{font-family:inherit;font-variant-numeric:tabular-nums}
+table.budget td.code,table.budget .code,table.budget.inv td.desc .code{font-size:12px;font-family:inherit}table.budget .qin,table.budget tfoot td,table.budget tfoot th{font-family:inherit;font-variant-numeric:tabular-nums}
+table.budget tbody tr:not(.part):not(.sec)>td{border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent)}
+table.budget .upc{background:color-mix(in srgb,var(--ok) 9%,transparent);color:var(--ok)}table.budget th.upc{color:var(--ok)}
+table.budget tr.bad .upc{color:inherit}
 .seenline{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ok);font-weight:600}.dexp summary{cursor:pointer}
 .bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
 table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
@@ -4937,7 +4942,7 @@ function budgetHTML(p){
   let part=null,sec=null,rows="";
   items.forEach(i=>{if(multi&&(i.partId||"")!==part){part=i.partId||"";sec=null;rows+=`<tr class="part"><td colspan="6">${esc(partOf(p,part).name||"Časť stavby")}</td><td class="num r">${eur(partSum(p,part))}</td></tr>`}
     const sk=secKey(i);if(sk!==sec){sec=sk;if(i.section)rows+=`<tr class="sec"><td colspan="7">${esc(i.section)}</td></tr>`}
-    rows+=`<tr><td class="num">${esc(i.por)}</td><td class="num code">${esc(i.code)}</td><td class="desc">${esc(i.desc)}</td><td>${esc(i.mj)}</td><td class="num r">${qf(i.qty)}</td><td class="num r">${eur(i.price)}</td><td class="num r">${eur(i.total)}</td></tr>`});
+    rows+=`<tr><td class="num">${esc(i.por)}</td><td class="num code">${esc(i.code)}</td><td class="desc">${esc(i.desc)}</td><td>${esc(i.mj)}</td><td class="num r">${qf(i.qty)}</td><td class="num r upc">${eur(i.price)}</td><td class="num r">${eur(i.total)}</td></tr>`});
   const L=view.lastImp,more=L&&L.pid===p.id?L.sheets.map((sh,k)=>({sh,k})).filter(({sh,k})=>!L.done.includes(k)&&detectHeader(sh.rows)):[];
   const partRows=parts.map(x=>{const used=partUsed(p,x.id),ed=view.bpEdit===x.id,del=view.bpDel===x.id,n=b.items.filter(i=>(i.partId||"")===x.id).length;
     return `<tr><td>${ed?`<form class="row" id="bpRenameForm" data-id="${x.id}" style="gap:6px;flex-wrap:nowrap"><input id="bpName" value="${esc(x.name)}" required style="min-width:180px"><button class="btn small primary" type="submit">Uložiť</button><button type="button" class="btn small ghost" data-a="bpEditNo">Zrušiť</button></form>`:`<b>${esc(x.name||"Rozpočet stavby")}</b>`}
@@ -4951,7 +4956,7 @@ function budgetHTML(p){
       ${canImp&&!multi?`<div class="muted" style="font-size:13px">Ak má stavba viac blokov, objektov alebo celkov, pridaj každý ako samostatnú časť. Rovnaké členenie sa prenesie do súpisov prác a fakturácie.</div>`:""}</div>
     ${more.length&&canImp?`<div class="card stack"><b>V súbore ${esc(L.fileName)} sú ďalšie hárky s rozpočtom</b><div class="row">${more.map(({sh,k})=>`<button class="btn small" data-a="impNextSheet" data-i="${k}">+ ${esc(sh.name)} ako ďalšia časť</button>`).join("")}<button class="btn small ghost" data-a="impNextNo">Nie, ďakujem</button></div></div>`:""}
     <div class="grid2">${multi?`<label>Časť stavby<select id="bPartSel"><option value="">Všetky časti</option>${parts.map(x=>`<option value="p:${x.id}" ${fp===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}</select></label>`:""}<label>Hľadať položku<input id="budgetSearch" type="search" value="${esc(view.bq||"")}" placeholder="kód alebo názov"></label></div>
-    <div class="card tablewrap" style="padding:6px 8px"><table class="budget"><thead><tr><th>Č.</th><th>Kód</th><th>Názov položky</th><th>MJ</th><th class="r">Množstvo</th><th class="r">J. cena</th><th class="r">Spolu</th></tr></thead>
+    <div class="card tablewrap" style="padding:6px 8px"><table class="budget"><thead><tr><th>Č.</th><th>Kód</th><th>Názov položky</th><th>MJ</th><th class="r">Množstvo</th><th class="r upc">J. cena</th><th class="r">Spolu</th></tr></thead>
       <tbody>${rows||`<tr><td colspan="7" class="muted">Žiadna položka nezodpovedá hľadaniu.</td></tr>`}</tbody>
       ${q||fp!==null?"":`<tfoot><tr><td colspan="6"><b>Spolu</b></td><td class="num r"><b>${eur(b.sum)}</b></td></tr></tfoot>`}</table></div></div>`;
 }
@@ -4962,7 +4967,7 @@ function importHTML(p){
   const maps=BUDGET_FIELDS.map(([k,l])=>`<label>${l}<select data-map="${k}" id="map_${k}">${colOpts(I.map[k])}</select></label>`).join("");
   const sheetSel=I.sheets.length>1?`<label>Hárok<select id="impSheet">${I.sheets.map((s,i)=>`<option value="${i}" ${i===I.sheet?"selected":""}>${esc(s.name)}</option>`).join("")}</select></label>`:"";
   const ok=ex.declaredTotal!=null&&!ex.warnings.some(w=>w.startsWith("Súčet"));
-  const prev=ex.items.slice(0,8).map(i=>`<tr${i.check?' class="bad"':""}><td class="num">${esc(i.por)}</td><td class="num code">${esc(i.code)}</td><td class="desc">${esc(i.desc)}</td><td>${esc(i.mj)}</td><td class="num r">${qf(i.qty)}</td><td class="num r">${eur(i.price)}</td><td class="num r">${eur(i.total)}</td></tr>`).join("");
+  const prev=ex.items.slice(0,8).map(i=>`<tr${i.check?' class="bad"':""}><td class="num">${esc(i.por)}</td><td class="num code">${esc(i.code)}</td><td class="desc">${esc(i.desc)}</td><td>${esc(i.mj)}</td><td class="num r">${qf(i.qty)}</td><td class="num r upc">${eur(i.price)}</td><td class="num r">${eur(i.total)}</td></tr>`).join("");
   return `<div class="stack"><div class="card stack">
     <div><div class="eyebrow">Kontrola importu</div><h2 style="overflow-wrap:anywhere">${esc(I.fileName)}</h2></div>
     ${I.target&&I.target!=="__new"?`<div class="note">Nahrádzaš rozpočet časti ${esc(partOf(p,I.target).name||"Rozpočet stavby")}.</div>`:""}
@@ -4975,7 +4980,7 @@ function importHTML(p){
       ${ex.declaredTotal!=null?`<div style="font-size:13px" class="${ok?"okt":"err"}">${ok?"✓ Sedí s riadkom Celkom v súbore":"Riadok Celkom v súbore: "+eur(ex.declaredTotal)}</div>`:""}</div></div>
     ${ex.warnings.map(w=>`<div class="note">${esc(w)}</div>`).join("")}
   </div>
-  ${prev?`<div class="eyebrow">Ukážka prvých položiek</div><div class="card tablewrap" style="padding:6px 8px"><table class="budget"><thead><tr><th>Č.</th><th>Kód</th><th>Názov</th><th>MJ</th><th class="r">Množstvo</th><th class="r">J. cena</th><th class="r">Spolu</th></tr></thead><tbody>${prev}</tbody></table></div>`:""}
+  ${prev?`<div class="eyebrow">Ukážka prvých položiek</div><div class="card tablewrap" style="padding:6px 8px"><table class="budget"><thead><tr><th>Č.</th><th>Kód</th><th>Názov</th><th>MJ</th><th class="r">Množstvo</th><th class="r upc">J. cena</th><th class="r">Spolu</th></tr></thead><tbody>${prev}</tbody></table></div>`:""}
   <div class="row"><button class="btn primary" data-a="impSave" ${ex.items.length?"":"disabled"}>Uložiť rozpočet do stavby</button><button class="btn ghost" data-a="impCancel">Zrušiť</button></div>
   ${p.budget&&I.target==="__new"?`<div class="muted" style="font-size:13px">Rozpočet sa pridá ako ďalšia časť stavby. Doterajšie časti a súpisy ostanú bez zmeny.</div>`:""}</div>`;
 }
@@ -5193,7 +5198,7 @@ function invDetailHTML(p,inv){
     if(M.multi&&(i.partId||"")!==part){part=i.partId||"";sec=null;const P2=M.parts[part];rows+=`<tr class="part"><td colspan="5">${esc(partOf(p,part).name||"Časť stavby")}</td><td class="num r">${eur(P2.b)}</td><td></td><td class="num r">${eur(P2.pr)}</td><td></td><td class="num r" data-part="${esc(part)}">${eur(P2.cu)}</td><td></td><td class="num r" data-partz="${esc(part)}">${eur(P2.zo)}</td></tr>`}
     const sk=secKey(i);if(sk!==sec){sec=sk;if(i.section){const S2=M.secs[sk];rows+=`<tr class="sec"><td colspan="5">${esc(i.section)}</td><td class="num r">${eur(S2.b)}</td><td></td><td class="num r">${eur(S2.pr)}</td><td></td><td class="num r" data-sec="${esc(sk)}">${eur(S2.cu)}</td><td></td><td class="num r" data-secz="${esc(sk)}">${eur(S2.zo)}</td></tr>`}}
     const over=r.zq<-1e-9;
-    rows+=`<tr${over?' class="bad"':""} id="r_${i.id}"><td class="num">${esc(i.por)}</td><td class="desc"><span class="code">${esc(i.code)}</span><br>${esc(i.desc)}</td><td>${esc(i.mj)}</td><td class="num r">${eur(i.price)}</td>
+    rows+=`<tr${over?' class="bad"':""} id="r_${i.id}"><td class="num">${esc(i.por)}</td><td class="desc"><span class="code">${esc(i.code)}</span><br>${esc(i.desc)}</td><td>${esc(i.mj)}</td><td class="num r upc">${eur(i.price)}</td>
       <td class="num r g1">${qf(i.qty)}</td><td class="num r g1">${eur(r.bs)}</td>
       <td class="num r">${qf(r.pq)}</td><td class="num r">${eur(r.ps)}</td>
       <td class="num r g2 cur">${ed?`<input class="qin num" inputmode="decimal" id="q_${i.id}" data-q="${i.id}" value="${r.cq?String(r.cq).replace(".",","):""}" placeholder="0" aria-label="Aktuálne množstvo ${esc(i.desc).slice(0,40)}">${r.zq>1e-9?`<button type="button" class="fill" data-a="fillRest" data-id="${i.id}" title="Dočerpať celý zostatok">zvyšok</button>`:""}`:qf(r.cq)}</td>
@@ -5232,7 +5237,7 @@ function invDetailHTML(p,inv){
       <button class="btn small" data-a="pdf">PDF na A4 na šírku</button><button class="btn small" data-a="xlsxOut">Excel</button>
     </div>
     <div class="card tablewrap" style="padding:6px 8px"><table class="budget inv">
-      <thead><tr><th rowspan="2">Č.</th><th rowspan="2">Kód / popis</th><th rowspan="2">MJ</th><th rowspan="2" class="r">J. cena</th><th colspan="2" class="grp g1">Rozpočet</th><th colspan="2" class="grp">Predošlé obdobie</th><th colspan="2" class="grp g2">Aktuálne obdobie</th><th colspan="2" class="grp">Zostatok</th></tr>
+      <thead><tr><th rowspan="2">Č.</th><th rowspan="2">Kód / popis</th><th rowspan="2">MJ</th><th rowspan="2" class="r upc">J. cena</th><th colspan="2" class="grp g1">Rozpočet</th><th colspan="2" class="grp">Predošlé obdobie</th><th colspan="2" class="grp g2">Aktuálne obdobie</th><th colspan="2" class="grp">Zostatok</th></tr>
       <tr><th class="r g1">Množ.</th><th class="r g1">Suma</th><th class="r">Množ.</th><th class="r">Suma</th><th class="r g2">Množ.</th><th class="r g2">Suma</th><th class="r">Množ.</th><th class="r">Suma</th></tr></thead>
       <tbody>${rows||`<tr><td colspan="12" class="muted">V tomto súpise zatiaľ nie je čerpaná žiadna položka.</td></tr>`}</tbody>
       <tfoot><tr><td colspan="5"><b>Spolu bez DPH</b></td><td class="num r"><b>${eur(T.b)}</b></td><td></td><td class="num r"><b>${eur(T.pr)}</b></td><td></td><td class="num r"><b id="tCur">${eur(T.cu)}</b></td><td></td><td class="num r"><b id="tZo">${eur(T.zo)}</b></td></tr></tfoot>
