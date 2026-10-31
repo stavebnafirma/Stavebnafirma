@@ -168,6 +168,7 @@ table.budget td.code{font-size:12px;color:var(--muted)}
 fieldset:has(#fmOffer:not(:checked)) .fmofr{display:none}
 .fmname{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.fmthumb{width:44px;height:33px;object-fit:cover;border-radius:5px;border:1px solid var(--line)}
 .acell span.pp{font-size:9.5px;letter-spacing:-.3px}
+.wiform{align-items:end;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}.wlim{align-items:center;gap:6px}
 .seenline{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ok);font-weight:600}.dexp summary{cursor:pointer}
 .bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
 table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
@@ -3416,13 +3417,55 @@ function wVeh(w){const m=wMachine(w.ecv);return m?`${w.ecv} · ${m.name.replace(
 /* číslo vážneho lístka RRMMDDxx – rok, mesiac, deň váženia a poradie v dni */
 function wNextNo(date){const p=date.slice(2,4)+date.slice(5,7)+date.slice(8,10);const n=(S.weighs||[]).filter(w=>String(w.no).startsWith(p)).map(w=>+String(w.no).slice(6)||0);
   const k=(n.length?Math.max(...n):0)+1;return p+String(k).padStart(k>99?3:2,"0")}
-function wState(){const ym=todayIso().slice(0,7);return view.wx||(view.wx={from:ym+"-01",to:monthDays(ym).at(-1),mat:"",center:"",dir:""})}
-function wFiltered(X){return (S.weighs||[]).filter(w=>w.date>=X.from&&w.date<=X.to&&(!X.mat||w.material===X.mat)&&(!X.center||w.center===X.center)&&(!X.dir||w.dir===X.dir)).sort((a,b)=>String(b.no).localeCompare(String(a.no)))}
+function wState(){const ym=todayIso().slice(0,7);return view.wx||(view.wx={from:ym+"-01",to:monthDays(ym).at(-1),mat:"",center:"",dir:"",q:""})}
+function wFiltered(X){const q=normText(X.q||"").replace(/\s/g,"");return (S.weighs||[]).filter(w=>(!X.from||w.date>=X.from)&&(!X.to||w.date<=X.to)&&(!X.mat||w.material===X.mat)&&(!X.center||w.center===X.center)&&(!X.dir||w.dir===X.dir)
+    &&(!q||normText([w.no,w.ecv,w.material,centerOf(w.center)?.name,(w.carrier||{}).name,d2(w.date),w.date].join(" ")).replace(/\s/g,"").includes(q))).sort((a,b)=>String(b.no).localeCompare(String(a.no)))}
 function wLastTare(ecv,exceptId){const e=ecvNorm(ecv);if(!e)return "";const L=(S.weighs||[]).filter(w=>w.id!==exceptId&&ecvNorm(w.ecv)===e&&wKg(w.tare)>0).sort((a,b)=>String(b.no).localeCompare(String(a.no)));return L[0]?L[0].tare:""}
 function wEcvs(){return [...new Set([...(S.machines||[]).map(m=>m.ecv),...(S.weighs||[]).map(w=>w.ecv)].filter(Boolean).map(ecvNorm))]}
 /* materiály v ponuke = tie, ktoré už boli raz zadané pri vážení (bez prednastaveného zoznamu) */
 function wMats(){return [...new Set((S.weighs||[]).map(w=>(w.material||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"sk"))}
 const nowHM=()=>new Date().toTimeString().slice(0,5);
+/* --- prepravcovia (zapamätané firmy) a počiatočný stav skladu podľa strediska a materiálu --- */
+const carriers=()=>S.carriers||(S.carriers=[]);
+const carrierByName=n=>{const k=normText(n);return k?carriers().find(c=>normText(c.name)===k):null};
+const carrierAddr=c=>c?[c.street,[c.zip,c.city].filter(Boolean).join(" ")].filter(Boolean).join(", "):"";
+const carrierLine=c=>c&&c.name?[c.name,carrierAddr(c),c.ico?`IČO ${c.ico}`:"",c.dic?`DIČ ${c.dic}`:"",c.icdph?`IČ DPH ${c.icdph}`:""].filter(Boolean).join(", "):"";
+function wCarrierHTML(D){const c=D.carrier||{},known=carrierByName(c.name),open=!!c.name&&(!known||view.wCarEdit);
+  return `<fieldset class="modes"><legend>Prepravca</legend>
+    <label>Firma prepravcu<input data-wc="name" value="${esc(c.name||"")}" list="wCarList" autocomplete="off" placeholder="začni písať názov firmy"></label>
+    <datalist id="wCarList">${carriers().slice().sort((a,b)=>a.name.localeCompare(b.name,"sk")).map(x=>`<option value="${esc(x.name)}">${esc([x.city,x.ico?"IČO "+x.ico:""].filter(Boolean).join(" · "))}</option>`).join("")}</datalist>
+    ${known&&!view.wCarEdit?`<div class="hint">${esc(carrierLine(known))} <button type="button" class="btn small ghost" data-a="vzCarEdit">Upraviť údaje</button></div>`:""}
+    ${open?`<div class="grid3 dxsel"><label>Ulica a číslo<input data-wc="street" value="${esc(c.street||"")}"></label><label>PSČ<input data-wc="zip" value="${esc(c.zip||"")}"></label><label>Obec<input data-wc="city" value="${esc(c.city||"")}"></label></div>
+      <div class="grid3 dxsel"><label>IČO<input data-wc="ico" value="${esc(c.ico||"")}" inputmode="numeric"></label><label>DIČ<input data-wc="dic" value="${esc(c.dic||"")}"></label><label>IČ DPH<input data-wc="icdph" value="${esc(c.icdph||"")}"></label></div>
+      <span class="hint">${known?"Zmena sa uloží k prepravcovi aj pre ďalšie vážne lístky.":"Nový prepravca – údaje sa zapamätajú a nabudúce stačí napísať názov."}</span>`:""}</fieldset>`}
+const wInits=()=>S.wInit||(S.wInit=[]);
+function wStock(){const rows=wInits().map(i=>{let inn=0,out=0;(S.weighs||[]).forEach(w=>{if(!wDone(w)||w.center!==i.center||normText(w.material)!==normText(i.material)||w.date<i.date)return;if(w.dir==="in")inn+=wNet(w);else if(w.dir==="out")out+=wNet(w)});
+    return {i,inn:inn/1000,out:out/1000,now:(+i.qty||0)+inn/1000-out/1000}});return rows.sort((a,b)=>(centerOf(a.i.center)?.name||"").localeCompare(centerOf(b.i.center)?.name||"","sk")||a.i.material.localeCompare(b.i.material,"sk"))}
+function wInitHTML(ed){const R=wStock(),E=view.wiEdit,e0=E&&E!=="__new"?wInits().find(x=>x.id===E):null;
+  const t3=v=>(Math.round(v*1000)/1000).toLocaleString("sk-SK",{minimumFractionDigits:2,maximumFractionDigits:3});
+  return `<div class="card stack"><div class="entry-head"><div><h3>Počiatočný stav skladu</h3><div class="muted" style="font-size:13px">Stav materiálu na stredisku ku dňu. Od tohto dňa sa pripočítavajú príjmy a odpočítavajú výdaje z vážnych lístkov.</div></div>
+      ${ed&&!E?`<button class="btn small" data-a="wiNew">+ Počiatočný stav</button>`:""}</div>
+    ${ed&&E?`<form class="grid3 dxsel wiform" id="wiForm" data-id="${e0?e0.id:""}"><label>Stredisko<select id="wiCenter" required><option value="">— vyber —</option>${centers().map(c=>`<option value="${c.id}" ${e0&&e0.center===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>
+      <label>Materiál<input id="wiMat" list="wMatList2" value="${esc(e0?.material||"")}" required></label><label>Ku dňu<input type="date" id="wiDate" value="${esc(e0?.date||todayIso())}" required></label>
+      <label>Množstvo (t)<input id="wiQty" inputmode="decimal" value="${esc(e0?String(e0.qty).replace(".",","):"")}" placeholder="napr. 120,5" required></label>
+      <div class="row" style="align-self:end"><button class="btn small primary" type="submit">Uložiť</button><button type="button" class="btn small ghost" data-a="wiNo">Zrušiť</button>${e0?`<button type="button" class="btn small ghost" data-a="wiDel" data-id="${e0.id}" style="color:var(--bad)">Odstrániť</button>`:""}</div>
+      <datalist id="wMatList2">${wMats().map(c=>`<option value="${esc(c)}">`).join("")}</datalist></form>`:""}
+    ${R.length?`<div class="tablewrap"><table class="dxt"><thead><tr><th>Stredisko</th><th>Materiál</th><th>Ku dňu</th><th class="r">Počiatočný stav t</th><th class="r">Príjem t</th><th class="r">Výdaj t</th><th class="r">Aktuálny stav t</th>${ed?"<th></th>":""}</tr></thead>
+      <tbody>${R.map(r=>`<tr><td>${esc(centerOf(r.i.center)?.name||"")}</td><td>${esc(r.i.material)}</td><td class="num">${esc(d2(r.i.date))}</td><td class="num r">${t3(+r.i.qty||0)}</td><td class="num r">${t3(r.inn)}</td><td class="num r">${t3(r.out)}</td><td class="num r"><b style="color:var(--${r.now<0?"bad":"fg"})">${t3(r.now)}</b></td>${ed?`<td class="r"><button class="btn small ghost" data-a="wiEdit" data-id="${r.i.id}">Upraviť</button></td>`:""}</tr>`).join("")}</tbody></table></div>`
+      :`<div class="muted" style="font-size:13px">Zatiaľ nie je zadaný počiatočný stav žiadneho materiálu.</div>`}</div>`}
+document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(a==="wiNew"){view.wiEdit="__new";render()}else if(a==="wiEdit"){view.wiEdit=b.dataset.id;render()}else if(a==="wiNo"){view.wiEdit=null;render()}
+  else if(a==="wiDel"&&canEdit("doprava")){S.wInit=wInits().filter(x=>x.id!==b.dataset.id);view.wiEdit=null;save();render()}
+  else if(a==="wLim"){view.wLimit=+b.dataset.n;render()}
+  else if(a==="vzCarEdit"){readWForm();view.wCarEdit=true;render()}});
+document.addEventListener("submit",ev=>{if(ev.target.id!=="wiForm"||!me)return;ev.preventDefault();if(!canEdit("doprava"))return;
+  const q=+String($("#wiQty").value).replace(/\s/g,"").replace(",",".");if(!isFinite(q)){toast("Množstvo zadaj ako číslo v tonách");return}
+  const d={center:$("#wiCenter").value,material:$("#wiMat").value.trim(),date:$("#wiDate").value,qty:q};if(!d.center||!d.material||!d.date){toast("Vyplň stredisko, materiál a dátum");return}
+  const id=ev.target.dataset.id;if(id)Object.assign(wInits().find(x=>x.id===id),d);else wInits().push({id:uid("wi"),...d});view.wiEdit=null;save();toast("Počiatočný stav uložený");render()});
+document.addEventListener("input",ev=>{if(ev.target.id==="wxQ"){const X=wState();X.q=ev.target.value;const pos=ev.target.selectionStart;render();const el=$("#wxQ");if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}}}});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me||!t.dataset||t.dataset.wc!=="name")return;readWForm();const k=carrierByName(t.value);if(k){view.wDraft.carrier={...k};view.wCarEdit=false}
+  /* prekresliť len keď sa mení, čo sa zobrazí (známy prepravca / polia pre nového) */
+  const open=!!document.querySelector('#wForm [data-wc="ico"]');if(k||(!open&&t.value.trim())||(open&&!t.value.trim())){render();const n=document.querySelector('#wForm [data-wc="'+(k?"name":"street")+'"]');if(n&&!k)n.focus()}});
 function wForm(){const w0=view.wEdit&&view.wEdit!=="__new"?(S.weighs||[]).find(x=>x.id===view.wEdit):null;
   const D=view.wDraft||(view.wDraft=w0?JSON.parse(JSON.stringify(w0)):{date:todayIso(),time:nowHM(),center:view.lastCenter&&centerOf(view.lastCenter)?view.lastCenter:(centers().length===1?centers()[0].id:""),dir:"",ecv:"",gross:"",tare:"",material:""});
   const net=wNet(D);
@@ -3440,10 +3483,12 @@ function wForm(){const w0=view.wEdit&&view.wEdit!=="__new"?(S.weighs||[]).find(x
     <div class="hint" style="margin-top:-6px">Stačí zadať jednu hmotnosť – váženie sa uloží ako nedokončené a druhú hmotnosť doplníš po vysypaní alebo naložení auta.</div>
     <label>Vážený materiál *<input data-wf="material" value="${esc(D.material)}" list="wMatList" required placeholder="vyber z ponuky alebo napíš nový"></label>
     <datalist id="wMatList">${wMats().map(c=>`<option value="${esc(c)}">`).join("")}</datalist>
+    ${wCarrierHTML(D)}
     <div class="row"><button class="btn primary" type="submit">${w0?"Uložiť":"Uložiť váženie"}</button><button type="button" class="btn ghost" data-a="vzNo">Zrušiť</button></div></form>`}
 function wEcvInfo(D){const m=wMachine(D.ecv),lt=wLastTare(D.ecv,D.id),a=[];if(m)a.push(`${esc(m.name)} – vozidlo z vozového parku.`);
   if(lt)a.push(`Posledná tara: ${kgNum(wKg(lt))} kg${String(lt)!==String(D.tare)?` <button type="button" class="btn small ghost" data-a="vzUseTare" data-v="${esc(lt)}">Použiť</button>`:""}`);return a.join(" ")}
-function readWForm(){const D=view.wDraft;if(!D||!$("#wForm"))return;document.querySelectorAll("#wForm [data-wf]").forEach(el=>D[el.dataset.wf]=el.value);const r=document.querySelector('#wForm input[name="wDir"]:checked');if(r)D.dir=r.value}
+function readWForm(){const D=view.wDraft;if(!D||!$("#wForm"))return;document.querySelectorAll("#wForm [data-wf]").forEach(el=>D[el.dataset.wf]=el.value);
+  const cs=document.querySelectorAll("#wForm [data-wc]");if(cs.length){const k0=carrierByName((D.carrier||{}).name);D.carrier={...(k0&&!view.wCarEdit?k0:{}),...(D.carrier||{})};cs.forEach(el=>D.carrier[el.dataset.wc]=el.value.trim())}const r=document.querySelector('#wForm input[name="wDir"]:checked');if(r)D.dir=r.value}
 const wDirTxt=w=>w.dir==="in"?"Príjem":w.dir==="out"?"Výdaj":"";
 const wDirPill=w=>w.dir==="in"?'<span class="pill s-ok">príjem</span>':w.dir==="out"?'<span class="pill s-wait">výdaj</span>':'<span class="muted">–</span>';
 function weighHTML(){const X=wState(),ed=canEdit("doprava"),list=wFiltered(X),sel=view.wOpen&&(S.weighs||[]).find(w=>w.id===view.wOpen);
@@ -3455,23 +3500,25 @@ function weighHTML(){const X=wState(),ed=canEdit("doprava"),list=wFiltered(X),se
         <span class="muted">${wMiss(w)==="tara"?`brutto ${kgNum(wKg(w.gross))} kg · čaká na taru`:`tara ${kgNum(wKg(w.tare))} kg · čaká na brutto`}</span>
         ${ed?`<button class="btn small primary" data-a="vzEdit" data-id="${w.id}" data-focus="${wMiss(w)==="tara"?"tare":"gross"}">Doplniť ${wMiss(w)==="tara"?"taru":"brutto"}</button>`:""}</div>`).join("")}</div>`:""}
     ${ed&&view.wEdit!==undefined?wForm():sel?wDetail(sel,ed):""}
-    <div class="card stack"><div class="grid3 dxsel"><label>Materiál<select id="wxMat"><option value="">— všetky materiály —</option>${wMats().map(c=>`<option ${X.mat===c?"selected":""}>${esc(c)}</option>`).join("")}</select></label>
+    <div class="card stack"><label>Hľadať<input id="wxQ" type="search" value="${esc(X.q||"")}" placeholder="EČV, číslo lístka, materiál, stredisko, prepravca alebo dátum" autocomplete="off"></label><div class="grid3 dxsel"><label>Materiál<select id="wxMat"><option value="">— všetky materiály —</option>${wMats().map(c=>`<option ${X.mat===c?"selected":""}>${esc(c)}</option>`).join("")}</select></label>
       <label>Od<input type="date" id="wxFrom" value="${esc(X.from)}"></label><label>Do<input type="date" id="wxTo" value="${esc(X.to)}"></label></div>
       <div class="grid3 dxsel"><label>Stredisko<select id="wxCenter"><option value="">— všetky strediská —</option>${centers().map(c=>`<option value="${c.id}" ${X.center===c.id?"selected":""}>${esc(c.name)}</option>`).join("")}</select></label>
         <label>Druh<select id="wxDir"><option value="">— príjem aj výdaj —</option><option value="in" ${X.dir==="in"?"selected":""}>Príjem</option><option value="out" ${X.dir==="out"?"selected":""}>Výdaj</option></select></label><span></span></div>
       <div class="row"><button type="button" class="btn small ghost" data-a="vzMonth" data-d="0">Tento mesiac</button><button type="button" class="btn small ghost" data-a="vzMonth" data-d="-1">Minulý mesiac</button>
         <span style="margin-left:auto" class="muted">${list.length} ${pl(list.length,"váženie","váženia","vážení")}${list.some(w=>!wDone(w))?` (${list.filter(w=>!wDone(w)).length} nedokončené)`:""} · netto spolu <b class="num">${tNum(sum)} t</b></span>${list.length?`<button class="btn small" data-a="vzXls">Excel</button>`:""}</div></div>
     <div class="card tablewrap" style="padding:6px 8px"><table class="dxt"><thead><tr><th>Č. lístka</th><th>Dátum a čas</th><th>Druh / stredisko</th><th>EČV</th><th>Materiál</th><th class="r">Brutto kg</th><th class="r">Tara kg</th><th class="r">Netto t</th><th></th></tr></thead>
-      <tbody>${list.map(w=>`<tr class="clickrow ${wDone(w)?"":"wpend"}" data-a="vzOpen" data-id="${w.id}"><td class="num"><b>${esc(w.no)}</b></td><td class="num">${esc(d2(w.date))} ${esc(w.time||"")}</td><td>${wDirPill(w)}<div class="muted" style="font-size:12px;white-space:normal;max-width:170px">${esc(centerOf(w.center)?.name||"")}</div></td><td>${esc(wVeh(w))}</td><td>${esc(w.material)}</td>
+      <tbody>${list.slice(0,view.wLimit||20).map(w=>`<tr class="clickrow ${wDone(w)?"":"wpend"}" data-a="vzOpen" data-id="${w.id}"><td class="num"><b>${esc(w.no)}</b></td><td class="num">${esc(d2(w.date))} ${esc(w.time||"")}</td><td>${wDirPill(w)}<div class="muted" style="font-size:12px;white-space:normal;max-width:170px">${esc(centerOf(w.center)?.name||"")}</div></td><td>${esc(wVeh(w))}</td><td>${esc(w.material)}</td>
         <td class="num r">${wKg(w.gross)?kgNum(wKg(w.gross)):'<span class="wwait">čaká</span>'}</td><td class="num r">${wKg(w.tare)?kgNum(wKg(w.tare)):'<span class="wwait">čaká</span>'}</td><td class="num r"><b>${wDone(w)?tNum(wNet(w)):"–"}</b></td>
         <td class="r">${wDone(w)?`<button class="btn small" data-a="vzPdf" data-id="${w.id}" title="Vážny lístok PDF">PDF</button>`:ed?`<button class="btn small primary" data-a="vzEdit" data-id="${w.id}" data-focus="${wMiss(w)==="tara"?"tare":"gross"}">Doplniť</button>`:""}</td></tr>`).join("")||`<tr><td colspan="9" class="muted">V zvolenom období nie je žiadne váženie.</td></tr>`}</tbody>
-      ${list.length?`<tfoot><tr><td colspan="7">Spolu</td><td class="num r">${tNum(sum)}</td><td></td></tr></tfoot>`:""}</table></div>
+      ${list.length?`<tfoot><tr><td colspan="7">Spolu za výber (${list.length} ${pl(list.length,"váženie","váženia","vážení")})</td><td class="num r">${tNum(sum)}</td><td></td></tr></tfoot>`:""}</table></div>
+    <div class="row wlim"><span class="muted" style="font-size:13px">Zobraziť posledných</span>${[20,50,100].map(n=>`<button class="btn small ${(view.wLimit||20)===n?"primary":"ghost"}" data-a="wLim" data-n="${n}">${n}</button>`).join("")}<span class="muted" style="font-size:13px">${list.length>(view.wLimit||20)?`zobrazených ${view.wLimit||20} z ${list.length}`:""}</span></div>
+    ${wInitHTML(ed)}
     <div class="hint">Súhrny podľa materiálu a áut sú v podkarte Štatistika.</div>
   </div>`}
 function wDetail(w,ed){
   return `<div class="card stack"><div class="entry-head"><div><div class="eyebrow">Vážny lístok</div><h3>č. ${esc(w.no)} · ${esc(d2(w.date))} ${esc(w.time||"")}</h3><div class="muted">${esc(w.material)}</div></div><button class="btn small ghost" data-a="vzClose">Zavrieť</button></div>
     ${wDone(w)?"":`<div class="note cnote">Nedokončené váženie – chýba ${wMiss(w)==="tara"?"tara (prázdne auto)":"brutto (plné auto)"}. Vážny lístok sa dá stiahnuť po doplnení.</div>`}
-    <dl class="dl">${[["Druh váženia",wDirTxt(w)],["Stredisko",centerOf(w.center)?`${centerOf(w.center).name} – ${centerAddr(centerOf(w.center))}`:""],["EČV",wVeh(w)],["Materiál",w.material],["1. váženie",`${d2(w.date)} ${w.time||""}`],["2. váženie",w.time2?`${w.date2&&w.date2!==w.date?d2(w.date2)+" ":""}${w.time2}`:""],["Brutto",wKg(w.gross)?kgNum(wKg(w.gross))+" kg":"čaká na váženie"],["Tara",wKg(w.tare)?kgNum(wKg(w.tare))+" kg":"čaká na váženie"],["Netto",wDone(w)?`${kgNum(wNet(w))} kg · ${tNum(wNet(w))} t`:"–"]].filter(r=>r[1]).map(([l,v])=>`<dt>${l}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    <dl class="dl">${[["Druh váženia",wDirTxt(w)],["Stredisko",centerOf(w.center)?`${centerOf(w.center).name} – ${centerAddr(centerOf(w.center))}`:""],["EČV",wVeh(w)],["Materiál",w.material],["Prepravca",carrierLine(w.carrier)],["1. váženie",`${d2(w.date)} ${w.time||""}`],["2. váženie",w.time2?`${w.date2&&w.date2!==w.date?d2(w.date2)+" ":""}${w.time2}`:""],["Brutto",wKg(w.gross)?kgNum(wKg(w.gross))+" kg":"čaká na váženie"],["Tara",wKg(w.tare)?kgNum(wKg(w.tare))+" kg":"čaká na váženie"],["Netto",wDone(w)?`${kgNum(wNet(w))} kg · ${tNum(wNet(w))} t`:"–"]].filter(r=>r[1]).map(([l,v])=>`<dt>${l}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
     <div class="row">${wDone(w)?`<button class="btn small primary" data-a="vzPdf" data-id="${w.id}">Stiahnuť vážny lístok PDF</button>`:ed?`<button class="btn small primary" data-a="vzEdit" data-id="${w.id}" data-focus="${wMiss(w)==="tara"?"tare":"gross"}">Doplniť ${wMiss(w)==="tara"?"taru":"brutto"}</button>`:""}${ed?`<button class="btn small" data-a="vzEdit" data-id="${w.id}">Upraviť</button><button class="btn small ghost" data-a="vzDel" data-id="${w.id}" style="margin-left:auto;color:var(--bad)">Zmazať</button>`:""}</div></div>`}
 /* vážny lístok: formát A5 na šírku, vždy dvakrát (originál + kópia) na jednu A4 na výšku */
 function wPDF(w){if(!wDone(w)){toast("Váženie nie je dokončené – doplň chýbajúcu hmotnosť");return}const doc=newPdf("portrait");if(!doc)return;
@@ -3494,15 +3541,16 @@ function wTicket(doc,w,y0,label){const F=S.firm||{},L=12,Rx=198;let x=L;
   doc.autoTable({startY:y0+30,margin:{left:L,right:210-Rx},theme:"grid",styles:st,tableWidth:Rx-L,
     columnStyles:{0:{cellWidth:38,...lab},1:{cellWidth:57},2:{cellWidth:38,...lab},3:{cellWidth:Rx-L-133}},
     body:[["Stredisko",{content:(()=>{const c=centerOf(w.center);return c?`${c.name}${centerAddr(c)?", "+centerAddr(c):""}`:""})(),colSpan:3}],
+      ...(w.carrier&&w.carrier.name?[["Prepravca",{content:carrierLine(w.carrier),colSpan:3}]]:[]),
       ["Vozidlo (EČV)",wVeh(w),"1. váženie",`${plain(d2(w.date))} ${w.time||""}`],
       ["Materiál",w.material||"","2. váženie",w.time2?`${plain(d2(w.date2||w.date))} ${w.time2}`:""],
       ["Hmotnosť brutto",{content:kgNum(wKg(w.gross))+" kg",styles:{halign:"right"}},"Hmotnosť tara",{content:kgNum(wKg(w.tare))+" kg",styles:{halign:"right"}}],
       [{content:"HMOTNOSŤ NETTO",colSpan:2,styles:{fontStyle:"bold",fontSize:12,fillColor:[253,236,222]}},{content:`${kgNum(wNet(w))} kg  (${tNum(wNet(w))} t)`,colSpan:2,styles:{fontStyle:"bold",fontSize:13,halign:"right",fillColor:[253,236,222]}}]]});
   const y=y0+124;doc.setFontSize(8.5);doc.setDrawColor(120);pdfStamp(doc,firmStamp(),L,y,58,20);doc.line(L,y,L+62,y);doc.text("Vážil (meno a podpis)",L,y+4);doc.line(Rx-62,y,Rx,y);doc.text("Vodič (podpis)",Rx-62,y+4)}
 function wXLS(){const X=wState(),list=wFiltered(X).slice().reverse();if(!window.XLSX){toast("Knižnica na Excel sa nenačítala. Skús stránku obnoviť.");return}
-  const a=[["Váženie"],[`Obdobie: ${d2(X.from)} – ${d2(X.to)}${X.mat?" · "+X.mat:""}`],[],["Č. lístka","Dátum","Čas","Druh","Stredisko","EČV","Vozidlo","Materiál","Brutto kg","Tara kg","Netto kg","Netto t"]];
-  list.forEach(w=>{const m=wMachine(w.ecv);a.push([String(w.no),d2(w.date),w.time||"",wDirTxt(w),centerOf(w.center)?.name||"",w.ecv||"",m?m.name:"",w.material||"",wKg(w.gross)||"",wKg(w.tare)||"",wDone(w)?wNet(w):"nedokončené",wDone(w)?Math.round(wNet(w))/1000:""])});
-  const ws=XLSX.utils.aoa_to_sheet(a);ws["!cols"]=[11,11,6,8,26,10,24,24,10,10,10,9].map(x=>({wch:x}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Váženie");
+  const a=[["Váženie"],[`Obdobie: ${d2(X.from)} – ${d2(X.to)}${X.mat?" · "+X.mat:""}`],[],["Č. lístka","Dátum","Čas","Druh","Stredisko","EČV","Vozidlo","Prepravca","IČO prepravcu","Materiál","Brutto kg","Tara kg","Netto kg","Netto t"]];
+  list.forEach(w=>{const m=wMachine(w.ecv);a.push([String(w.no),d2(w.date),w.time||"",wDirTxt(w),centerOf(w.center)?.name||"",w.ecv||"",m?m.name:"",(w.carrier||{}).name||"",(w.carrier||{}).ico||"",w.material||"",wKg(w.gross)||"",wKg(w.tare)||"",wDone(w)?wNet(w):"nedokončené",wDone(w)?Math.round(wNet(w))/1000:""])});
+  const ws=XLSX.utils.aoa_to_sheet(a);ws["!cols"]=[11,11,6,8,26,10,24,28,10,24,10,10,10,9].map(x=>({wch:x}));const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Váženie");
   offerFile(`Vazenie_${X.from}_${X.to}.xlsx`,XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;if(!a.startsWith("vz"))return;const X=wState(),W=id=>(S.weighs||[]).find(x=>x.id===id);
   if(a==="vzPdf"){ev.stopPropagation();const w=W(b.dataset.id);if(w)wPDF(w);return}
@@ -3511,8 +3559,8 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
   if(a==="vzMonth"){const t=new Date(todayIso().slice(0,7)+"-15T12:00");t.setMonth(t.getMonth()+(+b.dataset.d));const ym=t.toISOString().slice(0,7);X.from=ym+"-01";X.to=monthDays(ym).at(-1);render();return}
   if(a==="vzXls"){wXLS();return}
   if(!canEdit("doprava"))return;
-  if(a==="vzNew"){view.wEdit="__new";view.wDraft=null;view.wOpen=null;render();const e=document.querySelector('#wForm [data-wf="ecv"]');if(e)e.focus()}
-  else if(a==="vzEdit"){ev.stopPropagation();view.wEdit=b.dataset.id;view.wDraft=null;view.wOpen=null;render();window.scrollTo({top:0,behavior:"smooth"});if(b.dataset.focus){const f=$(`#wForm [data-wf="${b.dataset.focus}"]`);if(f)setTimeout(()=>f.focus(),50)}}
+  if(a==="vzNew"){view.wEdit="__new";view.wDraft=null;view.wCarEdit=false;view.wOpen=null;render();const e=document.querySelector('#wForm [data-wf="ecv"]');if(e)e.focus()}
+  else if(a==="vzEdit"){ev.stopPropagation();view.wEdit=b.dataset.id;view.wDraft=null;view.wCarEdit=false;view.wOpen=null;render();window.scrollTo({top:0,behavior:"smooth"});if(b.dataset.focus){const f=$(`#wForm [data-wf="${b.dataset.focus}"]`);if(f)setTimeout(()=>f.focus(),50)}}
   else if(a==="vzNo"){view.wEdit=undefined;view.wDraft=null;render()}
   else if(a==="vzUseTare"){readWForm();view.wDraft.tare=b.dataset.v;const t=$('#wForm [data-wf="tare"]');if(t){t.value=b.dataset.v;t.dispatchEvent(new Event("input",{bubbles:true}))}const i=$("#wEcvInfo");if(i)i.innerHTML=wEcvInfo(view.wDraft)}
   else if(a==="vzDel"){const w=W(b.dataset.id);if(!w)return;S.weighs=S.weighs.filter(x=>x.id!==w.id);view.wOpen=null;save();toast(`Váženie č. ${w.no} zmazané`);render()}});
@@ -3532,6 +3580,8 @@ document.addEventListener("submit",ev=>{if(ev.target.id!=="wForm"||!me)return;ev
   if(!D.date||!D.time){toast("Zadaj dátum a čas");return}if(!D.ecv){toast("Zadaj EČV auta");return}if(!D.material){toast("Zadaj vážený materiál");return}
   const g=wKg(D.gross),tr=wKg(D.tare);if(!(g>0)&&!(tr>0)){toast("Zadaj aspoň jednu hmotnosť – brutto alebo taru");return}if(g>0&&tr>0&&tr>=g){toast("Tara musí byť menšia ako brutto");return}
   D.gross=g>0?String(g):"";D.tare=tr>0?String(tr):"";
+  if(D.carrier&&D.carrier.name){const c=D.carrier,k=carrierByName(c.name),data={name:c.name,street:c.street||"",zip:c.zip||"",city:c.city||"",ico:c.ico||"",dic:c.dic||"",icdph:c.icdph||""};
+    if(k){if(view.wCarEdit||!k.ico&&data.ico)Object.assign(k,data);D.carrier={...k}}else{carriers().push({id:uid("pr"),...data});D.carrier=data}delete D.carrier.id}else delete D.carrier;view.wCarEdit=false;
   const id=ev.target.dataset.id;S.weighs=S.weighs||[];let w,completed=false;
   if(id){w=S.weighs.find(x=>x.id===id);const was=wDone(w);Object.assign(w,D);if(!was&&wDone(w)&&!w.time2){w.time2=nowHM();w.date2=todayIso();completed=true}}else{w={id:uid("vl"),...D,no:wNextNo(D.date)};S.weighs.push(w)}
   view.wEdit=undefined;view.wDraft=null;view.wOpen=w.id;const X=wState();if(w.date<X.from||w.date>X.to){const ym=w.date.slice(0,7);X.from=ym+"-01";X.to=monthDays(ym).at(-1)}
@@ -3991,7 +4041,7 @@ const SEC_MOD={personal:"personal",doprava:"doprava",pozicovna:"pozicovna",home:
 function navHTML(){if(!me||view.screen==="setup"||needsProfile())return "";
   const cur=curSection(),admin=me.companyRole==="admin";
   const items=isExternal(me)?["home"]:["firma","personal","doprava","pozicovna","home"].filter(k=>k==="firma"||(k==="home"?(hasMod("stavba")||admin):(canSee(SEC_MOD[k])&&(hasMod(SEC_MOD[k])||admin))));
-  return `<nav class="topnav" role="tablist" aria-label="Hlavné menu">${items.map(k=>{const locked=k!=="firma"&&!hasMod(SEC_MOD[k]);const n=k==="doprava"&&!locked?fleetAlerts().length:0;const [full,short]=NAV_LABELS[k];
+  return `<nav class="topnav" role="tablist" aria-label="Hlavné menu">${items.map(k=>{const locked=k!=="firma"&&!hasMod(SEC_MOD[k]);const n=0;const [full,short]=NAV_LABELS[k];
     return `<button class="ntab ${locked?"locked":""}" role="tab" aria-selected="${cur===k}" data-a="${locked?"secLocked":"sec"}" data-sec="${k}" ${locked?`title="Modul ${full} nie je v predplatnom"`:""}>${icon(locked?"lock":k)}<span class="l-full">${full}</span><span class="l-short">${short}</span>${n?`<span class="badge">${n}</span>`:""}</button>`}).join("")}</nav>`}
 function setupHTML(){return `<div class="stack"><div><div class="eyebrow">Vitaj v aplikácii, ${esc(me.name)}</div><h1>Nastavenie firmy</h1></div>${firmFormHTML("setup")}</div>`}
 function firmTabs(){return [["nastenka","Nástenka"],["udaje","Údaje o firme"],...(isCompanyRole(me)?[["zam","Zamestnanci"],["park","Strojový a vozový park"]]:[]),["moduly","Moduly"],["role","Používatelia a prístupy"],["ponuka","Ponuka strojov"]]}
