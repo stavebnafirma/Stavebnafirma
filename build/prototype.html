@@ -169,6 +169,11 @@ fieldset:has(#fmOffer:not(:checked)) .fmofr{display:none}
 .fmname{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.fmthumb{width:44px;height:33px;object-fit:cover;border-radius:5px;border:1px solid var(--line)}
 .acell span.pp{font-size:9.5px;letter-spacing:-.3px}
 .wiform{align-items:end;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}.wlim{align-items:center;gap:6px}
+.dfgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.dfold{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;text-align:left;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);cursor:pointer;font:inherit;color:inherit}
+.dfold svg{grid-row:1/3;width:28px;height:28px;fill:color-mix(in srgb,var(--accent) 22%,transparent);stroke:var(--accent);stroke-width:1.4}.dfold b{font-size:14px;line-height:1.25}.dfold .muted{font-size:12px}
+.dfold:hover{border-color:var(--accent-soft)}.dfold.on{border-color:var(--accent);background:var(--tint)}
+.overbox{border-left:4px solid var(--bad)}.overbox td.bad{color:var(--bad)}.overbox textarea{font:inherit;line-height:1.45}
 .seenline{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ok);font-weight:600}.dexp summary{cursor:pointer}
 .bpact{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;align-items:center}.bparts td{vertical-align:middle}
 table.budget tr.part td{background:var(--tint);color:var(--ink);font-weight:700;font-size:14px;padding-top:12px;border-top:2px solid var(--accent-soft)}
@@ -4990,26 +4995,44 @@ const fsize=n=>n>=1048576?`${(n/1048576).toLocaleString("sk-SK",{maximumFraction
 const docExt=n=>(String(n).match(/\.([a-z0-9]{1,5})$/i)||[])[1]?.toLowerCase()||"";
 const docTenant=()=>(typeof TID!=="undefined"&&TID)?TID:"demo";
 const safeKey=n=>String(n).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_").replace(/_+/g,"_").slice(-120);
-function docsHTML(p){const up=can(p,"docs.upload"),list=(p.docs||[]).slice(),q=normText(view.dq||"");
-  const groups=[...new Set([...DOC_GROUPS,...list.map(d=>d.group).filter(Boolean)])];
-  const shown=list.filter(d=>!q||normText(d.name+" "+(d.group||"")+" "+(d.note||"")).includes(q));
-  const by={};shown.forEach(d=>(by[d.group||"Iné"]=by[d.group||"Iné"]||[]).push(d));
-  const order=Object.keys(by).sort((a,b)=>(groups.indexOf(a)+1||99)-(groups.indexOf(b)+1||99)||a.localeCompare(b,"sk"));
-  const busy=view.docBusy;
-  const form=up?`<form class="card stack" id="docForm"><div class="entry-head"><h3>Nahrať výkresy a dokumenty</h3><span class="muted" style="font-size:13px">PDF, obrázky, DWG a iné · najviac 50 MB na súbor</span></div>
-      <div class="grid2"><label>Skupina<input id="docGroup" list="docGroups" value="${esc(view.docGroup||"")}" placeholder="napr. Statika"></label><label>Poznámka<input id="docNote" placeholder="napr. revízia B, platné od 10/2026"></label></div>
-      <datalist id="docGroups">${groups.map(g=>`<option value="${esc(g)}">`).join("")}</datalist>
-      <label class="docdrop"><input type="file" id="docFiles" multiple><span>${busy?esc(busy):"Vyber súbory alebo ich sem pretiahni"}</span></label>
-      <div class="row"><button class="btn primary" type="submit" ${busy?"disabled":""}>Nahrať</button></div></form>`:"";
-  const rows=order.map(g=>`<div class="card stack docgrp"><div class="entry-head"><h3>${esc(g)}</h3><span class="muted" style="font-size:13px">${by[g].length} ${by[g].length===1?"súbor":by[g].length<5?"súbory":"súborov"}</span></div>
-    <ul class="doclist">${by[g].sort((a,b)=>a.name.localeCompare(b.name,"sk",{numeric:true})).map(d=>`<li><span class="docext">${esc(docExt(d.name)||"súbor")}</span>
-      <div class="docmain"><b>${esc(d.name)}</b><span class="muted">${fsize(d.size||0)} · ${esc(user(d.by)?.name||"")} ${d.at?fmtDate(d.at.slice(0,10)):""}${d.note?` · ${esc(d.note)}`:""}</span></div>
+/* zložky dokumentácie: zakladá ich ten, kto nahráva (administrátor, stavbyvedúci); ostatní členovia stavby, dozor aj investor čítajú */
+const DOC_FOLDER_IDEAS=["Projektová dokumentácia","Skúšky a revízie","Atesty zabudovaných materiálov","Geodetické zameranie","Stavebné povolenie a rozhodnutia","Fotodokumentácia"];
+function docFolders(p){const F=(p.docFolders||[]).slice();(p.docs||[]).forEach(d=>{const g=d.group||"Iné";if(!F.includes(g))F.push(g)});return F}
+function docsHTML(p){const up=can(p,"docs.upload"),list=p.docs||[],F=docFolders(p),q=normText(view.dq||""),cur=view.docFolder&&F.includes(view.docFolder)?view.docFolder:null;
+  const cnt=f=>list.filter(d=>(d.group||"Iné")===f).length,busy=view.docBusy;
+  const item=d=>`<li><span class="docext">${esc(docExt(d.name)||"súbor")}</span>
+      <div class="docmain"><b>${esc(d.name)}</b><span class="muted">${fsize(d.size||0)} · ${esc(user(d.by)?.name||"")} ${d.at?fmtDate(d.at.slice(0,10)):""}${d.note?` · ${esc(d.note)}`:""}${!cur?` · ${esc(d.group||"Iné")}`:""}</span></div>
       <div class="docbtn"><button class="btn small" data-a="docOpen" data-id="${d.id}">Otvoriť</button><button class="btn small ghost" data-a="docGet" data-id="${d.id}">Stiahnuť</button>
-      ${up?(view.docDel===d.id?`<button class="btn small" data-a="docDelYes" data-id="${d.id}" style="color:var(--bad)">Naozaj odstrániť</button><button class="btn small ghost" data-a="docDelNo">Späť</button>`:`<button class="btn small ghost" data-a="docDel" data-id="${d.id}" aria-label="Odstrániť ${esc(d.name)}">Odstrániť</button>`):""}</div></li>`).join("")}</ul></div>`).join("");
-  return `<div class="stack"><div class="muted">Výkresy a projektová dokumentácia stavby. Otvoriť a stiahnuť ich môžu všetci členovia stavby vrátane stavebného dozoru.${up?"":" Nahráva ich stavbyvedúci alebo administrátor."}</div>
-    ${form}${list.length>6?`<label>Hľadať v dokumentácii<input id="docSearch" type="search" value="${esc(view.dq||"")}" placeholder="názov súboru, skupina alebo poznámka"></label>`:""}
-    ${rows||`<div class="card muted">${list.length?"Nič nezodpovedá hľadaniu.":"Zatiaľ tu nie sú žiadne výkresy."}</div>`}</div>`}
-async function docUpload(p,files){const group=($("#docGroup")?.value||"").trim()||"Iné",note=($("#docNote")?.value||"").trim();
+      ${up?(view.docDel===d.id?`<button class="btn small" data-a="docDelYes" data-id="${d.id}" style="color:var(--bad)">Naozaj odstrániť</button><button class="btn small ghost" data-a="docDelNo">Späť</button>`:`<button class="btn small ghost" data-a="docDel" data-id="${d.id}" aria-label="Odstrániť ${esc(d.name)}">Odstrániť</button>`):""}</div></li>`;
+  const folders=`<div class="card stack"><div class="entry-head"><h3>Zložky dokumentácie</h3>${up&&!view.dfNew?`<button class="btn small" data-a="dfNew">+ Nová zložka</button>`:""}</div>
+    ${up&&view.dfNew?`<form class="row" id="dfForm"><input id="dfName" list="dfIdeas" placeholder="napr. Skúšky a revízie" style="flex:1 1 240px" required><datalist id="dfIdeas">${DOC_FOLDER_IDEAS.filter(x=>!F.includes(x)).map(x=>`<option value="${esc(x)}">`).join("")}</datalist><button class="btn small primary" type="submit">Vytvoriť</button><button type="button" class="btn small ghost" data-a="dfNo">Zrušiť</button></form>`:""}
+    ${F.length?`<div class="dfgrid">${F.map(f=>`<button class="dfold${cur===f?" on":""}" data-a="dfOpen" data-f="${esc(f)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/></svg><b>${esc(f)}</b><span class="muted">${cnt(f)} ${pl(cnt(f),"súbor","súbory","súborov")}</span></button>`).join("")}</div>`
+      :`<div class="muted" style="font-size:13px">${up?"Zatiaľ tu nie je žiadna zložka. Vytvor napr. Projektová dokumentácia, Skúšky a revízie alebo Geodetické zameranie.":"Zatiaľ tu nie sú žiadne dokumenty."}</div>`}</div>`;
+  let body="";
+  if(q){const shown=list.filter(d=>normText(d.name+" "+(d.group||"")+" "+(d.note||"")).includes(q));
+    body=`<div class="card stack"><h3>Výsledky hľadania</h3>${shown.length?`<ul class="doclist">${shown.sort((a,b)=>a.name.localeCompare(b.name,"sk",{numeric:true})).map(item).join("")}</ul>`:`<div class="muted">Nič nezodpovedá hľadaniu.</div>`}</div>`}
+  else if(cur){const L=list.filter(d=>(d.group||"Iné")===cur).sort((a,b)=>a.name.localeCompare(b.name,"sk",{numeric:true})),ren=view.dfRen===cur;
+    body=`<div class="card stack docgrp"><div class="entry-head">${ren?`<form class="row" id="dfRenForm" data-f="${esc(cur)}" style="flex:1"><input id="dfRenName" value="${esc(cur)}" style="flex:1 1 220px" required><button class="btn small primary" type="submit">Uložiť</button><button type="button" class="btn small ghost" data-a="dfRenNo">Zrušiť</button></form>`
+        :`<h3>${esc(cur)}</h3><div class="row">${up?`<button class="btn small ghost" data-a="dfRen">Premenovať</button>${L.length?"":`<button class="btn small ghost" data-a="dfDel" style="color:var(--bad)">Odstrániť prázdnu zložku</button>`}`:""}<button class="btn small ghost" data-a="dfClose">Zavrieť</button></div>`}</div>
+      ${up?`<form class="stack" id="docForm"><label class="docdrop"><input type="file" id="docFiles" multiple><span>${busy?esc(busy):`Nahrať do zložky „${esc(cur)}“ – vyber súbory alebo ich sem pretiahni`}</span></label>
+        <div class="row"><input id="docNote" placeholder="Poznámka k súborom (nepovinné), napr. revízia B" style="flex:1 1 260px"><button class="btn primary small" type="submit" ${busy?"disabled":""}>Nahrať</button></div><span class="hint">PDF, obrázky, DWG a iné · najviac 50 MB na súbor</span></form>`:""}
+      ${L.length?`<ul class="doclist">${L.map(item).join("")}</ul>`:`<div class="muted">Zložka je prázdna.</div>`}</div>`}
+  return `<div class="stack">${folders}
+    ${list.length>6?`<label>Hľadať v dokumentácii<input id="docSearch" type="search" value="${esc(view.dq||"")}" placeholder="názov súboru, zložka alebo poznámka"></label>`:""}
+    ${body}
+    <div class="muted" style="font-size:13px">Dokumenty môžu otvoriť a stiahnuť všetci členovia stavby vrátane stavebného dozoru a investora. ${up?"Zložky zakladáš a súbory nahrávaš ty – ostatní ich nemôžu meniť, dopĺňať ani mazať.":"Meniť, dopĺňať ani mazať ich nemôžeš."}</div></div>`}
+document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-a]");if(!b||!me||view.screen!=="project")return;const a=b.dataset.a;if(!/^df/.test(a))return;
+  const p=S.projects.find(x=>x.id===view.projectId);if(!p)return;const up=can(p,"docs.upload");
+  if(a==="dfOpen"){view.docFolder=view.docFolder===b.dataset.f?null:b.dataset.f;view.dfRen=null;view.dq="";render()}
+  else if(a==="dfClose"){view.docFolder=null;render()}
+  else if(a==="dfNew"&&up){view.dfNew=true;render();const e=$("#dfName");if(e)e.focus()}else if(a==="dfNo"){view.dfNew=false;render()}
+  else if(a==="dfRen"&&up){view.dfRen=view.docFolder;render()}else if(a==="dfRenNo"){view.dfRen=null;render()}
+  else if(a==="dfDel"&&up){const f=view.docFolder;if((p.docs||[]).some(d=>(d.group||"Iné")===f)){toast("Zložka nie je prázdna");return}p.docFolders=(p.docFolders||[]).filter(x=>x!==f);view.docFolder=null;save();toast("Zložka odstránená");render()}});
+document.addEventListener("submit",ev=>{const f=ev.target.id;if(!me||(f!=="dfForm"&&f!=="dfRenForm"))return;ev.preventDefault();const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"docs.upload"))return;
+  if(f==="dfForm"){const n=$("#dfName").value.trim();if(!n)return;if(docFolders(p).some(x=>normText(x)===normText(n))){toast("Taká zložka už existuje");return}(p.docFolders=p.docFolders||[]).push(n);view.dfNew=false;view.docFolder=n;save();toast("Zložka vytvorená");render()}
+  else{const old=ev.target.dataset.f,n=$("#dfRenName").value.trim();if(!n||n===old){view.dfRen=null;render();return}if(docFolders(p).some(x=>x!==old&&normText(x)===normText(n))){toast("Taká zložka už existuje");return}
+    p.docFolders=docFolders(p).map(x=>x===old?n:x);(p.docs||[]).forEach(d=>{if((d.group||"Iné")===old)d.group=n});view.docFolder=n;view.dfRen=null;save();toast("Zložka premenovaná");render()}});
+async function docUpload(p,files){const group=view.docFolder||($("#docGroup")?.value||"").trim()||"Iné",note=($("#docNote")?.value||"").trim();
   files=[...files];const big=files.filter(f=>f.size>DOC_MAX);if(big.length){toast(`Súbor ${big[0].name} má viac ako 50 MB`);return}
   if(!files.length){toast("Vyber súbory na nahratie");return}
   p.docs=p.docs||[];let ok=0;
@@ -5017,7 +5040,7 @@ async function docUpload(p,files){const group=($("#docGroup")?.value||"").trim()
     const id=uid("dk"),path=`${docTenant()}/${p.id}/${id}-${safeKey(f.name)}`;
     try{await FILESTORE.put(path,f);p.docs.push({id,name:f.name,size:f.size,type:f.type||"",group,note,path,by:me.id,at:new Date().toISOString()});ok++}
     catch(e){console.error(e);toast(`${f.name} sa nepodarilo nahrať: ${e.message||e}`)}}
-  view.docBusy=null;view.docGroup=group;if(ok){save();toast(ok===1?"Súbor nahraný":`Nahraných ${ok} súborov`)}render()}
+  view.docBusy=null;view.docGroup=group;if(!(p.docFolders||[]).includes(group))(p.docFolders=p.docFolders||[]).push(group);if(ok){save();toast(ok===1?"Súbor nahraný":`Nahraných ${ok} súborov`)}render()}
 async function docOpen(d,download){const w=download?null:window.open("","_blank");
   try{const url=await FILESTORE.url(d.path,d.name,download);
     if(w&&!w.closed){w.location.href=url;return}
@@ -5082,6 +5105,31 @@ function myNotices(){const out=[];visibleProjects().forEach(p=>(p.invoices||[]).
   if(inv.status==="submitted"&&can(p,"inv.approve"))out.push({p,inv,kind:"wait",text:`Súpis prác č. ${inv.no} (${periodLabel(inv)}) čaká na tvoje odsúhlasenie`});
   if(inv.status==="returned"&&can(p,"inv.edit")){const h=(inv.history||[]).slice().reverse().find(x=>x.action==="returned");out.push({p,inv,kind:"ret",text:`Stavebný dozor vrátil súpis č. ${inv.no} na prepracovanie${h&&h.note?`: „${h.note}“`:""}`})}}));return out}
 function noticesHTML(list){return list.map(n=>`<button class="card proj notice n-${n.kind}" data-a="goInv" data-p="${n.p.id}" data-id="${n.inv.id}"><div class="eyebrow">${esc(n.p.name)}</div><div>${esc(n.text)}</div></button>`).join("")}
+/* prečerpané položky: súčet množstiev zo všetkých súpisov nad rozpočtované množstvo */
+function overItems(p){if(!p.budget)return [];const L=invList(p);return p.budget.items.map(i=>{const used=L.reduce((s,x)=>s+(+x.qty[i.id]||0),0),oq=used-i.qty;if(oq<=1e-9)return null;
+  const nos=L.filter(x=>+x.qty[i.id]>0).map(x=>x.no);return {i,used,oq,oe:oq*i.price,pc:i.qty?oq/i.qty*100:null,nos}}).filter(Boolean)}
+function overHTML(p){const R=overItems(p);if(!R.length)return "";const T=R.reduce((s,r)=>s+r.oe,0),ed=can(p,"inv.edit"),qf3=v=>qf(Math.round(v*1000)/1000);
+  return `<div class="card stack overbox"><div class="entry-head"><div><h3>Prečerpané položky <span class="pill s-ret">${R.length}</span></h3><div class="muted" style="font-size:13px">Položky, pri ktorých súpisy prekročili množstvo z rozpočtu. Prečerpanie spolu <b>${eur(T)}</b> bez DPH.</div></div>
+      <button class="btn small primary" data-a="overPdf">PDF prečerpaných položiek</button></div>
+    <div class="tablewrap"><table class="dxt"><thead><tr><th>P. č.</th><th>Položka</th><th>MJ</th><th class="r">Rozpočet</th><th class="r">Čerpané spolu</th><th class="r">Prečerpanie</th><th class="r">Prečerpanie €</th><th class="r">%</th><th>Súpisy</th></tr></thead>
+    <tbody>${R.map(r=>`<tr><td class="num">${esc(r.i.por||"")}</td><td style="white-space:normal;min-width:220px">${r.i.code?`<span class="muted num">${esc(r.i.code)}</span> `:""}${esc(r.i.desc)}</td><td>${esc(r.i.mj||"")}</td>
+      <td class="num r">${qf3(r.i.qty)}</td><td class="num r">${qf3(r.used)}</td><td class="num r bad"><b>+${qf3(r.oq)}</b></td><td class="num r"><b>${eur(r.oe)}</b></td><td class="num r">${r.pc==null?"–":nf1(Math.round(r.pc*10)/10)+" %"}</td><td class="num">${r.nos.map(n=>"č. "+n).join(", ")}</td></tr>`).join("")}</tbody>
+    <tfoot><tr><td colspan="6">Spolu</td><td class="num r">${eur(T)}</td><td colspan="2"></td></tr></tfoot></table></div>
+    <label>Poznámka k prečerpaniu${ed?"":" (upravuje stavbyvedúci)"}<textarea id="overNote" rows="3" ${ed?"":"disabled"} placeholder="napr. zväčšenie hrúbky podkladu na pokyn dozoru zo dňa…">${esc(p.overNote||"")}</textarea></label></div>`}
+function overPDF(p){const R=overItems(p);if(!R.length){toast("Žiadne prečerpané položky");return}const doc=newPdf("landscape");if(!doc)return;
+  pdfFirmHeader(doc,"PREČERPANÉ POLOŽKY ROZPOČTU",plain(`${p.name} · stav k ${d2(todayIso())}`));const T=R.reduce((s,r)=>s+r.oe,0),M=v=>plain(eur(v)),Q=v=>plain(qf(Math.round(v*1000)/1000));
+  doc.autoTable({head:[["P. č.","Kód","Položka","MJ","Rozpočet","Čerpané spolu","Prečerpanie","Prečerpanie €","%","Súpisy"]],body:R.map(r=>[r.i.por||"",r.i.code||"",plain(r.i.desc),r.i.mj||"",Q(r.i.qty),Q(r.used),"+"+Q(r.oq),M(r.oe),r.pc==null?"–":nf1(Math.round(r.pc*10)/10)+" %",r.nos.map(n=>"č. "+n).join(", ")]),
+    foot:[["","","Spolu","","","","",M(T),"",""]],startY:28,margin:{left:10,right:10},theme:"grid",styles:{font:"DVC",fontSize:8.3,cellPadding:1.4,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},
+    headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255},footStyles:{font:"DVC",fontStyle:"bold",fillColor:[253,236,222],textColor:[31,35,40]},showFoot:"lastPage",
+    columnStyles:{0:{cellWidth:12},1:{cellWidth:22},3:{cellWidth:12},4:{halign:"right",cellWidth:20},5:{halign:"right",cellWidth:22},6:{halign:"right",cellWidth:22},7:{halign:"right",cellWidth:26},8:{halign:"right",cellWidth:14},9:{cellWidth:24}}});
+  let y=doc.lastAutoTable.finalY+8;const note=(p.overNote||"").trim();
+  if(note){if(y>170){doc.addPage();y=20}doc.setFont("DVC","bold");doc.setFontSize(10);doc.text("Poznámka k prečerpaniu",10,y);y+=5;doc.setFont("DVC","normal");doc.setFontSize(9.5);
+    doc.splitTextToSize(plain(note),277).forEach(l=>{if(y>195){doc.addPage();y=20}doc.text(l,10,y);y+=4.6})}
+  y+=14+stampGap();if(y>190){doc.addPage();y=40}doc.setFontSize(8.5);pdfStamp(doc,firmStamp(),10,y);doc.line(10,y,80,y);doc.text("Zhotoviteľ – stavbyvedúci",10,y+4);doc.line(207,y,287,y);doc.text("Stavebný dozor",207,y+4);
+  const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(plain(`${p.name} · prečerpané položky`),10,205);doc.text(`Strana ${k} / ${n}`,287,205,{align:"right"});doc.setTextColor(0)}
+  offerFile(diaryFile(p,"precerpanie").replace("Stavebny_dennik_","Precerpane_polozky_")+".pdf",doc.output("arraybuffer"))}
+document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest('[data-a="overPdf"]');if(!b||!me)return;const p=S.projects.find(x=>x.id===view.projectId);if(p)overPDF(p)});
+document.addEventListener("change",ev=>{if(ev.target.id!=="overNote"||!me)return;const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"inv.edit"))return;p.overNote=ev.target.value;save();toast("Poznámka k prečerpaniu uložená")});
 function invoicesHTML(p){
   if(!p.budget)return `<div class="card stack"><h3>Fakturácia</h3><div class="note">Najprv nahraj rozpočet stavby v záložke Rozpočet. Z jeho položiek sa potom čerpá do súpisov prác.</div></div>`;
   if(!p.invoices)p.invoices=[];
@@ -5110,6 +5158,7 @@ function invoicesHTML(p){
         <div><div class="muted"><i class="dot b-open"></i>Rozpracované a na schválenie</div><div class="kv num">${eur(open)}</div><div class="muted num">${po} %</div></div>
         <div><div class="muted"><i class="dot b-rest"></i>Zostatok</div><div class="kv num">${eur(zo)}</div><div class="muted num">z ${eur(B)}</div></div>
       </div>${multiPart(p)?partDrawHTML(p):""}</div>
+    ${overHTML(p)}
     ${form}
     ${cards||`<div class="card muted">Zatiaľ nie je žiadny súpis. Založ prvý a zvoľ obdobie: týždeň, 2 týždne, mesiac alebo vlastné dátumy.</div>`}
   </div>`;
@@ -5322,11 +5371,11 @@ function econHTML(p){const A=econAuto(p),costs=costsOf(p).sort((a,b)=>(b.date||"
   const list=shown.map(c=>`<li><span class="ectag c-${c.cat}">${costCat(c.cat)}</span><div class="docmain"><b>${esc(c.desc||c.supplier||costCat(c.cat))}</b><span class="muted">${d2(c.date)}${c.supplier?` · ${esc(c.supplier)}`:""}${c.docNo?` · ${esc(c.docNo)}`:""}${c.part&&multiPart(p)?` · ${esc((p.budget.parts.find(x=>x.id===c.part)||{}).name||"")}`:""}</span></div>
       <b class="num">${eur(numIn(c.amount))}</b><div class="docbtn">${c.file?`<button class="btn small ghost" data-a="ecOpen" data-id="${c.id}">Doklad</button>`:""}${ed?`<button class="btn small ghost" data-a="ecEdit" data-id="${c.id}">Upraviť</button>`:""}</div></li>`).join("");
   return `<div class="stack">
-    <div class="card stack"><div class="entry-head"><div class="eyebrow">Náklady podľa kategórií</div>${ed&&!D?`<button class="btn small primary" data-a="ecNew">+ Pridať náklad</button>`:""}</div>
+    <div class="card stack"><div class="entry-head"><div class="eyebrow">Náklady podľa kategórií</div></div>
       ${catRows||`<div class="muted">Zatiaľ bez nákladov. Personálne náklady sa počítajú z denníka, doprava z plánovača úloh priradených k tejto stavbe.</div>`}
       ${A.cntH?`<div class="muted" style="font-size:13px">${h(A.cntH)} h je v denníku zapísaných iba počtom pracovníkov, bez sadzby – nie sú v personálnych nákladoch.</div>`:""}</div>
     ${form}
-    <div class="card stack"><div class="entry-head"><div class="eyebrow">Doklady</div><select id="ecFlt" aria-label="Filtrovať kategóriu"><option value="">všetky kategórie</option>${COST_CATS.map(([k,l])=>`<option value="${k}" ${flt===k?"selected":""}>${l}</option>`).join("")}</select></div>
+    <div class="card stack"><div class="entry-head"><div class="eyebrow">Doklady</div><div class="row">${ed&&!D?`<button class="btn small primary" data-a="ecNew">+ Pridať náklad</button>`:""}<select id="ecFlt" aria-label="Filtrovať kategóriu"><option value="">všetky kategórie</option>${COST_CATS.map(([k,l])=>`<option value="${k}" ${flt===k?"selected":""}>${l}</option>`).join("")}</select></div></div>
       ${list?`<ul class="doclist eclist">${list}</ul>`:`<div class="muted">${costs.length?"V tejto kategórii nie sú žiadne doklady.":"Zatiaľ žiadne ručne zadané náklady."}</div>`}
       ${costs.length?`<div class="row"><button class="btn small ghost" data-a="ecXls">Export nákladov do Excelu</button></div>`:""}</div>
     <div class="eckpi"><div class="card"><div class="muted">Rozpočet bez DPH</div><div class="total num">${B?eur(B):"–"}</div></div>
