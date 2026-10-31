@@ -900,13 +900,14 @@ table.jlog th.r,table.jlog td.r{text-align:right}
 @media (max-width:1100px){.ld-mods{grid-template-columns:repeat(2,minmax(0,1fr))}.ld-mcard.base{grid-column:1/-1}}
 @media (max-width:760px){
   .ld-hero.ld-photo{min-height:0;padding:36px 0 20px;gap:28px}
-  .ld-hero.ld-photo{background:var(--l-card)}
-  .ld-photo>.ld-herogrid{order:1}.ld-photo>.ld-in:last-child{order:3;margin-top:-64px;position:relative}
-  .ld-heroimg{order:2;position:relative;inset:auto;z-index:0;display:block;aspect-ratio:4/3;margin:0 max(16px,env(safe-area-inset-left,0px));border-radius:14px;overflow:hidden;-webkit-mask-image:none;mask-image:none}
-  .ld-heroimg img{object-position:62% 50%}
-  .ld-photo::before{display:none}
-  .ld-photo h1,.ld-photo .ld-herotext>p,.ld-photo .ld-small{text-shadow:none}
-  .ld-mods{padding:0 8px}
+  /* mobil: nadpis na oblohe, pod ním fotka bagra, ktorá zhora prechádza do farby oblohy a zdola do pozadia stránky */
+  .ld-hero.ld-photo{--ih:min(108vw,520px);--top:calc(26px + 3 * 1.02 * clamp(34px,10vw,46px) + 18px);--ph:calc(var(--top) + var(--ih) - 70px);
+    padding-top:26px;background:linear-gradient(180deg,#e2eefc 0,#a9ccf2 var(--top),#c2e1fd calc(var(--ph) - var(--ih) * .45),var(--l-card) calc(var(--ph) - var(--ih) * .3)) no-repeat}
+  .ld-heroimg{inset:auto 0 auto 0;top:calc(var(--ph) - var(--ih));height:var(--ih);-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 34%);mask-image:linear-gradient(180deg,transparent 0,#000 34%)}
+  .ld-heroimg img{object-position:76% 100%}
+  .ld-photo::before{inset:auto 0 auto 0;top:calc(var(--ph) - 34%);top:calc(var(--ph) - var(--ih) * .3);height:calc(var(--ih) * .3);background:linear-gradient(180deg,rgba(255,255,255,0),var(--l-card))}
+  .ld-photo h1{min-height:calc(var(--ph) - 26px);margin-bottom:0;font-size:clamp(34px,10vw,46px);line-height:1.02;max-width:none;text-shadow:none}
+  .ld-photo .ld-herotext>p{margin-top:0}
   .ld-mods{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
   .ld-mcard{padding:11px 12px}.ld-mcard b{font-size:16px}.ld-mcard span{font-size:12px}
   .ld-mcard.base{grid-column:1/-1}}
@@ -918,6 +919,8 @@ table.jlog th.r,table.jlog td.r{text-align:right}
 :root[data-theme="dark"] .ld-photo h1{color:#f3f4f5;text-shadow:none}:root[data-theme="dark"] .ld-photo .ld-herotext>p,:root[data-theme="dark"] .ld-photo .ld-small{color:#c9ced4}
 :root[data-theme="dark"] .ld-photo .ld-btn.line{background:rgba(20,22,25,.6);color:#f3f4f5;border-color:rgba(255,255,255,.5)}
 :root[data-theme="dark"] .ld-mcard:not(.base){background:rgba(24,27,31,.84);color:#eceef0;border-color:rgba(255,255,255,.12)}:root[data-theme="dark"] .ld-mcard:not(.base) span{color:#b5bcc4}:root[data-theme="dark"] .ld-mcard:not(.base) b svg{color:#f39a52}
+@media (max-width:760px){:root[data-theme="dark"] .ld-hero.ld-photo{background:linear-gradient(180deg,#141a22 0,#2f4a6b var(--top),#5d84ad calc(var(--ph) - var(--ih) * .45),var(--l-card) calc(var(--ph) - var(--ih) * .3)) no-repeat}:root[data-theme="dark"] .ld-photo::before{background:linear-gradient(180deg,rgba(0,0,0,0),var(--l-card))}}
+@media (max-width:760px) and (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ld-hero.ld-photo{background:linear-gradient(180deg,#141a22 0,#2f4a6b var(--top),#5d84ad calc(var(--ph) - var(--ih) * .45),var(--l-card) calc(var(--ph) - var(--ih) * .3)) no-repeat}:root:not([data-theme="light"]) .ld-photo::before{background:linear-gradient(180deg,rgba(0,0,0,0),var(--l-card))}}
 </style>
 
 <header class="bar"><div class="bar-in" id="bar"></div><div class="subnav" id="subnav"></div></header>
