@@ -2413,14 +2413,14 @@ function payCash(ym,ws,C){const R={payout:0,advance:0,deduct:0,sp:0,zp:{},tax:0,
   R.total=r2(R.payout+R.deduct+R.sp+Object.values(R.zp).reduce((s,x)=>s+x,0)+Math.max(0,R.tax));return R}
 function payCashHTML(ym,ws,C,ed){if(!ws.length)return "";const R=payCash(ym,ws,C);
   const line=(l,when,v,sub)=>`<div class="pkv"><span>${l}${sub?` <small class="muted">${sub}</small>`:""}</span><span class="muted" style="font-size:12px;white-space:nowrap">${when}</span><b>${eur(r2(v))}</b></div>`;
-  return `<div class="card stack cashplan"><div class="entry-head"><b>Peniaze na výplatu za ${esc(ymName(ym))}</b>
+  return `<div class="card stack cashplan"><div class="entry-head"><b>Sumár financií na mzdy za ${esc(ymName(ym))}</b>
       <div class="payday">Výplatný termín <input type="number" id="payDay" aria-label="Výplatný termín – deň" min="1" max="31" value="${R.payDay}" ${ed?"":"disabled"}> . deň nasledujúceho mesiaca</div></div>
     ${line("Čisté mzdy zamestnancom",d2(R.payDate),R.payout,R.advance?`(po odpočítaní záloh ${eur(r2(R.advance))})`:"")}
     ${R.deduct?line("Zrážky zo miezd (oprávneným, napr. exekútor)",d2(R.payDate),R.deduct):""}
     ${line("Sociálna poisťovňa (zamestnanci + zamestnávateľ)",`v lehote výplaty · ${d2(R.payDate)}`,R.sp)}
     ${Object.entries(R.zp).map(([k,v])=>line(`Zdravotné poistenie – ${esc(k)}`,`najneskôr ${d2(R.zpDate)}`,v)).join("")}
     ${line("Daňový úrad – preddavky na daň mínus daňový bonus",`do ${d2(R.taxDate)}`,R.tax,R.tax<0?"(bonus prevyšuje daň – rozdiel sa započíta)":"")}
-    <div class="pkv tot"><span>Spolu treba pripraviť</span><span></span><b>${eur(R.total)}</b></div>
+    <div class="pkv tot"><span>Celkové náklady na mzdy</span><span></span><b>${eur(R.total)}</b></div>
     <span class="hint">Odhad z orientačného výpočtu ${R.n} zamestnancov. Termíny: mzda do výplatného termínu (najneskôr do konca nasledujúceho mesiaca), poistné do Sociálnej poisťovne v lehote na výplatu mzdy, zdravotné v deň výplaty, najneskôr do 8. dňa nasledujúceho mesiaca, preddavok dane do 5 dní od výplaty. Presné sumy a termíny potvrdí účtovníčka.</span></div>`}
 
 /* mzdové údaje v karte zamestnanca */
