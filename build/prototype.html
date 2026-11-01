@@ -974,6 +974,7 @@ table.pft tr:last-child td{border-bottom:0}
 .shell.wide{max-width:1440px}
 table.pft .pill{white-space:normal;line-height:1.3}
 table.pft .num{white-space:normal}
+table.jlog input.tin{min-width:92px}table.jlog input.nin{min-width:64px}table.jlog input[data-lk="from"],table.jlog input[data-lk="to"],table.jlog input[data-lk="mat"]{min-width:130px}table.jlog input[data-lk="note"]{min-width:120px}
 </style>
 
 <header class="bar"><div class="bar-in" id="bar"></div><div class="subnav" id="subnav"></div></header>
@@ -1833,7 +1834,7 @@ function vehMainHTML(m){
       <div class="grid2"><label>Názov *<input id="vmName" value="${esc(m.name)}" required></label><label>Druh<select id="vmCat">${CAT_ORDER.map(k=>`<option value="${k}" ${m.cat===k?"selected":""}>${CATS[k].l}</option>`).join("")}</select></label></div>
       <div class="grid2"><label>Typ / označenie<input id="vmType" value="${esc(m.type)}"></label><label>Sadzba za hodinu €<input id="vmRate" inputmode="decimal" value="${m.rate?String(m.rate).replace(".",","):""}"></label></div>
       <div class="grid2">${rateKmIn("vmRateKm",m.rateKm)}</div>
-      ${C.main?`<div class="grid3"><label>EČV<input id="vmEcv" value="${esc(m.ecv)}" placeholder="RS123AB" style="text-transform:uppercase"></label><label>VIN<input id="vmVin" value="${esc(m.vin)}" maxlength="17" style="text-transform:uppercase"></label><label>Farba<input id="vmColor" value="${esc(m.color)}"></label></div>`
+      ${C.main?`<div class="grid3"><label>EČV<input id="vmEcv" value="${esc(m.ecv)}" placeholder="RS123AB" style="text-transform:uppercase"></label><label>VIN<input id="vmVin" value="${esc(m.vin)}" maxlength="17" style="text-transform:uppercase"></label><label>EČV prívesu<input id="vmTrailer" value="${esc(m.trailer)}" placeholder="RS456YZ" style="text-transform:uppercase"></label><label>Farba<input id="vmColor" value="${esc(m.color)}"></label></div>`
         :`<label>Výrobné alebo inventárne číslo<input id="vmSerial" value="${esc(m.serial)}"></label>`}
       <label>Zodpovedná osoba<select id="vmResp"><option value="">— nikto —</option>${wo}</select></label>
       <label>Poznámka<input id="vmNote" value="${esc(m.note)}"></label>
@@ -1976,7 +1977,7 @@ document.addEventListener("submit",ev=>{const f=ev.target.id;if(!me)return;
   if(!m)return;
   if(f==="vehMainForm"){ev.preventDefault();if(!v("vmName"))return;if(moneyVal("vmRate")===null||moneyVal("vmRateKm")===null){toast("Sadzbu zadaj ako číslo, napr. 42 alebo 0,90");return}
     Object.assign(m,{name:v("vmName"),cat:v("vmCat"),type:v("vmType"),rate:rateVal("vmRate"),rateKm:rateVal("vmRateKm"),resp:v("vmResp"),note:v("vmNote")});
-    if($("#vmEcv"))Object.assign(m,{ecv:v("vmEcv").toUpperCase().replace(/\s/g,""),vin:v("vmVin").toUpperCase().replace(/\s/g,""),color:v("vmColor")});
+    if($("#vmEcv"))Object.assign(m,{ecv:v("vmEcv").toUpperCase().replace(/\s/g,""),vin:v("vmVin").toUpperCase().replace(/\s/g,""),color:v("vmColor"),trailer:v("vmTrailer").toUpperCase().replace(/\s/g,"")});
     if($("#vmSerial"))m.serial=v("vmSerial");
     if(m.vin&&m.vin.length!==17){toast("VIN má mať 17 znakov. Skontroluj ho.")}done("Hlavné údaje uložené",{vehEdit:false})}
   else if(f==="oevForm"){ev.preventDefault();const O={};OEV_FIELDS.forEach(([k])=>{const x=v("oev_"+k);if(x)O[k]=x});m.oev=O;
@@ -3329,6 +3330,7 @@ function jobForm(){
       <label>Stavba<select data-jf="projectId"><option value="">— iné miesto —</option>${S.projects.map(p=>`<option value="${p.id}" ${D.projectId===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></label></div>
       ${!D.projectId&&projGuess(jobText(D))?(()=>{const g=projGuess(jobText(D));return `<div class="note">Názov sa podobá na vlastnú stavbu <b>${esc(g.p.name)}</b>. <button type="button" class="btn small" data-a="jfUseProj" data-p="${g.p.id}">Použiť túto stavbu</button></div>`})():""}`}
     <datalist id="jfClients">${clients.map(c=>`<option value="${esc(c)}">`).join("")}</datalist>
+    <div class="grid2"><label>IČO objednávateľa<input data-jf="clientIco" value="${esc(D.clientIco||"")}" inputmode="numeric" placeholder="do knihy jázd"></label><label>IČ DPH objednávateľa<input data-jf="clientIcdph" value="${esc(D.clientIcdph||"")}" placeholder="napr. SK2020123456"></label></div>
     <div class="grid2"><label>Miesto<input data-jf="place" value="${esc(D.place)}" placeholder="napr. Tornaľa, rekonštrukcia chodníkov"></label><label>Popis práce<input data-jf="desc" value="${esc(D.desc)}" placeholder="napr. odvoz sutiny, búracie práce"></label></div>
     <fieldset class="modes"><legend>Stroje a vozidlá</legend>
       ${D.machines.map((x,i)=>{const m=machine(x.machineId),need=m&&NEEDS_DRIVER.includes(m.cat);return `<div class="jfm"><label>Stroj / vozidlo<select data-jm="${i}" data-k="machineId">${ms.map(mm=>`<option value="${mm.id}" ${mm.id===x.machineId?"selected":""}>${esc(mm.name)}${mm.ecv?" · "+esc(mm.ecv):""}</option>`).join("")}</select></label>
@@ -3347,6 +3349,10 @@ function jobForm(){
     ${conflictNote(c,true)}
     ${view.jobWarn&&c.length?`<div class="row cconfirm"><b>Naozaj chceš úlohu ${j0?"uložiť":"naplánovať"} aj s ${c.length===1?"týmto prekryvom":"týmito prekryvmi"}?</b><button type="button" class="btn primary small" data-a="jobForce">Áno, ${j0?"uložiť":"naplánovať"} aj tak</button><button type="button" class="btn ghost small" data-a="jobWarnNo">Ešte upravím</button></div>`
       :`<div class="row"><button class="btn primary small" type="submit">${j0?"Uložiť":"Naplánovať"}</button><button type="button" class="btn ghost small" data-a="jobNo">Zrušiť</button></div>`}</form>`}
+/* IČO a IČ DPH objednávateľa sa doplnia z predošlej úlohy s rovnakým objednávateľom */
+document.addEventListener("change",ev=>{const t=ev.target;if(!t.closest||!t.closest("#jobForm")||t.dataset.jf!=="client")return;const nm=normText(t.value);if(!nm)return;
+  const prev=(S.jobs||[]).slice().reverse().find(j=>normText(j.client)===nm&&(j.clientIco||j.clientIcdph));if(!prev)return;
+  const f=k=>document.querySelector(`#jobForm [data-jf="${k}"]`);if(f("clientIco")&&!f("clientIco").value)f("clientIco").value=prev.clientIco||"";if(f("clientIcdph")&&!f("clientIcdph").value)f("clientIcdph").value=prev.clientIcdph||""});
 function readJobForm(){const D=view.jobDraft;if(!D||!$("#jobForm"))return;document.querySelectorAll("#jobForm [data-jf]").forEach(el=>D[el.dataset.jf]=el.value);
   document.querySelectorAll("#jobForm [data-jm]").forEach(el=>{const x=D.machines[+el.dataset.jm];if(x&&!el.disabled)x[el.dataset.k]=el.value});
   const chk=[...document.querySelectorAll("#jobForm [data-jw]")];if(chk.length||!D.workers.length)D.workers=chk.filter(x=>x.checked).map(x=>x.dataset.jw);
@@ -3382,6 +3388,8 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
   else if(a==="matchNo"){const j=J(b.dataset.id);if(j){j.matchNo=true;save();render()}}
   else if(a==="matchAll"){const M=jobMatchSuggest();M.forEach(({j,g})=>{j.projectId=g.p.id;j.own=true});save();toast(`Priradených ${M.length} úloh k stavbám`);render()}});
 document.addEventListener("change",ev=>{const t=ev.target;if(!me||!t.closest||!t.closest("#jobForm"))return;readJobForm();view.jobWarn=false;
+  /* textové polia nemenia vzhľad formulára – bez prekreslenia, aby kliknutie do ďalšieho poľa nezmizlo */
+  if(["client","clientIco","clientIcdph","place","desc","note"].includes(t.dataset.jf))return;
   if(t.dataset.jm!==undefined&&t.dataset.k==="machineId"){const x=view.jobDraft.machines[+t.dataset.jm],m=machine(t.value);if(x&&m&&m.resp&&!x.driverId)x.driverId=m.resp}
   if(t.dataset.jf==="teamId"){const tm=teamOf(t.value);if(tm)teamApply(view.jobDraft,tm)}
   if(t.dataset.jf==="projectId"){const p=S.projects.find(x=>x.id===t.value);if(p){view.jobDraft.client=view.jobDraft.client||p.client;view.jobDraft.place=[(p.locality||"").split(",")[0],p.name].filter(Boolean).join(", ")}}
@@ -3411,50 +3419,115 @@ function jobLogHTML(j,ed){
     const tk=(rows||[]).reduce((s,r)=>s+(+String(r.km).replace(",",".")||0),0),th=(rows||[]).reduce((s,r)=>s+(+String(r.h).replace(",",".")||0),0);
     if(!rows&&!editing)return ed?`<div class="logbox"><div class="entry-head"><div><b>Kniha jázd · ${esc(m.name)}</b><div class="muted" style="font-size:12px">${m.cat==="machine"?"strojník":"vodič"}: ${esc(dr?fullName(dr):"nezadaný")}</div></div><button class="btn small primary" data-a="logGen" data-j="${j.id}" data-m="${m.id}">Generovať knihu jázd</button></div></div>`:"";
     if(editing){const R=view.logDraft;return `<form class="logbox stack" id="jlogForm" data-j="${j.id}" data-m="${m.id}"><b>Kniha jázd · ${esc(m.name)} · ${esc(fmtDate(j.date))}</b>
-      <div class="tablewrap"><table class="jlog"><thead><tr><th>#</th><th>Odkiaľ</th><th>Kam</th><th class="r">Km</th><th class="r">Hodiny</th><th>Poznámka</th><th></th></tr></thead><tbody>
+      <div class="tablewrap"><table class="jlog"><thead><tr><th>#</th><th>Odkiaľ</th><th>Kam</th><th>Hodina od</th><th>Hodina do</th><th class="r">Tachometer od</th><th class="r">Tachometer do</th><th class="r">Km</th><th class="r">Hodiny</th><th>Materiál</th><th class="r">Množstvo t</th><th>Poznámka</th><th></th></tr></thead><tbody>
       ${R.map((r,i)=>`<tr><td class="num">${i+1}</td><td><input data-lr="${i}" data-lk="from" value="${esc(r.from)}" placeholder="napr. Jesenské"></td><td><input data-lr="${i}" data-lk="to" value="${esc(r.to)}" placeholder="napr. Tornaľa"></td>
+        <td><input class="tin" type="time" data-lr="${i}" data-lk="t1" value="${esc(r.t1||"")}"></td><td><input class="tin" type="time" data-lr="${i}" data-lk="t2" value="${esc(r.t2||"")}"></td>
+        <td><input class="nin" data-lr="${i}" data-lk="o1" inputmode="numeric" value="${esc(r.o1||"")}"></td><td><input class="nin" data-lr="${i}" data-lk="o2" inputmode="numeric" value="${esc(r.o2||"")}"></td>
         <td><input class="nin" data-lr="${i}" data-lk="km" inputmode="decimal" value="${esc(r.km)}"></td><td><input class="nin" data-lr="${i}" data-lk="h" inputmode="decimal" value="${esc(r.h)}"></td>
+        <td><input data-lr="${i}" data-lk="mat" value="${esc(r.mat||"")}" list="kjMatList" placeholder="napr. štrk 0-32"></td><td><input class="nin" data-lr="${i}" data-lk="qty" inputmode="decimal" value="${esc(r.qty||"")}"></td>
         <td><input data-lr="${i}" data-lk="note" value="${esc(r.note)}"></td><td>${R.length>1?`<button type="button" class="x" data-a="logRowDel" data-i="${i}" aria-label="Zmazať riadok">×</button>`:""}</td></tr>`).join("")}</tbody></table></div>
-      <div class="row"><button type="button" class="btn small" data-a="logRowAdd">+ Pridať riadok</button><span class="muted" style="font-size:12px">Nový riadok začne tam, kde predošlý skončil, a predvyplní cestu späť. Súčet hodín a km sa použije do ceny úlohy podľa cenníka.</span></div>
+      <div class="row"><button type="button" class="btn small" data-a="logRowAdd">+ Pridať riadok</button><span class="muted" style="font-size:12px">Nový riadok začne tam, kde predošlý skončil (miesto, hodina aj stav tachometra), a predvyplní cestu späť. Km a hodiny sa dopočítajú z tachometra a hodín. Súčet hodín a km sa použije do ceny úlohy podľa cenníka.</span></div>
+      <datalist id="kjMatList">${[...new Set([...(S.jobs||[]).flatMap(x=>Object.values(x.log||{}).flat().map(r=>r.mat)),...(S.weighs||[]).map(w=>w.material)].filter(Boolean))].slice(0,60).map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
       <div class="row"><button class="btn primary small" type="submit">Uložiť knihu jázd</button><button type="button" class="btn ghost small" data-a="logEditNo">Zrušiť</button></div></form>`}
     return `<div class="logbox stack"><div class="entry-head"><div><b>Kniha jázd · ${esc(m.name)}</b><div class="muted" style="font-size:12px">${m.cat==="machine"?"strojník":"vodič"}: ${esc(dr?fullName(dr):"nezadaný")}</div></div>
         <div class="row">${ed?`<button class="btn small" data-a="logEdit" data-j="${j.id}" data-m="${m.id}">Upraviť</button>`:""}<button class="btn small" data-a="logPdf" data-j="${j.id}" data-m="${m.id}">PDF</button></div></div>
       <div class="tablewrap"><table class="jlog view"><thead><tr><th>#</th><th>Odkiaľ</th><th>Kam</th><th class="r">Km</th><th class="r">Hodiny</th><th>Poznámka</th></tr></thead><tbody>
-      ${rows.map((r,i)=>`<tr><td class="num">${i+1}</td><td>${esc(r.from)}</td><td>${esc(r.to)}</td><td class="num r">${r.km!==""?nf1(+String(r.km).replace(",",".")):""}</td><td class="num r">${r.h!==""?nf1(+String(r.h).replace(",",".")):""}</td><td>${esc(r.note)}</td></tr>`).join("")}</tbody>
+      ${rows.map((r,i)=>`<tr><td class="num">${i+1}</td><td>${esc(r.from)}${r.t1||r.t2?`<div class="muted" style="font-size:12px">${esc(r.t1||"")} – ${esc(r.t2||"")}</div>`:""}</td><td>${esc(r.to)}${r.mat?`<div class="muted" style="font-size:12px">${esc(r.mat)}${r.qty?` · ${esc(r.qty)} t`:""}</div>`:""}</td><td class="num r">${r.km!==""?nf1(+String(r.km).replace(",",".")):""}</td><td class="num r">${r.h!==""?nf1(+String(r.h).replace(",",".")):""}</td><td>${esc(r.note)}</td></tr>`).join("")}</tbody>
       <tfoot><tr><td colspan="3">Spolu ${rows.length} ${pl(rows.length,"úsek","úseky","úsekov")}</td><td class="num r">${nf1(tk)} km</td><td class="num r">${nf1(th)} h</td><td></td></tr></tfoot></table></div></div>`}).join("")}</div>`}
+const kjNum=v=>+String(v??"").replace(/\s/g,"").replace(",",".")||0;
+const kjMin=t=>{const m=/^(\d{1,2}):(\d{2})$/.exec(t||"");return m?+m[1]*60+ +m[2]:null};
+document.addEventListener("input",ev=>{const t=ev.target;if(!t.closest||!t.closest("#jlogForm")||!["t1","t2","o1","o2"].includes(t.dataset.lk))return;const i=t.dataset.lr,q=k=>document.querySelector(`#jlogForm [data-lr="${i}"][data-lk="${k}"]`);
+  if(t.dataset.lk==="o1"||t.dataset.lk==="o2"){const a=q("o1").value,b=q("o2").value;if(a!==""&&b!==""&&kjNum(b)>=kjNum(a))q("km").value=String(Math.round((kjNum(b)-kjNum(a))*10)/10).replace(".",",")}
+  else{const a=kjMin(q("t1").value),b=kjMin(q("t2").value);if(a!==null&&b!==null){let d=b-a;if(d<0)d+=1440;q("h").value=String(Math.round(d/6)/10).replace(".",",")}}});
 function readLogForm(){const R=view.logDraft;if(!R)return;document.querySelectorAll("#jlogForm [data-lr]").forEach(el=>{const r=R[+el.dataset.lr];if(r)r[el.dataset.lk]=el.value})}
 function logRowsFor(m,from,to){const out=[];(S.jobs||[]).filter(j=>j.date>=from&&j.date<=to).sort((a,b)=>(a.date+a.from).localeCompare(b.date+b.from)).forEach(j=>{
   const rows=(j.log||{})[m.id];if(!rows)return;const x=(j.machines||[]).find(y=>y.machineId===m.id),dr=worker(x&&x.driverId);rows.forEach(r=>out.push({j,r,dr}))});return out}
+/* Kniha jázd: tlačivo A5 na šírku (podľa vzoru), na A4 hore originál a dole kópia.
+   Jeden list = jedno vozidlo, jeden deň a jeden odberateľ (úloha); viac ako 11 jázd pokračuje na ďalšom liste. */
+const KJ_ROWS=11;
+function kjSheet(doc,d,y0,label){const F=S.firm||{},X=[9.3,30.7,58.5,85.9,102.5,118.7,135.1,151.5,176.9,201],L=X[0],R=X[9],Y=v=>y0+v;
+  const thick=()=>doc.setLineWidth(0.55),thin=()=>doc.setLineWidth(0.2),solid=()=>doc.setLineDashPattern&&doc.setLineDashPattern([],0),dots=()=>doc.setLineDashPattern&&doc.setLineDashPattern([0.35,0.55],0);
+  const T=(t,x,y,o)=>{if(t!==undefined&&t!==null&&t!=="")doc.text(String(t),x,Y(y),o||{})},fit=(t,w)=>{t=String(t||"");if(!t)return "";let x=t;while(x.length>1&&doc.getTextWidth(x)>w)x=x.slice(0,-1);return x===t?t:x.slice(0,-1)+"…"};
+  doc.setDrawColor(0);doc.setTextColor(0);
+  // tenký rámik listu
+  thin();solid();doc.rect(5.2,Y(8.5),200.2,132);
+  // hlavička
+  thick();doc.rect(L,Y(12.5),R-L,123.5);
+  doc.line(X[2],Y(12.5),X[2],Y(30.8));doc.line(X[7],Y(12.5),X[7],Y(30.8));doc.line(L,Y(30.8),R,Y(30.8));
+  doc.setFont("DVC","bold");doc.setFontSize(9);T(fit(F.name||S.company,X[2]-L-2),L+1,16);
+  doc.setFont("DVC","normal");doc.setFontSize(8.5);T(fit(F.street,X[2]-L-2),L+1,20.3);T(fit([F.zip,F.city].filter(Boolean).join(" "),X[2]-L-2),L+1,24.6);T(F.ico?`IČO: ${F.ico}`:"",L+1,28.9);
+  doc.setFont("DVC","bold");doc.setFontSize(16);T("KNIHA JÁZD",(X[2]+X[7])/2,24,{align:"center"});
+  doc.setFont("DVC","normal");doc.setFontSize(8.5);const vx=X[7]+1;
+  T("Typ vozidla:",vx,16);T("EČV:",vx,24.6);T("EČV príves:",vx,28.9);
+  doc.setFont("DVC","bold");T(fit(d.type,R-vx-2),vx,20.3);T(d.ecv,vx+8,24.6);T(d.trailer,vx+18,28.9);doc.setFont("DVC","normal");
+  // vodič, poznámka, odberateľ
+  thin();doc.line(L,Y(35.5),X[3],Y(35.5));thick();doc.line(X[3],Y(30.8),X[3],Y(49));doc.line(L,Y(49),R,Y(49));
+  T("Vodič:",L+1,34.3);doc.setFont("DVC","bold");T(fit(d.driver,X[3]-L-14),L+12,34.3);doc.setFont("DVC","normal");
+  T("Poznámka:",L+1,39);if(d.note){doc.setFontSize(8);doc.text(doc.splitTextToSize(d.note,X[3]-L-3).slice(0,2),L+1,Y(42.8));doc.setFontSize(8.5)}
+  doc.setFont("DVC","bold");doc.setFontSize(8);T("Odberateľ:",X[3]+1,34.3);doc.setFontSize(8.5);T(fit(d.client,R-X[3]-3),X[3]+1,39.2);doc.setFont("DVC","normal");
+  if(d.clientAddr){doc.setFontSize(8);T(fit(d.clientAddr,R-X[3]-3),X[3]+1,43);doc.setFontSize(8.5)}
+  doc.setFont("DVC","bold");doc.setFontSize(8);T("IČO:",X[3]+1,47.8);T("IČ DPH:",136,47.8);doc.setFont("DVC","normal");doc.setFontSize(8.5);T(d.clientIco,X[3]+9,47.8);T(d.clientIcdph,149,47.8);
+  // hlavička tabuľky
+  thin();[1,3,7].forEach(k=>doc.line(X[k],Y(49),X[k],Y(58)));[2,4,5,6,8].forEach(k=>doc.line(X[k],Y(53.5),X[k],Y(58)));
+  thick();doc.line(X[3],Y(49),X[3],Y(58));thin();doc.line(X[1],Y(53.5),X[7],Y(53.5));
+  doc.setFontSize(8.5);T("Dátum",(L+X[1])/2,55,{align:"center"});T("Cieľ cesty",(X[1]+X[3])/2,52.3,{align:"center"});T("Hodina",(X[3]+X[5])/2,52.3,{align:"center"});
+  T("Kilometre",(X[5]+X[7])/2,52.3,{align:"center"});T("Materiál (náklad)",(X[7]+R)/2,52.3,{align:"center"});
+  [["odkiaľ",1],["kam",2],["začiatok",3],["koniec",4],["začiatok",5],["koniec",6],["názov",7],["množstvo",8]].forEach(([t,k])=>T(t,(X[k]+X[k+1])/2,56.9,{align:"center"}));
+  // dvojitá čiara a riadky
+  thin();doc.line(L,Y(58.1),R,Y(58.1));doc.line(L,Y(58.8),R,Y(58.8));
+  const rh=(111-58.8)/KJ_ROWS;
+  dots();for(let r=1;r<KJ_ROWS;r++)doc.line(L,Y(58.8+r*rh),R,Y(58.8+r*rh));for(let k=1;k<9;k++)doc.line(X[k],Y(58.8),X[k],Y(111));solid();
+  thick();doc.line(X[3],Y(58),X[3],Y(111));doc.line(X[7],Y(49),X[7],Y(111));thin();
+  doc.setFontSize(8);(d.rows||[]).forEach((r,i)=>{const y=58.8+i*rh+rh*0.72,c=(k,t,al)=>{if(t===undefined||t==="")return;const w=X[k+1]-X[k]-2;al==="r"?T(fit(t,w),X[k+1]-1,y,{align:"right"}):al==="c"?T(fit(t,w),(X[k]+X[k+1])/2,y,{align:"center"}):T(fit(t,w),X[k]+1,y)};
+    c(0,r.date,"c");c(1,r.from);c(2,r.to);c(3,r.t1,"c");c(4,r.t2,"c");c(5,r.o1,"r");c(6,r.o2,"r");c(7,r.mat);c(8,r.qty,"r")});
+  // súčty
+  doc.line(L,Y(111),R,Y(111));doc.line(L,Y(111.7),R,Y(111.7));thick();doc.line(L,Y(116.3),R,Y(116.3));
+  doc.setFontSize(8.5);T("Súčet km:",L+1,115.1);T("Súčet hodín:",67,115.1);T("Súčet (t):",165,115.1);
+  doc.setFont("DVC","bold");T(d.sumKm,L+17,115.1);T(d.sumH,87,115.1);T(d.sumT,R-1.5,115.1,{align:"right"});doc.setFont("DVC","normal");
+  // podpisy a logo
+  doc.line(X[4],Y(116.3),X[4],Y(136));T("Podpis odberateľa:",L+1,119.8);doc.setFont("DVC","bold");T("Podpis vodiča:",X[4]+1,119.8);doc.setFont("DVC","normal");
+  if(F.logo&&F.logo.w){const bw=30,bh=13,k=Math.min(bw/F.logo.w,bh/F.logo.h),w=F.logo.w*k,h=F.logo.h*k;try{doc.addImage(F.logo.data,"PNG",R-2-w,Y(134.5)-h,w,h)}catch(e){}}
+  doc.setFontSize(7.5);doc.setFont("DVC","bold");T(label,L,139.4);doc.setFont("DVC","normal");T("Vytvorené pre: Stavebná firma.eu",R,139.4,{align:"right"})}
+function kjPage(doc,d){kjSheet(doc,d,0,"ORIGINÁL");kjSheet(doc,d,148.5,"KÓPIA");
+  doc.setDrawColor(150);doc.setLineWidth(0.1);doc.setLineDashPattern&&doc.setLineDashPattern([2,2],0);doc.line(4,148.5,206,148.5);doc.setLineDashPattern&&doc.setLineDashPattern([],0);
+  doc.setFontSize(6.5);doc.setTextColor(150);doc.text("- - - tu odstrihnúť - - -",105,147.3,{align:"center"});doc.setTextColor(0);doc.setDrawColor(0)}
+/* údaje listu z úlohy Dopravy a riadkov knihy jázd */
+function kjData(m,j,rows,dr){const n1=v=>v===""||v==null?"":nf1(kjNum(v)),nt=v=>v===""||v==null?"":String(v).replace(".",","),od=v=>v===""||v==null?"":String(Math.round(kjNum(v))).replace(/\B(?=(\d{3})+(?!\d))/g," ");
+  const sk=rows.reduce((s,r)=>s+kjNum(r.km),0),sh=rows.reduce((s,r)=>s+kjNum(r.h),0),st=rows.reduce((s,r)=>s+kjNum(r.qty),0);
+  return {type:m.type||(CATS[m.cat]||{}).l||"",ecv:m.ecv||"",trailer:m.trailer||"",driver:dr?fullName(dr):"",
+    note:[j&&j.desc,j&&j.note,...rows.map(r=>r.note)].filter(Boolean).join(" · "),client:j?j.client||"":"",clientAddr:j?j.place||"":"",clientIco:j&&j.clientIco||"",clientIcdph:j&&j.clientIcdph||"",
+    rows:rows.map(r=>({date:j?plain(d2(j.date)):"",from:r.from||"",to:r.to||"",t1:r.t1||"",t2:r.t2||"",o1:od(r.o1),o2:od(r.o2),mat:r.mat||"",qty:nt(r.qty)})),
+    sumKm:rows.length&&sk?nf1(sk):"",sumH:rows.length&&sh?nf1(sh):"",sumT:rows.length&&st?nf1(st):""}}
 function logPDF(m,from,to){const rows=logRowsFor(m,from,to);if(!rows.length){toast("V zvolenom období nie sú pre toto vozidlo zapísané žiadne jazdy");return}
-  const doc=newPdf("landscape");if(!doc)return;
-  pdfFirmHeader(doc,"KNIHA JÁZD",`${m.name}${m.ecv?` · EČV ${m.ecv}`:""}${m.vin?` · VIN ${m.vin}`:""}`);
-  doc.setFontSize(9);doc.text(`Obdobie: ${plain(d2(from))} – ${plain(d2(to))}`,14,26);
-  const num=v=>v===""||v==null?"":nf1(+String(v).replace(",","."));
-  const body=rows.map(({j,r,dr},i)=>[String(i+1),plain(d2(j.date)),r.from||"",r.to||"",[j.client,j.desc].filter(Boolean).join(" – "),dr?fullName(dr):"",num(r.km),num(r.h),r.note||""]);
-  const tk=rows.reduce((s,{r})=>s+(+String(r.km).replace(",",".")||0),0),th=rows.reduce((s,{r})=>s+(+String(r.h).replace(",",".")||0),0);
-  doc.autoTable({head:[["#","Dátum","Odkiaľ","Kam","Účel jazdy / objednávateľ",m.cat==="machine"?"Strojník":"Vodič","Km","Hodiny","Poznámka"]],body,foot:[["","","","","Spolu","",nf1(tk),nf1(th),""]],startY:30,margin:{left:10,right:10,bottom:16},theme:"grid",
-    styles:{font:"DVC",fontSize:8.5,cellPadding:1.3,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255},
-    footStyles:{font:"DVC",fontStyle:"bold",fillColor:[253,236,222],textColor:[31,35,40]},showFoot:"lastPage",showHead:"everyPage",
-    columnStyles:{0:{cellWidth:8},1:{cellWidth:20},2:{cellWidth:36},3:{cellWidth:36},5:{cellWidth:34},6:{cellWidth:16,halign:"right"},7:{cellWidth:16,halign:"right"},8:{cellWidth:44}}});
-  let y=doc.lastAutoTable.finalY+16+stampGap();if(y>190){doc.addPage();y=40}doc.setFontSize(8.5);pdfStamp(doc,firmStamp(),217,y);doc.line(10,y,80,y);doc.text("Podpis vodiča",10,y+4);doc.line(217,y,287,y);doc.text("Skontroloval, dátum",217,y+4);
-  const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(`Kniha jázd · ${m.name}`,10,205);doc.text(`Strana ${k} / ${n}`,287,205,{align:"right"});doc.setTextColor(0)}
-  offerFile(`Kniha_jazd_${m.ecv||m.name}_${from}_${to}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_")+".pdf",doc.output("arraybuffer"))}
+  const doc=newPdf("portrait");if(!doc)return;
+  const byJob=[];rows.forEach(x=>{let g=byJob.find(b=>b.j===x.j);if(!g)byJob.push(g={j:x.j,dr:x.dr,rows:[]});g.rows.push(x.r)});
+  let first=true;byJob.forEach(g=>{for(let i=0;i<g.rows.length;i+=KJ_ROWS){const part=g.rows.slice(i,i+KJ_ROWS),last=i+KJ_ROWS>=g.rows.length;
+    const d=kjData(m,g.j,part,g.dr);if(!last){d.sumKm=d.sumH=d.sumT="";d.note=(d.note?d.note+" · ":"")+"pokračuje na ďalšom liste"}else if(i){const a=kjData(m,g.j,g.rows,g.dr);d.sumKm=a.sumKm;d.sumH=a.sumH;d.sumT=a.sumT}
+    if(!first)doc.addPage();first=false;kjPage(doc,d)}});
+  offerFile(`Kniha_jazd_${m.ecv||m.name}_${from}${to!==from?"_"+to:""}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_")+".pdf",doc.output("arraybuffer"))}
+/* prázdne tlačivo pre vozidlo (na ručné vypĺňanie) */
+function kjBlankPDF(m){const doc=newPdf("portrait");if(!doc)return;kjPage(doc,{...kjData(m,null,[],null),note:""});
+  offerFile(`Kniha_jazd_prazdna_${m.ecv||m.name}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_")+".pdf",doc.output("arraybuffer"))}
 function logExportHTML(){const vs=(S.machines||[]).filter(x=>NEEDS_DRIVER.includes(x.cat));if(!vs.length)return "";const ym=todayIso().slice(0,7);
   return `<form class="card stack" id="logExpForm"><b>Kniha jázd – export za obdobie</b><div class="grid3"><label>Vozidlo / stroj<select id="lxM">${vs.map(v=>`<option value="${v.id}">${esc(v.name)}${v.ecv?" · "+esc(v.ecv):""}</option>`).join("")}</select></label>
     <label>Od<input type="date" id="lxFrom" value="${view.lxFrom||ym+"-01"}"></label><label>Do<input type="date" id="lxTo" value="${view.lxTo||monthDays(ym).at(-1)}"></label></div>
-    <div><button class="btn small primary" type="submit">Stiahnuť knihu jázd PDF</button></div></form>`}
+    <div class="row"><button class="btn small primary" type="submit">Stiahnuť knihu jázd PDF</button><button type="button" class="btn small" data-a="kjBlank">Prázdne tlačivo na tlač</button></div>
+    <div class="muted" style="font-size:12px">Tlačivo A5 podľa vzoru – na jednej A4 je hore originál a dole kópia. Každý deň a odberateľ je na samostatnom liste.</div></form>`}
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;const J=id=>(S.jobs||[]).find(x=>x.id===id);
   if(a==="logPdf"){const j=J(b.dataset.j),m=machine(b.dataset.m);if(j&&m)logPDF(m,j.date,j.date);return}
+  if(a==="kjBlank"){const m=machine(($("#lxM")||{}).value);if(m)kjBlankPDF(m);return}
   if(!canEdit("doprava"))return;
-  if(a==="logGen"){const j=J(b.dataset.j),m=machine(b.dataset.m);view.logEditFor=j.id+"|"+m.id;view.logDraft=[{from:baseCity(),to:j.place||"",km:"",h:"",note:""}];render()}
+  if(a==="logGen"){const j=J(b.dataset.j),m=machine(b.dataset.m);view.logEditFor=j.id+"|"+m.id;view.logDraft=[{from:baseCity(),to:j.place||"",t1:j.from||"",t2:"",o1:"",o2:"",km:"",h:"",mat:"",qty:"",note:""}];render()}
   else if(a==="logEdit"){const j=J(b.dataset.j);view.logEditFor=j.id+"|"+b.dataset.m;view.logDraft=JSON.parse(JSON.stringify((j.log||{})[b.dataset.m]||[]));render()}
   else if(a==="logEditNo"){view.logEditFor=null;view.logDraft=null;render()}
-  else if(a==="logRowAdd"){readLogForm();const R=view.logDraft,p=R[R.length-1]||{};R.push({from:p.to||baseCity(),to:p.from||"",km:p.km||"",h:"",note:""});render();const ins=document.querySelectorAll('#jlogForm [data-lk="to"]');if(ins.length&&ins[ins.length-1].focus)ins[ins.length-1].focus()}
+  else if(a==="logRowAdd"){readLogForm();const R=view.logDraft,p=R[R.length-1]||{};R.push({from:p.to||baseCity(),to:p.from||"",t1:p.t2||"",t2:"",o1:p.o2||"",o2:"",km:p.km||"",h:"",mat:"",qty:"",note:""});render();const ins=document.querySelectorAll('#jlogForm [data-lk="to"]');if(ins.length&&ins[ins.length-1].focus)ins[ins.length-1].focus()}
   else if(a==="logRowDel"){readLogForm();view.logDraft.splice(+b.dataset.i,1);render()}});
 document.addEventListener("change",ev=>{const t=ev.target;if(t.id==="lxFrom")view.lxFrom=t.value;else if(t.id==="lxTo")view.lxTo=t.value});
 document.addEventListener("submit",ev=>{const f=ev.target.id;if(!me)return;
-  if(f==="jlogForm"){ev.preventDefault();if(!canEdit("doprava"))return;readLogForm();const R=view.logDraft.filter(r=>r.from||r.to||r.km||r.h||r.note);
-    const bad=R.find(r=>(r.km&&isNaN(+String(r.km).replace(",",".")))||(r.h&&isNaN(+String(r.h).replace(",","."))));if(bad){toast("Km a hodiny zadaj ako čísla, napr. 42 alebo 1,5");return}
+  if(f==="jlogForm"){ev.preventDefault();if(!canEdit("doprava"))return;readLogForm();const R=view.logDraft.filter(r=>r.from||r.to||r.km||r.h||r.note||r.mat||r.qty||r.o1||r.o2);
+    const isN=v=>!v||!isNaN(+String(v).replace(/\s/g,"").replace(",","."));
+    const bad=R.find(r=>!isN(r.km)||!isN(r.h)||!isN(r.o1)||!isN(r.o2)||!isN(r.qty));if(bad){toast("Km, hodiny, tachometer a množstvo zadaj ako čísla, napr. 42 alebo 1,5");return}
+    const back=R.find(r=>r.o1&&r.o2&&kjNum(r.o2)<kjNum(r.o1));if(back){toast("Stav tachometra na konci je menší ako na začiatku – skontroluj riadok "+(R.indexOf(back)+1));return}
     const j=(S.jobs||[]).find(x=>x.id===ev.target.dataset.j);(j.log=j.log||{})[ev.target.dataset.m]=R;view.logEditFor=null;view.logDraft=null;save();toast("Kniha jázd uložená");render()}
   else if(f==="logExpForm"){ev.preventDefault();const m=machine($("#lxM").value),fr=$("#lxFrom").value,to=$("#lxTo").value;if(!fr||!to||to<fr){toast("Skontroluj obdobie");return}logPDF(m,fr,to)}});
 
