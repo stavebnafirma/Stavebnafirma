@@ -951,6 +951,7 @@ table.jlog th.r,table.jlog td.r{text-align:right}
 .ld-tiers>div{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed var(--l-line)}
 .ld-tiers>div b{white-space:nowrap}.ld-tiers small{color:var(--l-mut);font-size:12px;margin-top:2px}
 .ld-od{font-size:14px;color:var(--l-mut);font-weight:600}
+.mcusage{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 </style>
 
 <header class="bar"><div class="bar-in" id="bar"></div><div class="subnav" id="subnav"></div></header>
@@ -4161,8 +4162,8 @@ function SEED_RENT(){const it=(id,name,cat,invNo,dayRate,weekRate,deposit)=>({id
 /* ---------- moduly (predplatné) ---------- */
 const MODULES=[["personal","Personalistika","Personálna agenda, výpočty miezd, dochádzka, školenia, cestovné príkazy, generovanie PDF výstupov."],
   ["doprava","Doprava a logistika","Plánovač úloh, sledovanie fakturácie vykonaných prác, podklady k vyúčtovaniam, import jázd z GPS, servis a údržba strojov a techniky, vážne lístky, štatistika."],
-  ["pozicovna","Požičovňa","Evidencia náradia, cenníky, generovanie výpožičných listov, plánovač a štatistika obsadenosti."],
-  ["stavba","Stavba","Stavebný denník, rozpočty, čerpanie podľa súpisov prác, elektronická komunikácia so stavebným dozorom, kontrolné dni, generovanie výstupov do archívu."]];
+  ["stavba","Stavba","Stavebný denník, rozpočty, čerpanie podľa súpisov prác, elektronická komunikácia so stavebným dozorom, kontrolné dni, generovanie výstupov do archívu."],
+  ["pozicovna","Požičovňa","Evidencia náradia, cenníky, generovanie výpožičných listov, plánovač a štatistika obsadenosti."]];
 const ALL_MODS={personal:true,doprava:true,pozicovna:true,stavba:true};
 const hasMod=k=>!!(S.modules||ALL_MODS)[k];
 function modName(k){return (MODULES.find(m=>m[0]===k)||[])[1]||k}
@@ -4182,6 +4183,11 @@ const PLANS={
   pozicovna:{n:"Požičovňa",u:["položka","položky","položiek"],tiers:[[0,0,29,290]]}};
 function tierLabel(k,t){const P=PLANS[k];if(!P)return"";const i=P.tiers.findIndex(z=>z[0]===t);if(i<0)return"";const x=P.tiers[i];
   if(x[1])return `do ${x[1]} ${P.u[2]}`;return i?`${P.tiers[i-1][1]+1} a viac ${P.u[2]}`:"bez obmedzenia"}
+function usageText(k){const u=planUsage(k);
+  if(k==="personal")return `Aktuálne ${u} ${pl(u,"aktívny zamestnanec","aktívni zamestnanci","aktívnych zamestnancov")}`;
+  if(k==="doprava")return `Aktuálne ${u} ${pl(u,"stroj alebo vozidlo","stroje a vozidlá","strojov a vozidiel")} v databáze`;
+  if(k==="stavba")return `Aktuálne ${u} ${pl(u,"aktívna stavba","aktívne stavby","aktívnych stavieb")}`;
+  return ""}
 function planUsage(k){
   if(k==="stavba")return S.projects.filter(p=>!p.closed).length;
   if(k==="personal")return S.workers.filter(w=>w.active!==false).length;
@@ -4211,7 +4217,7 @@ function modulesHTML(){
   return `<div class="stack"><div class="card stack"><h2>Moduly</h2>
     <div class="muted">Karta Firma so základným zoznamom zamestnancov a strojovým a vozovým parkom je súčasťou každého užívateľa bezplatne. Ostatné moduly si vyberieš podľa vlastnej potreby – môžeš si zvoliť iba tie, ktoré potrebuješ pre fungovanie svojej firmy.</div>
     ${admin?`<form class="stack" id="modForm">${MODULES.map(([k,l,d])=>{const tiered=PLANS[k].tiers.length>1;
-        return `<div class="modcard bill${M[k]?" on":""}"><div><b>${l}</b><br><span class="muted">${d}</span>${tiered?`<br><span class="muted" style="font-size:12.5px">Teraz ${planUsage(k)} ${pl(planUsage(k),...PLANS[k].u)}</span>`:""}</div>
+        return `<div class="modcard bill${M[k]?" on":""}"><div><b>${l}</b><br><span class="muted">${d}</span>${tiered?`<div class="mcusage">${usageText(k)}</div>`:""}</div>
           ${tierPicker(k,M[k]?(tiered?((S.plans||{})[k]||minTier(k)):0):"off","month","mt_"+k)}</div>`}).join("")}
       <div class="muted" style="font-size:13px">Vypnutím modulu sa údaje nezmažú. Po opätovnom zapnutí budú znova k dispozícii.</div>
       <button class="btn primary" type="submit" style="align-self:flex-start">Uložiť moduly</button></form>`
@@ -4235,7 +4241,7 @@ const NAV_LABELS={firma:["Firma","Firma"],personal:["Personalistika","Personál"
 const SEC_MOD={personal:"personal",doprava:"doprava",pozicovna:"pozicovna",home:"stavba"};
 function navHTML(){if(!me||view.screen==="setup"||needsProfile())return "";
   const cur=curSection(),admin=me.companyRole==="admin";
-  const items=isExternal(me)?["home"]:["firma","personal","doprava","pozicovna","home"].filter(k=>k==="firma"||(k==="home"?(hasMod("stavba")||admin):(canSee(SEC_MOD[k])&&(hasMod(SEC_MOD[k])||admin))));
+  const items=isExternal(me)?["home"]:["firma","personal","doprava","home","pozicovna"].filter(k=>k==="firma"||(k==="home"?(hasMod("stavba")||admin):(canSee(SEC_MOD[k])&&(hasMod(SEC_MOD[k])||admin))));
   return `<nav class="topnav" role="tablist" aria-label="Hlavné menu">${items.map(k=>{const locked=k!=="firma"&&!hasMod(SEC_MOD[k]);const n=0;const [full,short]=NAV_LABELS[k];
     return `<button class="ntab ${locked?"locked":""}" role="tab" aria-selected="${cur===k}" data-a="${locked?"secLocked":"sec"}" data-sec="${k}" ${locked?`title="Modul ${full} nie je v predplatnom"`:""}>${icon(locked?"lock":k)}<span class="l-full">${full}</span><span class="l-short">${short}</span>${n?`<span class="badge">${n}</span>`:""}</button>`}).join("")}</nav>`}
 function setupHTML(){return `<div class="stack"><div><div class="eyebrow">Vitaj v aplikácii, ${esc(me.name)}</div><h1>Nastavenie firmy</h1></div>${firmFormHTML("setup")}</div>`}

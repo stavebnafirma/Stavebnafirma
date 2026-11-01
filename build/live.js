@@ -316,7 +316,7 @@ function modulesHTML(){
     :`<div class="note cnote hard"><b>Skúšobné obdobie skončilo.</b> ${admin?"Vyber moduly a predplať si ich – údaje ostali uložené a po zaplatení budú znova k dispozícii.":"Administrátor firmy môže moduly predplatiť v tejto karte."}</div>`;
   const cards=MODULES.map(([k,l,d])=>{const st=modStatus(k),pm=(B.paid_modules||{})[k],on=D.mods.includes(k),tiered=tiersOf(k)[0],u=planUsage(k),edit=admin&&!B.complimentary;
     return `<div class="modcard bill ${on?"on":""}"><div class="mcrow"><span style="flex:1;min-width:0"><b>${l}</b> <span class="pill ${st.cls}">${esc(st.t)}</span><br><span class="muted">${esc(d)}</span>
-      ${tiered?`<br><span class="muted" style="font-size:12.5px">Teraz ${u} ${pl(u,...PLANS[k].u)}</span>`:""}
+      ${tiered?`<div class="mcusage">${usageText(k)}</div>`:""}
       ${pm&&st.paid?`<br><span class="muted" style="font-size:12.5px">Predplatené do ${dmy(new Date(new Date(pm.until)-3*864e5).toISOString())}</span>`:""}</span>
       ${on?`<span class="bprice">${priceTxt(k,tierFor(k),D.interval)}</span>`:""}</div>
       ${edit?tierPicker(k,on?tierFor(k):"off",D.interval,"bt_"+k,sPrice,"btier"):""}</div>`}).join("");
