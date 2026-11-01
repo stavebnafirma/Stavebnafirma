@@ -5323,8 +5323,8 @@ function settingsHTML(p){
 const closedText=p=>`Ukončená ${d2((p.closed.at||"").slice(0,10))}${user(p.closed.by)?` · uzamkol ${user(p.closed.by).name}`:""}`;
 /* ukončenie stavby: natrvalo ju uzamkne, prestane sa rátať medzi aktívne stavby predplatného */
 function projCloseHTML(p){if(!can(p,"close"))return"";
-  if(view.projClose!==p.id)return `<div class="card stack"><h3>Ukončenie stavby</h3><div class="muted" style="font-size:13px">Po dokončení stavbu ukonči. Natrvalo sa uzamkne – ostane dostupná na prezeranie a export denníka, súpisov a dokumentácie, ale už sa nebude dať upravovať a nebude sa rátať medzi aktívne stavby v predplatnom.</div>
-    <button type="button" class="btn" data-a="projCloseAsk" style="align-self:flex-start">${icon("lock")}Ukončiť a uzamknúť stavbu…</button></div>`;
+  if(view.projClose!==p.id)return `<div class="card stack"><h3>Ukončenie stavby</h3><div class="muted" style="font-size:13px">Po dokončení stavbu ukonči. Natrvalo sa uzamkne – ostane dostupná na prezeranie a export denníka, súpisov a dokumentácie, ale už sa nebude dať upravovať a nebude sa počítať medzi aktívne stavby v predplatnom.</div>
+    <button type="button" class="btn" data-a="projCloseAsk" style="align-self:flex-start">${icon("lock")}Ukončiť a uzamknúť stavbu</button></div>`;
   const D=S.diary.filter(e=>e.projectId===p.id),open=D.filter(e=>!e.locked).length,
     inv=(p.invoices||[]).filter(i=>!["approved","invoiced"].includes(i.status)).length,
     kd=(p.inspections||[]).filter(k=>k.status==="planned"&&k.date>=todayIso()).length;
