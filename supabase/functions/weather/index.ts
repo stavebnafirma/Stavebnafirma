@@ -3,7 +3,14 @@
 // po zakúpení predplatného stačí doplniť Secret OPENMETEO_KEY a funkcia prejde na komerčné API.
 // POST { date: "2026-11-01", lat?, lng?, place? }
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { cors, json } from "../_shared/stripe.ts";
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+const json = (data: unknown, status = 200) =>
+  new Response(JSON.stringify(data), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const KEY = Deno.env.get("OPENMETEO_KEY") || "";
