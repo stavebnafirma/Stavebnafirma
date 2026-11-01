@@ -342,6 +342,19 @@ function modulesHTML(){
       <div class="muted" style="font-size:13px">${hasSub?"Pri pridaní modulu sa doplatí len pomerná časť do konca obdobia, pri odobratí sa zvyšok odpočíta z ďalšej platby.":"Platbu spracúva Stripe – údaje o karte sa v aplikácii neukladajú. Predplatné sa obnovuje automaticky a dá sa kedykoľvek zrušiť."} Vypnutím modulu sa údaje nezmažú.</div>`
       :!admin?`<div class="muted" style="font-size:13px">Predplatné spravuje administrátor firmy.</div>`:""}
   </div></div>`}
+/* zrušenie účtu alebo celej firmy: overí heslo, zavolá server (funkcia "account") a odhlási */
+accountDelete=async(scope,pw)=>{
+  const email=me.email;const {error:e1}=await SB.auth.signInWithPassword({email,password:pw});
+  if(e1)throw new Error(/invalid/i.test(e1.message)?"Nesprávne heslo.":e1.message);
+  await saveQ.catch(()=>{});
+  const {data,error}=await SB.functions.invoke("account",{body:scope==="me"?{action:"delete_me"}:{action:"delete_company",tenant_id:TID,delete_account:scope==="firmMe"}});
+  if(error){let msg=error.message;try{const j=await error.context.json();if(j&&j.error)msg=j.error}catch(e){}throw new Error(msg)}
+  if(data&&data.error)throw new Error(data.error);
+  const gone=scope==="me"||(data&&data.account);view.accDel=null;
+  try{if(liveCh)SB.removeChannel(liveCh)}catch(e){}liveCh=null;await OFF.clear();
+  if(gone){try{await SB.auth.signOut({scope:"local"})}catch(e){}lsSet("sf-uid","");me=null;authUser=null;TID=null;S=blankState();SNAP=new Map();USNAP=new Map();VER=new Map();
+    view={screen:"home",auth:"landing",loginErr:""};render();window.scrollTo(0,0);toast(scope==="me"?"Tvoj účet bol zrušený.":"Firma aj tvoj účet boli zrušené. Ďakujeme, že si používal Stavebnú firmu.")}
+  else{lsSet("sf-tenant","");toast("Firma bola zrušená.");setTimeout(()=>location.replace(location.pathname),1200)}};
 async function billCall(body){billBusy=true;render();
   try{const {data,error}=await SB.functions.invoke("billing",{body:{...body,tenant_id:TID}});
     if(error){let msg=error.message;try{const j=await error.context.json();if(j&&j.error)msg=j.error}catch(e){}throw new Error(msg)}

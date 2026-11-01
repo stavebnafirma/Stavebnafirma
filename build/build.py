@@ -51,6 +51,10 @@ cut('Pozvaný dostane pozvánku e-mailom, nastaví si heslo a uvidí iba túto s
     f'Pozvánka sa zatiaľ neposiela automaticky – daj mu vedieť, nech sa zaregistruje na {REG} práve týmto e-mailom. Uvidí iba túto stavbu')
 rep(' V prototype sa e-mail neodošle, prihlás sa jeho e-mailom.', '')
 
+# zrušenie účtu: prototyp len simuluje, ostrá verzia volá server (accountDelete v live.js)
+cut('/* v prototype sa nič nemaže', 'document.addEventListener("click",async ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;\n  if(!["accDelAsk"',
+    'async function accountDelete(scope,pw){}\n')
+
 # 3) založenie firmy pri prvom nastavení
 rep('const setup=ev.target.dataset.mode==="setup";S.firm={...view.firmDraft,setupDone:true};S.company=S.firm.name;if(setup&&!me.name)me.name=S.firm.repName;\n    view.firmDraft=null;view.firmErr="";view.firmEditing=false;if(save())toast(setup?"Firma nastavená. Môžeš začať.":"Údaje o firme uložené");\n    view=setup?{screen:startScreen(),tab:"dennik"}:{screen:"firma",firmTab:"udaje"};render();window.scrollTo(0,0)}',
     'const setup=ev.target.dataset.mode==="setup";(async()=>{if(!TID){try{await createFirm(view.firmDraft.name)}catch(e){view.firmErr="Firmu sa nepodarilo založiť: "+errText(e);render();return}}\n    S.firm={...view.firmDraft,setupDone:true};S.company=S.firm.name;if(setup&&!me.name)me.name=S.firm.repName;\n    view.firmDraft=null;view.firmErr="";view.firmEditing=false;if(save())toast(setup?"Firma nastavená. Môžeš začať.":"Údaje o firme uložené");\n    view=setup?{screen:startScreen(),tab:"dennik"}:{screen:"firma",firmTab:"udaje"};render();window.scrollTo(0,0)})()}')
