@@ -987,6 +987,7 @@ table.pft .pill{white-space:normal;line-height:1.3}
 table.pft .num{white-space:normal}
 table.jlog input.tin{min-width:92px}table.jlog input.nin{min-width:64px}table.jlog input[data-lk="from"],table.jlog input[data-lk="to"],table.jlog input[data-lk="mat"]{min-width:130px}table.jlog input[data-lk="note"]{min-width:120px}
 table.impm tr.off td{opacity:.5}table.impm td{vertical-align:middle}
+.bar-in .brand[data-a]{cursor:pointer}.bar-in .brand[data-a]:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
 .modcard.bill{display:flex;flex-direction:column;gap:10px;cursor:default}.modcard.bill .mcrow{display:flex;flex-direction:row;gap:12px;font-weight:400;align-items:flex-start;cursor:pointer;width:100%}.modcard.bill.on{border-color:var(--accent);background:var(--tint)}.bprice{white-space:nowrap;font-weight:600;font-size:14px}
 .spinner{width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:spin 0.9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .saveind{font-size:12px;color:var(--brand-hi);margin-right:8px;white-space:nowrap}.saveind.off{color:#fff;background:#b3261e;padding:3px 8px;border-radius:999px}
@@ -2417,7 +2418,7 @@ function tasksPaneHTML(){
     </div>`}
 let TP_COL=(()=>{try{return localStorage.getItem("sf-tpcol")==="1"}catch(e){return false}})();
 const tpCollapsed=()=>TP_COL&&!view.tpMax&&matchMedia("(min-width:920px)").matches;
-function renderTasks(){const pane=$("#taskpane"),shell=$("#shell");if(!pane||!shell)return;const on=!!me&&view.screen!=="setup"&&view.screen!=="platform"&&!needsProfile();
+function renderTasks(){const pane=$("#taskpane"),shell=$("#shell");if(!pane||!shell)return;const on=!!me&&view.screen!=="setup"&&view.screen!=="platform"&&view.screen!=="landing"&&!needsProfile();
   pane.hidden=!on;shell.classList.toggle("with-tasks",on);shell.classList.toggle("wide",!!me&&view.screen==="platform");document.body.classList.toggle("has-tp",on);shell.classList.toggle("tp-col",on&&tpCollapsed());pane.classList.toggle("col",on&&tpCollapsed());
   if(!on)view.tpMax=false;
   if(on){pane.innerHTML=tasksPaneHTML();pane.classList.toggle("open",!!view.tpOpen||!!view.tpMax);pane.classList.toggle("max",!!view.tpMax)}else pane.innerHTML="";
@@ -3322,7 +3323,7 @@ function landingHTML(){
   const cell=(v,k)=>`<i class="c-${v==="8"||v==="10"?"w":v==="½D"?"D":v}" style="--k:${k}">${v}</i>`;
   return `<div class="ld">
   <nav class="ld-nav"><div class="ld-in"><a class="ld-logo" href="#" data-a="landTop"><span class="ld-mark"><svg viewBox="0 0 24 24" aria-hidden="true" class="cone"><path d="M10.4 2.6h3.2l5.2 16.4H5.2z" fill="#e8792f"/><path d="M8.64 8h6.72l.78 2.5H7.86zM6.92 13.5h10.16l.78 2.5H6.14z" fill="#fff"/><rect x="2.5" y="18.6" width="19" height="3" rx="1.2" fill="currentColor"/></svg></span><span class="ld-lt">Stavebná firma</span></a>
-    <div class="ld-navbtn"><button class="ld-navlink" data-a="landScroll" data-to="cennik">Cenník</button><button class="ld-navlink" data-a="landScroll" data-to="kontakt">Kontakt</button><button class="ld-btn ghost" data-a="landGo" data-to="login">Prihlásiť sa</button><button class="ld-btn sig" data-a="landGo" data-to="register">Zaregistrovať sa</button></div></div></nav>
+    <div class="ld-navbtn"><button class="ld-navlink" data-a="landScroll" data-to="cennik">Cenník</button><button class="ld-navlink" data-a="landScroll" data-to="kontakt">Kontakt</button>${me?`<button class="ld-btn sig" data-a="landGo" data-to="app">Otvoriť aplikáciu</button>`:`<button class="ld-btn ghost" data-a="landGo" data-to="login">Prihlásiť sa</button><button class="ld-btn sig" data-a="landGo" data-to="register">Zaregistrovať sa</button>`}</div></div></nav>
 
   <header class="ld-hero ld-photo">
     <picture class="ld-heroimg"><source type="image/webp" srcset="img/uvod-1200.webp 1200w, img/uvod-1920.webp 1920w" sizes="100vw"><img src="img/uvod-1920.jpg" srcset="img/uvod-1200.jpg 1200w, img/uvod-1920.jpg 1920w" sizes="100vw" alt="Minibager pri zemných prácach na stavbe" fetchpriority="high" decoding="async"></picture>
@@ -3417,10 +3418,16 @@ function landingInit(){const root=document.querySelector(".ld");if(!root)return;
   const secs=root.querySelectorAll(".ld-mock");
   if(!("IntersectionObserver" in window)){secs.forEach(s=>s.classList.add("in"));return}
   const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");io.unobserve(e.target)}}),{threshold:.35});secs.forEach(s=>io.observe(s))}
-document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="ldPer"],[data-a="landScroll"]');if(!b||me)return;ev.preventDefault();
+document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="ldPer"],[data-a="landScroll"]');if(!b||(me&&view.screen!=="landing"))return;ev.preventDefault();
   if(b.dataset.a==="landScroll"){const el=document.getElementById(b.dataset.to);if(el)el.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});return}
   const sec=b.closest(".ld-price");sec.classList.toggle("year",b.dataset.p==="y");sec.querySelectorAll("[data-a=ldPer]").forEach(x=>{const on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-pressed",on)})});
-document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="landGo"],[data-a="landTop"]');if(!b||me)return;ev.preventDefault();
+/* klik na logo v hlavičke aplikácie: úvodná stránka (prihlásený sa vráti tlačidlom Otvoriť aplikáciu) */
+document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="brandHome"]');if(!b||ev.target.closest('[data-a="theme"]'))return;
+  if(me)view={screen:"landing"};else view={...view,auth:"landing"};render();window.scrollTo(0,0)});
+document.addEventListener("keydown",ev=>{if((ev.key==="Enter"||ev.key===" ")&&ev.target.closest&&ev.target.closest('[data-a="brandHome"]')){ev.preventDefault();ev.target.click()}});
+document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="landGo"],[data-a="landTop"]');if(!b)return;
+  if(me){if(view.screen!=="landing")return;ev.preventDefault();if(b.dataset.a==="landTop"){window.scrollTo({top:0,behavior:"smooth"});return}view={screen:startScreen()};render();window.scrollTo(0,0);return}
+  ev.preventDefault();
   if(b.dataset.a==="landTop"){window.scrollTo({top:0,behavior:"smooth"});return}
   view={screen:"home",auth:b.dataset.to,loginErr:""};render();window.scrollTo(0,0)});
 
@@ -4889,6 +4896,7 @@ function render0(){renderBar();const a=$("#app");
     if((sc==="personal"||sc==="doprava"||sc==="pozicovna")&&(!canSee(sc)||!hasMod(sc)))view.screen=startScreen();
     if(sc==="home"&&!hasMod("stavba"))view.screen=startScreen();}
   if(!me){a.innerHTML=view.auth==="landing"?landingHTML():loginHTML();if(view.auth==="landing")landingInit()}
+  else if(view.screen==="landing"){a.innerHTML=landingHTML();landingInit()}
   else if(view.screen==="setup") a.innerHTML=setupHTML();
   else if(view.screen==="profile") a.innerHTML=profileHTML();
   else if(view.screen==="home") a.innerHTML=homeHTML();
@@ -4911,7 +4919,7 @@ function renderBar(){
   const F=me?S.firm||{}:{};
   const sn=subnavHTML();const se=$("#subnav");se.innerHTML=sn;se.hidden=!sn;
   (se.querySelectorAll?se.querySelectorAll(".sub-in"):[]).forEach(si=>{const ss=si.querySelector('[aria-selected="true"]');if(ss&&si.scrollWidth>si.clientWidth){const r=ss.offsetLeft+ss.offsetWidth-si.clientWidth;si.scrollLeft=r>0?r+16:0}});
-  $("#bar").innerHTML=navHTML()+`<div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true" class="cone"><path d="M10.4 2.6h3.2l5.2 16.4H5.2z" fill="#e8792f"/><path d="M8.64 8h6.72l.78 2.5H7.86zM6.92 13.5h10.16l.78 2.5H6.14z" fill="#fff"/><rect x="2.5" y="18.6" width="19" height="3" rx="1.2" fill="currentColor"/></svg><span class="bname">Stavebná firma</span>${themeBtn()}</div>`+(me?`<div class="acct"><button type="button" class="who" data-a="profile" title="Môj profil">${F.logo?`<span class="blogo"><img src="${F.logo.data}" alt=""></span>`:""}<span class="wtext"><b>${esc(me.name)}</b><span class="wmail">${esc(F.name||S.company||me.email)}</span></span></button>${isPlatformAdmin()?`<button class="padmin${view.screen==="platform"?" on":""}" data-a="platform" title="Prehľad všetkých firiem na platforme">${icon("lock")}<span>Admin</span></button>`:""}<span class="saveind${OFFLINE?" off":""}" id="saveInd" ${OFFLINE?"":"hidden"}>${OFFLINE?"Offline":"Ukladám…"}</span>${myTenants.length>1?`<button class="logout" data-a="switchTenant" title="Prepnúť firmu">Firmy</button>`:""}<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");
+  $("#bar").innerHTML=navHTML()+`<div class="brand" data-a="brandHome" role="link" tabindex="0" title="Úvodná stránka"><svg viewBox="0 0 24 24" aria-hidden="true" class="cone"><path d="M10.4 2.6h3.2l5.2 16.4H5.2z" fill="#e8792f"/><path d="M8.64 8h6.72l.78 2.5H7.86zM6.92 13.5h10.16l.78 2.5H6.14z" fill="#fff"/><rect x="2.5" y="18.6" width="19" height="3" rx="1.2" fill="currentColor"/></svg><span class="bname">Stavebná firma</span>${themeBtn()}</div>`+(me?`<div class="acct"><button type="button" class="who" data-a="profile" title="Môj profil">${F.logo?`<span class="blogo"><img src="${F.logo.data}" alt=""></span>`:""}<span class="wtext"><b>${esc(me.name)}</b><span class="wmail">${esc(F.name||S.company||me.email)}</span></span></button>${isPlatformAdmin()?`<button class="padmin${view.screen==="platform"?" on":""}" data-a="platform" title="Prehľad všetkých firiem na platforme">${icon("lock")}<span>Admin</span></button>`:""}<span class="saveind${OFFLINE?" off":""}" id="saveInd" ${OFFLINE?"":"hidden"}>${OFFLINE?"Offline":"Ukladám…"}</span>${myTenants.length>1?`<button class="logout" data-a="switchTenant" title="Prepnúť firmu">Firmy</button>`:""}<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");
 }
 /* prepínač svetlej a tmavej verzie: voľba sa pamätá v prehliadači, bez voľby sa riadi nastavením zariadenia */
 const THEME_KEY="sf-theme";
