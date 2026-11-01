@@ -68,7 +68,9 @@ Deno.serve(async (req) => {
 
       // 1) predplatné: ukončiť ihneď, aby sa už nič nestrhávalo (ak zlyhá, firma sa nezmaže)
       if (ten.stripe_customer_id && Deno.env.get("STRIPE_SECRET_KEY")) {
-        const list = await stripe("GET", "subscriptions", { customer: ten.stripe_customer_id, status: "all", limit: 20 });
+        // zákazník z testovacieho režimu (alebo už zmazaný) – nie je čo rušiť
+        const list = await stripe("GET", "subscriptions", { customer: ten.stripe_customer_id, status: "all", limit: 20 })
+          .catch((e) => { if (/No such customer/i.test(String(e?.message))) return { data: [] }; throw e; });
         for (const s of list.data || []) {
           if (["active", "trialing", "past_due", "unpaid", "incomplete", "paused"].includes(s.status)) await stripe("DELETE", `subscriptions/${s.id}`);
         }
