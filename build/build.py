@@ -71,7 +71,7 @@ s = s[:i] + 'boot();\n</script>' + s[j + len('render();\n</script>'):]
 rep('const hasMod=k=>!!(S.modules||ALL_MODS)[k];','const hasMod=k=>!!((typeof BILL!=="undefined"&&BILL&&BILL.active)||S.modules||ALL_MODS)[k];')
 rep('function modulesHTML(){\n  const M=S.modules||ALL_MODS','function modulesHTML_prototyp(){\n  const M=S.modules||ALL_MODS')
 rep('nie je v predplatnom. Zapnúť ho môžeš tu.','nie je predplatený. Predplatiť ho môžeš tu.')
-rep('</style>', '.modcard.bill{display:flex;gap:12px;align-items:flex-start}.modcard.bill.on{border-color:var(--accent);background:var(--tint)}.bprice{white-space:nowrap;font-weight:600;font-size:14px}\n</style>')
+rep('</style>', '.modcard.bill{display:flex;flex-direction:column;gap:10px;cursor:default}.modcard.bill .mcrow{display:flex;flex-direction:row;gap:12px;font-weight:400;align-items:flex-start;cursor:pointer;width:100%}.modcard.bill.on{border-color:var(--accent);background:var(--tint)}.bprice{white-space:nowrap;font-weight:600;font-size:14px}\n</style>')
 
 # 6c) ponuka strojov: ostatné firmy z tabuľky offers (live.js), nie ukážkové dáta
 rep('let marketExt=()=>MARKET_SEED.map(o=>({...o,own:false}));', 'let marketExt=()=>{loadOffers();return OFFERS.filter(o=>o.tenant!==TID)};')

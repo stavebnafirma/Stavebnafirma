@@ -1,7 +1,8 @@
 // Predplatné modulov: ceny, platba (Stripe Checkout), zmena modulov, správa predplatného (Stripe portál)
-// Volá aplikácia s prihláseným používateľom: POST { action, tenant_id, modules?, interval? }
+// Volá aplikácia s prihláseným používateľom: POST { action, tenant_id, modules?, tiers?, interval? }
+// tiers = zvolené balíčky modulov s počtom, napr. { stavba: 2, personal: 1 }
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { cors, json, stripe, pricesByKey, lookupKey, MODULES, INTERVALS, paidFromSubscription } from "../_shared/stripe.ts";
+import { cors, json, stripe, pricesByKey, lookupKey, MODULES, INTERVALS, TIERS, isTiered, paidFromSubscription } from "../_shared/stripe.ts";
 
 const SB_URL = Deno.env.get("SUPABASE_URL")!;
 const admin = createClient(SB_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
@@ -19,8 +20,15 @@ Deno.serve(async (req) => {
 
     if (action === "prices") {
       const P = await pricesByKey();
-      const out: Record<string, Record<string, { amount: number; currency: string } | null>> = {};
-      for (const m of MODULES) { out[m] = {}; for (const i of INTERVALS) { const p = P[lookupKey(m, i)]; out[m][i] = p ? { amount: p.unit_amount / 100, currency: p.currency } : null; } }
+      // ceny po moduloch, balíčkoch a obdobiach: { stavba: { "1": { month: {...}, year: {...} }, … }, pozicovna: { "0": {...} } }
+      const out: Record<string, Record<string, Record<string, { amount: number; currency: string } | null>>> = {};
+      for (const m of MODULES) {
+        out[m] = {};
+        for (const t of (isTiered(m) ? [...TIERS] : [0])) {
+          out[m][String(t)] = {};
+          for (const i of INTERVALS) { const p = P[lookupKey(m, i, t)]; out[m][String(t)][i] = p ? { amount: p.unit_amount / 100, currency: p.currency } : null; }
+        }
+      }
       // na kontrolu nastavenia: všetky aktívne opakované ceny v Stripe (aj bez správneho lookup_key)
       const all = await stripe("GET", "prices", { active: true, type: "recurring", limit: 100, expand: ["data.product"] }).catch(() => ({ data: [] }));
       const stripePrices = (all.data || []).map((p: any) => ({ product: p.product?.name || "", lookup_key: p.lookup_key || "", interval: p.recurring?.interval || "", amount: (p.unit_amount || 0) / 100, livemode: !!p.livemode }));
@@ -64,9 +72,11 @@ Deno.serve(async (req) => {
       const mods = (Array.isArray(body.modules) ? body.modules : []).filter((m: string) => (MODULES as readonly string[]).includes(m));
       const interval = (INTERVALS as readonly string[]).includes(body.interval) ? body.interval : "month";
       if (!mods.length) return json({ error: "Vyber aspoň jeden modul." }, 400);
+      const tierOf = (m: string) => { const t = Number((body.tiers || {})[m]); return (TIERS as readonly number[]).includes(t) ? t : 1; };
+      const key = (m: string) => lookupKey(m, interval, tierOf(m));
       const P = await pricesByKey();
-      const missing = mods.filter((m: string) => !P[lookupKey(m, interval)]);
-      if (missing.length) return json({ error: `V Stripe chýba cena pre: ${missing.map((m: string) => lookupKey(m, interval)).join(", ")}` }, 400);
+      const missing = mods.filter((m: string) => !P[key(m)]);
+      if (missing.length) return json({ error: `V Stripe chýba cena pre: ${missing.map(key).join(", ")}` }, 400);
 
       // existujúce aktívne predplatné → len upraviť moduly (s doplatkom/dobropisom za zvyšok obdobia)
       // aktívne predplatné (aj keby ešte nebolo zapísané) → upraviť ho, nezakladať druhé
@@ -78,7 +88,7 @@ Deno.serve(async (req) => {
       if (subId) {
         const sub = await stripe("GET", `subscriptions/${subId}`).catch(() => null);
         if (sub && ["active", "trialing", "past_due"].includes(sub.status)) {
-          const want = new Set(mods.map((m: string) => P[lookupKey(m, interval)].id));
+          const want = new Set(mods.map((m: string) => P[key(m)].id));
           const items: Record<string, unknown>[] = [];
           for (const it of sub.items.data) { if (want.has(it.price.id)) want.delete(it.price.id); else items.push({ id: it.id, deleted: true }); }
           for (const price of want) items.push({ price, quantity: 1 });
@@ -91,7 +101,7 @@ Deno.serve(async (req) => {
       const customer = await ensureCustomer();
       const s = await stripe("POST", "checkout/sessions", {
         mode: "subscription", customer, locale: "sk",
-        line_items: mods.map((m: string) => ({ price: P[lookupKey(m, interval)].id, quantity: 1 })),
+        line_items: mods.map((m: string) => ({ price: P[key(m)].id, quantity: 1 })),
         subscription_data: { metadata: { tenant_id: tid } },
         metadata: { tenant_id: tid },
         allow_promotion_codes: true,
