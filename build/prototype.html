@@ -1761,8 +1761,19 @@ function gpsHTML(){const G=view.gps||(view.gps={step:1});const vs=gpsVeh(),C=gps
       <div class="row"><button class="btn small" data-a="gpsOsm">Doplniť názvy obcí z mapy</button><span class="muted" style="font-size:12px">OpenStreetMap, len pre nepomenované zastávky</span></div></div>
     <datalist id="gpsPlL">${(S.gpsPlaces||[]).map(p=>`<option value="${esc(p.name)}">`).join("")}</datalist><datalist id="gpsMatL">${mats.map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
     ${days.map(d=>`<div class="card stack"><div class="eyebrow">${esc(fmtDate(d))}</div><ol class="gtl">${G.stops.map((s,i)=>s.t0.slice(0,10)!==d?"":stopRow(s,i)+(G.segs[i]?segRow(G.segs[i],i):"")).join("")}</ol></div>`).join("")}
-    <div class="card row"><button class="btn primary" data-a="gpsSave">Uložiť do knihy jázd</button><span class="muted" style="font-size:13px">Existujúca kniha jázd tohto vozidla na vybraných úlohách sa nahradí.</span></div></div>`}
-function gpsSaveAll(){const G=view.gps;gpsRead();const m=machine(G.mid);if(!m)return;
+    ${gpsAskHTML()}
+    <div class="card row"><button class="btn primary" data-a="gpsSave">Uložiť do knihy jázd</button><span class="muted" style="font-size:13px">Ak už vozidlo má v ten deň úlohu, aplikácia sa spýta, či ju prepísať údajmi z GPS. Materiál a množstvo doplň v knihe jázd.</span></div></div>`}
+/* úlohy v plánovači, do ktorých by sa jazdy z GPS uložili a ktoré už pre toto vozidlo existujú */
+function gpsConflicts(){const G=view.gps;return [...new Set(G.segs.map(g=>g.jobId).filter(id=>id&&id!=="__new"))].map(id=>(S.jobs||[]).find(j=>j.id===id)).filter(Boolean).sort((a,b)=>(a.date+a.from).localeCompare(b.date+b.from))}
+function gpsAskHTML(){const G=view.gps;if(!G.ask)return "";const C=gpsConflicts(),m=machine(G.mid);if(!C.length)return "";
+  return `<div class="card stack delbox closebox"><b>Pre ${esc(m?m.name:"vozidlo")} už sú na ${C.length>1?"tieto dni":"tento deň"} zadané úlohy v plánovači:</b>
+    <ul style="margin:0;padding-left:18px">${C.map(j=>{const n=((j.log||{})[G.mid]||[]).length;return `<li><b>${esc(fmtDate(j.date))}</b> ${esc(j.from)}–${esc(j.to)} · ${esc(j.client||"bez objednávateľa")}${j.desc?" – "+esc(j.desc):""}${n?` <span class="muted">(kniha jázd: ${n} ${pl(n,"jazda","jazdy","jázd")})</span>`:""}</li>`}).join("")}</ul>
+    <div class="muted">Prepísať ich údajmi z GPS? Nahradí sa kniha jázd tohto vozidla a čas úlohy podľa GPS; objednávateľ, popis a ostatné stroje ostanú. Alebo z jázd z GPS vytvor nové úlohy a existujúce nechaj tak.</div>
+    <div class="row"><button class="btn primary" data-a="gpsSaveOver">Prepísať údajmi z GPS</button><button class="btn" data-a="gpsSaveNew">Vytvoriť nové úlohy</button><button class="btn ghost" data-a="gpsAskNo">Späť</button></div></div>`}
+function gpsSaveAll(mode){const G=view.gps;gpsRead();const m=machine(G.mid);if(!m)return;
+  if(!mode&&gpsConflicts().length){G.ask=true;render();const e=$(".closebox");if(e)e.scrollIntoView({block:"center",behavior:"smooth"});return}
+  if(mode==="new")G.segs.forEach(g=>{if(g.jobId&&g.jobId!=="__new")g.jobId="__new"});
+  G.ask=false;
   const nm=s=>(s.name||"").trim()||`${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}`;
   /* zapamätať pomenované miesta */
   S.gpsPlaces=S.gpsPlaces||[];G.stops.forEach(s=>{const n=(s.name||"").trim();if(!n||/^\d+\.\d+, \d+\.\d+$/.test(n))return;const kp=gpsPlaceAt(s);
@@ -1774,10 +1785,11 @@ function gpsSaveAll(){const G=view.gps;gpsRead();const m=machine(G.mid);if(!m)re
       const mats=[...new Set(idx.map(i=>G.stops[i+1].mat).filter(Boolean))];
       j={id:uid("jb"),status:"planned",date:d,from:hhmm(f.dep),to:hhmm(l.arr)>hhmm(f.dep)?hhmm(l.arr):"23:59",client:"",projectId:"",own:false,place:nm(G.stops[idx[idx.length-1]+1]),desc:mats.length?"Doprava – "+mats.join(", "):"Doprava podľa GPS",
         machines:[{machineId:m.id,driverId:f.driverId||m.resp||""}],workers:[],priceMode:"cennik",price:"",note:"Vytvorené z importu GPS – doplň objednávateľa."};S.jobs.push(j);nj++}
-    else j=S.jobs.find(x=>x.id===k);if(!j)return;
+    else{j=S.jobs.find(x=>x.id===k);if(j&&mode==="over"){const f=G.segs[idx[0]],l=G.segs[idx[idx.length-1]],t1=hhmm(f.dep),t2=hhmm(l.arr);
+      if((j.machines||[]).length<=1||!j.from){j.from=t1;j.to=t2>t1?t2:"23:59"}else{if(t1<j.from)j.from=t1;if(t2>j.to)j.to=t2}}}if(!j)return;
     if(!(j.machines||[]).some(x=>x.machineId===m.id))(j.machines=j.machines||[]).push({machineId:m.id,driverId:G.segs[idx[0]].driverId||m.resp||""});
     (j.log=j.log||{})[m.id]=idx.map(i=>{const g=G.segs[i],a=G.stops[i],b=G.stops[i+1];nr++;
-      return {from:nm(a),to:nm(b),km:String(Math.round(g.km*10)/10).replace(".",","),h:String(Math.round((tsec(g.arr)-tsec(g.dep))/360)/10).replace(".",","),note:[`${hhmm(g.dep)}–${hhmm(g.arr)}`,b.type&&!/Garáž|^$/.test(b.type)?b.type.toLowerCase():"",b.mat].filter(Boolean).join(" · "),gps:true}})});
+      return {from:nm(a),to:nm(b),t1:hhmm(g.dep),t2:hhmm(g.arr),o1:"",o2:"",km:String(Math.round(g.km*10)/10).replace(".",","),h:String(Math.round((tsec(g.arr)-tsec(g.dep))/360)/10).replace(".",","),mat:"",qty:"",note:[b.type&&!/Garáž|^$/.test(b.type)?b.type.toLowerCase():"",b.mat].filter(Boolean).join(" · "),gps:true}})});
   view.gps={step:1,mid:G.mid};save();toast(`Uložené: ${nr} ${pl(nr,"jazda","jazdy","jázd")} do knihy jázd${nj?` · ${nj} ${pl(nj,"nová úloha","nové úlohy","nových úloh")} v plánovači (doplň objednávateľa)`:""}`);render()}
 async function gpsOsm(){const G=view.gps;gpsRead();const todo=G.stops.filter(s=>!(s.name||"").trim());if(!todo.length){toast("Všetky zastávky už majú názov");return}
   let ok=0;for(const s of todo){try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=14&accept-language=sk&lat=${s.lat}&lon=${s.lon}`,{headers:{Accept:"application/json"}});
@@ -1788,7 +1800,7 @@ document.addEventListener("submit",ev=>{if(ev.target.id!=="gpsForm"||!me)return;
   const c={minStop:Math.max(1,+$("#gpsMin").value||GPS_DEF.minStop),speed:Math.max(0,+$("#gpsSpd").value||GPS_DEF.speed),mergeM:Math.max(0,+$("#gpsMer").value||GPS_DEF.mergeM),minKm:Math.max(0,numIn($("#gpsKmin").value)||GPS_DEF.minKm)};
   try{localStorage.setItem("sf-gps-cfg",JSON.stringify(c))}catch(e){}view.gps={...(view.gps||{}),mid:$("#gpsM").value};gpsLoad()});
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;if(!/^gps/.test(a)||!canEdit("doprava"))return;
-  if(a==="gpsBack"){view.gps={step:1,mid:view.gps.mid};render()}else if(a==="gpsSave")gpsSaveAll();else if(a==="gpsOsm")gpsOsm();
+  if(a==="gpsBack"){view.gps={step:1,mid:view.gps.mid};render()}else if(a==="gpsSave")gpsSaveAll();else if(a==="gpsSaveOver")gpsSaveAll("over");else if(a==="gpsSaveNew")gpsSaveAll("new");else if(a==="gpsAskNo"){view.gps.ask=false;render()}else if(a==="gpsOsm")gpsOsm();
   else if(a==="gpsPlDel"){S.gpsPlaces=(S.gpsPlaces||[]).filter(p=>p.id!==b.dataset.id);save();render()}});
 document.addEventListener("change",ev=>{const t=ev.target;if(!me)return;
   if(t.id==="gpsKml"||t.id==="gpsXls"){const z=t.closest(".docdrop");if(z&&t.files[0])z.querySelector("span").textContent=t.files[0].name}
