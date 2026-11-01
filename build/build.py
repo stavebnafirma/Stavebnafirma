@@ -37,19 +37,10 @@ rep('  else if(a==="forgot"){toast("V ostrej verzii príde na e-mail odkaz na na
 i = s.index('  if(f==="loginForm"){view.loginEmail='); j = s.index('  else if(f==="modForm")', i)
 s = s[:i] + '  if(false){}\n' + s[j:]
 
-# 2b) texty z prototypu: ostrá verzia zatiaľ neposiela e-maily (pozvánky ani upozornenia)
-REG = "www.stavebnafirma.eu"
-rep('Používateľ sa prihlási svojím e-mailom a pri prvom prihlásení si nastaví heslo. V ostrej verzii mu príde pozvánka e-mailom.',
-    f'Pozvánka sa zatiaľ neposiela automaticky – daj kolegovi vedieť, nech sa zaregistruje na {REG} práve týmto e-mailom. Do firmy sa potom pridá sám, s pridelenými právami.')
-rep('V ostrej verzii dostane zodpovedná osoba a administrátor upozornenie aj e-mailom.', 'Zodpovedná osoba a administrátor uvidia upozornenie v aplikácii.')
-rep(' V ostrej verzii príde používateľovi aj e-mail.', '')
-rep('Upozornenie dostane v aplikácii a e-mailom: ', 'Upozornenie dostane v aplikácii: ')
-rep('. V prototype sa e-mail neodošle.</div>', '.</div>')
-rep('Pozvaní dostanú upozornenie v aplikácii a e-mailom oficiálnu pozvánku. V prototype sa e-mail neodošle, pozvánku si môžeš stiahnuť ako PDF.',
-    'Pozvaní dostanú upozornenie v aplikácii. Oficiálnu pozvánku si môžeš stiahnuť ako PDF a poslať e-mailom.')
-cut('Pozvaný dostane pozvánku e-mailom, nastaví si heslo a uvidí iba túto stavbu', ' s pridelenými právami.',
-    f'Pozvánka sa zatiaľ neposiela automaticky – daj mu vedieť, nech sa zaregistruje na {REG} práve týmto e-mailom. Uvidí iba túto stavbu')
-rep(' V prototype sa e-mail neodošle, prihlás sa jeho e-mailom.', '')
+# 2b) texty z prototypu o neodoslaných e-mailoch (ostrá verzia e-maily posiela cez funkciu notify)
+import re as _re2
+s, _n = _re2.subn(r" V prototype sa e-mail neodošle[^<`\"]*", "", s)
+if _n < 4: sys.exit(f"Build: očakával som aspoň 4 texty o e-mailoch v prototype, našiel som {_n}")
 
 # zrušenie účtu: prototyp len simuluje, ostrá verzia volá server (accountDelete v live.js)
 cut('/* v prototype sa nič nemaže', 'document.addEventListener("click",async ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;\n  if(!["accDelAsk"',
@@ -64,7 +55,7 @@ rep('if(findAccount(email)){toast("Používateľ s týmto e-mailom už existuje"
     'if(S.users.some(u=>(u.email||"").toLowerCase()===email)){toast("Používateľ s týmto e-mailom už existuje");return}')
 rep('S.users.push({id:uid("u"),email,name,companyRole:"clen",rights});view.userNew=false;save();toast(`Používateľ ${name} pridaný`);render()});',
     'S.users.push({id:newInvId(),email,name,companyRole:"clen",rights,pending:true});view.userNew=false;save();toast(`Pozvánka uložená. Pošli kolegovi odkaz www.stavebnafirma.eu – zaregistruje sa e-mailom ${email}.`);render()});')
-rep('${esc(u.email)}${u.pw||DEMO_IDS.includes(u.id)?"":" · ešte sa neprihlásil"}', '${esc(u.email)}${u.pending?" · pozvaný, ešte sa nezaregistroval":""}')
+rep('${esc(u.email)}${u.pw||DEMO_IDS.includes(u.id)?"":" · ešte sa neprihlásil"}', '${esc(u.email)}${u.pending?` · pozvaný, ešte sa neprihlásil${admin?` <button type="button" class="btn small ghost" data-a="invResend" data-id="${u.id}" style="padding:1px 8px;font-size:12px;margin-left:4px">Poslať pozvánku znova</button>`:""}`:""}')
 rep('if(!u){u={id:uid("u"),email,name:$("#invName").value.trim()||email.split("@")[0],companyRole:"clen"};S.users.push(u)}',
     'if(!u){u={id:newInvId(),email,name:$("#invName").value.trim()||email.split("@")[0],companyRole:"clen",pending:true};S.users.push(u)}')
 rep('p.members.push({userId:u.id,role,status:"pozvaný"});toast("Pozvánka pripravená. Odhlás sa a prihlás jeho e-mailom.")',

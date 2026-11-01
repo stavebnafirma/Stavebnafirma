@@ -988,6 +988,7 @@ table.pft .num{white-space:normal}
 table.jlog input.tin{min-width:92px}table.jlog input.nin{min-width:64px}table.jlog input[data-lk="from"],table.jlog input[data-lk="to"],table.jlog input[data-lk="mat"]{min-width:130px}table.jlog input[data-lk="note"]{min-width:120px}
 table.impm tr.off td{opacity:.5}table.impm td{vertical-align:middle}
 .bar-in .brand[data-a]{cursor:pointer}.bar-in .brand[data-a]:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:6px}
+:root[data-theme="dark"]{color-scheme:dark}:root[data-theme="light"]{color-scheme:light}@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark}}
 .modcard.bill{display:flex;flex-direction:column;gap:10px;cursor:default}.modcard.bill .mcrow{display:flex;flex-direction:row;gap:12px;font-weight:400;align-items:flex-start;cursor:pointer;width:100%}.modcard.bill.on{border-color:var(--accent);background:var(--tint)}.bprice{white-space:nowrap;font-weight:600;font-size:14px}
 .spinner{width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:spin 0.9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .saveind{font-size:12px;color:var(--brand-hi);margin-right:8px;white-space:nowrap}.saveind.off{color:#fff;background:#b3261e;padding:3px 8px;border-radius:999px}
@@ -1276,7 +1277,7 @@ async function syncUsers(){const cur=new Map(S.users.map(u=>[u.id,u]));
   for(const u of S.users){const st=userState(u),js=JSON.stringify(st);if(USNAP.get(u.id)===js)continue;
     if(u.id.startsWith("inv:")){const row={role:st.role==="admin"?"clen":st.role,rights:st.rights,projects:st.projects,email:u.email,name:u.name||null};
       const q=USNAP.has(u.id)?SB.from("invites").update(row).eq("id",u.id.slice(4)):SB.from("invites").insert({id:u.id.slice(4),tenant_id:TID,created_by:authUser.id,...row});
-      const {error}=await q;if(error)throw permErr(error,"Pozývať a meniť prístupy môže administrátor firmy.");}
+      const isNew=!USNAP.has(u.id);const {error}=await q;if(error)throw permErr(error,"Pozývať a meniť prístupy môže administrátor firmy.");if(isNew)sendInvite(u.id.slice(4),u.email);}
     else{const {error}=await SB.from("members").update(st).eq("tenant_id",TID).eq("user_id",u.id);if(error)throw permErr(error,"Prístupy používateľov mení administrátor firmy.")}
     USNAP.set(u.id,js)}
   for(const id of [...USNAP.keys()]){if(cur.has(id))continue;
@@ -1311,10 +1312,11 @@ async function boot(){
   view={screen:"home",auth:"loading"};render();
   SB.auth.onAuthStateChange((ev,s)=>{if(ev==="PASSWORD_RECOVERY"){me=null;TID=null;view={screen:"home",auth:"newpw"};render()}});
   const hash=location.hash||"";if(/type=recovery/.test(hash))return;
+  if(/type=invite/.test(hash)){view={screen:"home",auth:"newpw",invite:true};render();return}   /* odkaz z pozvánky: najprv si nastaví heslo */
   if(/error_description=/.test(hash)){const m=decodeURIComponent((hash.match(/error_description=([^&]*)/)||[])[1]||"").replace(/\+/g," ");history.replaceState(null,"",location.pathname);view={screen:"home",auth:"login",loginErr:/expired/i.test(m)?"Odkaz v e-maile už neplatí. Prihlás sa alebo si vyžiadaj nový.":m};render();return}
   if(!navigator.onLine&&await openFromCache())return;
   let session=null;try{({data:{session}}=await SB.auth.getSession())}catch(e){if(await openFromCache())return}
-  if(session&&session.user)await afterLogin(session.user);else if(lsGet("sf-uid")&&!navigator.onLine&&await openFromCache())return;else{view={screen:"home",auth:/[?&]prihlasenie/.test(location.search)?"login":"landing",loginErr:""};render()}}
+  if(session&&session.user)await afterLogin(session.user);else if(lsGet("sf-uid")&&!navigator.onLine&&await openFromCache())return;else{const rg=(location.search.match(/[?&]registracia=([^&]*)/)||[])[1];view={screen:"home",auth:rg!=null?"register":/[?&]prihlasenie/.test(location.search)?"login":"landing",loginErr:"",regPrefill:rg?decodeURIComponent(rg):""};render()}}
 async function afterLogin(u){authUser=u;lsSet("sf-uid",u.id);view={screen:"home",auth:"loading"};render();
   try{await SB.rpc("accept_invites");
     const {data:ms,error}=await SB.from("members").select("tenant_id,role,tenants(name)").eq("user_id",u.id);if(error)throw error;
@@ -1351,7 +1353,7 @@ function loginHTML(){
   if(A==="register")return registerHTML();
   if(A==="checkmail")return authShell("Skontroluj e-mail","Registrácia",`<div class="card stack"><div>Na adresu <b>${esc(view.regEmail||"")}</b> sme poslali odkaz na overenie. Klikni naň a potom sa prihlás.</div>
     <div class="muted" style="font-size:13px">Ak e-mail neprišiel do pár minút, pozri priečinok Spam alebo Hromadné.</div><button class="btn" data-a="authGo" data-to="login" style="align-self:flex-start">Na prihlásenie</button></div>`);
-  if(A==="newpw")return authShell("Nové heslo","Obnovenie hesla",`<form class="card stack" id="newPwForm">
+  if(A==="newpw")return authShell(view.invite?"Nastav si heslo":"Nové heslo",view.invite?"Prijatie pozvánky":"Obnovenie hesla",`<form class="card stack" id="newPwForm">${view.invite?`<div class="muted">Vitaj v aplikácii Stavebná firma. Zvoľ si heslo, ktorým sa budeš odteraz prihlasovať. Po uložení sa ti otvorí firma, ktorá ťa pozvala.</div>`:""}
       <div class="grid2"><label>Nové heslo<input id="npPw" type="password" required minlength="8" autocomplete="new-password"></label><label>Heslo znova<input id="npPw2" type="password" required minlength="8" autocomplete="new-password"></label></div>
       ${view.loginErr?`<div class="err">${esc(view.loginErr)}</div>`:""}<button class="btn primary" type="submit">Uložiť heslo a prihlásiť sa</button></form>`);
   if(A==="pick")return authShell("Vyber firmu","Máš prístup do viacerých firiem",`${myTenants.map(t=>`<button class="card demo" data-a="pickTenant" data-id="${t.tenant_id}"><span><b>${esc((t.tenants||{}).name||"Firma")}</b><br><span class="muted">${esc({admin:"administrátor",spravca:"správca",clen:"člen",dozor:"stavebný dozor"}[t.role]||t.role)}</span></span></button>`).join("")}
@@ -1370,7 +1372,7 @@ function registerHTML(){
   return authShell("Registrácia","Nový účet",`
     <form class="card stack" id="registerForm">
       <label>Meno a priezvisko<input id="rgName" required autocomplete="name"></label>
-      <label>E-mail<input id="rgEmail" type="email" required autocomplete="username" placeholder="meno@firma.sk"></label>
+      <label>E-mail<input id="rgEmail" type="email" required autocomplete="username" placeholder="meno@firma.sk" value="${esc(view.regPrefill||"")}"></label>
       <div class="grid2"><label>Heslo<input id="rgPw" type="password" required minlength="8" autocomplete="new-password"></label>
         <label>Heslo znova<input id="rgPw2" type="password" required minlength="8" autocomplete="new-password"></label></div>
       <span class="hint">Aspoň 8 znakov.</span>
@@ -1423,7 +1425,16 @@ async function loadBilling(){if(!TID)return;const {data,error}=await SB.rpc("bil
 let PADMIN=false;
 async function loadPadmin(){try{const {data,error}=await SB.rpc("is_platform_admin");const v=!error&&!!data;if(v!==PADMIN){PADMIN=v;render()}}catch(e){PADMIN=false}}
 isPlatformAdmin=()=>!!me&&PADMIN;
-platformLoad=async()=>{const {data,error}=await SB.rpc("platform_overview");if(error)throw new Error(error.message);return data||[]};
+platformLoad=async()=>{let r=await SB.rpc("platform_overview");
+  if(r.error&&/permission denied|JWT|401/i.test(r.error.message+(r.status||""))){await SB.auth.refreshSession().catch(()=>{});r=await SB.rpc("platform_overview")}
+  if(r.error)throw new Error(/permission denied|JWT/i.test(r.error.message)?"Prihlásenie vypršalo. Odhlás sa a prihlás znova.":r.error.message);return r.data||[]};
+/* po návrate k oknu (napr. po uspatí počítača) obnoviť prihlásenie skôr, než aplikácia niečo načíta alebo uloží */
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&SB&&authUser)SB.auth.getSession().then(({data})=>{const e=data&&data.session&&data.session.expires_at;if(!e||e*1000-Date.now()<120000)return SB.auth.refreshSession()}).catch(()=>{})});
+/* počasie pre denný záznam: server (funkcia weather, Open-Meteo) podľa GPS alebo obce stavby */
+wxFetch=async(p,d)=>{const body={date:d};if(p.locType==="gps"&&p.gps){body.lat=p.gps.lat;body.lng=p.gps.lng}else body.place=[p.locality,p.address].filter(Boolean).join(", ");
+  const {data,error}=await SB.functions.invoke("weather",{body});
+  if(error){let msg=error.message;try{const j=await error.context.json();if(j&&j.error)msg=j.error}catch(e){}throw new Error(msg)}
+  if(data&&data.error)throw new Error(data.error);return data};
 /* zosúladenie so Stripe – pri otvorení firmy a po návrate z platby (ak by potvrdenie zo Stripe meškalo) */
 async function syncBilling(){if(!TID||!BILL||!BILL.has_customer)return false;try{const {data,error}=await SB.functions.invoke("billing",{body:{action:"sync",tenant_id:TID}});
   if(error||!data||!data.synced)return false;const before=JSON.stringify(BILL.active);await loadBilling();if(JSON.stringify(BILL.active)!==before){await loadTenant(TID);render()}return true}catch(e){return false}}
@@ -1494,6 +1505,20 @@ accountDelete=async(scope,pw)=>{
   if(gone){try{await SB.auth.signOut({scope:"local"})}catch(e){}lsSet("sf-uid","");me=null;authUser=null;TID=null;S=blankState();SNAP=new Map();USNAP=new Map();VER=new Map();
     view={screen:"home",auth:"landing",loginErr:""};render();window.scrollTo(0,0);toast(scope==="me"?"Tvoj účet bol zrušený.":"Firma aj tvoj účet boli zrušené. Ďakujeme, že si používal Stavebnú firmu.")}
   else{lsSet("sf-tenant","");toast("Firma bola zrušená.");setTimeout(()=>location.replace(location.pathname),1200)}};
+/* ---------- e-maily (funkcia notify) ---------- */
+async function notifyCall(body){const {data,error}=await SB.functions.invoke("notify",{body:{tenant_id:TID,...body}});
+  if(error){let msg=error.message;try{const j=await error.context.json();if(j&&j.error)msg=j.error}catch(e){}throw new Error(msg)}
+  if(data&&data.error)throw new Error(data.error);return data||{}}
+const mailToast=t=>setTimeout(()=>toast(t),1600);
+mail=async(kind,o)=>{if(!TID||!navigator.onLine)return;if(!(o.users||[]).length&&!(o.emails||[]).length)return;
+  try{await saveQ.catch(()=>{});const d=await notifyCall({action:"send",kind,...o});
+    if(d.sent)mailToast(`E-mail odoslaný (${d.sent} ${pl(d.sent,"príjemca","príjemcovia","príjemcov")})`)}
+  catch(e){console.error(e);mailToast("E-mail sa nepodarilo odoslať: "+(e.message||e))}};
+async function sendInvite(id,email){try{const d=await notifyCall({action:"invite",invite_id:id});
+    mailToast(d.existing?`${email} už má účet – poslali sme mu e-mail, že ho pridávaš`:`Pozvánka odoslaná na ${email}`)}
+  catch(e){console.error(e);mailToast("Pozvánku sa nepodarilo odoslať e-mailom: "+(e.message||e))}}
+document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="invResend"]');if(!b||!me)return;ev.stopImmediatePropagation();
+  const u=S.users.find(x=>x.id===b.dataset.id);if(u){b.disabled=true;toast("Posielam pozvánku…");sendInvite(u.id.slice(4),u.email)}},true);
 async function billCall(body){billBusy=true;render();
   try{const {data,error}=await SB.functions.invoke("billing",{body:{...body,tenant_id:TID}});
     if(error){let msg=error.message;try{const j=await error.context.json();if(j&&j.error)msg=j.error}catch(e){}throw new Error(msg)}
@@ -2145,7 +2170,7 @@ function termsOverviewHTML(){
     <div class="card tablewrap" style="padding:6px 8px"><table><thead><tr><th>Stav</th><th>Stroj / vozidlo</th><th>Termín</th><th>Platnosť</th></tr></thead><tbody>
     ${list.map(i=>`<tr class="clickrow" data-a="vehOpen" data-id="${i.m.id}"><td>${stPill(i.st,i.st==="ok"?"OK":i.st==="none"?"–":undefined)}</td><td><b>${esc(i.m.name)}</b>${i.m.ecv?`<br><span class="muted num">${esc(i.m.ecv)}</span>`:""}</td><td>${esc(i.name)}${i.kind==="svc"?' <span class="muted">· servis</span>':""}</td><td class="num">${esc(i.text)}</td></tr>`).join("")
       ||`<tr><td colspan="4" class="muted">${only?"Všetko je v poriadku, žiadny termín nekončí do 30 dní.":"Zatiaľ nie sú zadané žiadne termíny."}</td></tr>`}</tbody></table></div>
-    <div class="muted" style="font-size:13px">Zodpovedná osoba a administrátor uvidia upozornenie v aplikácii.</div></div>`}
+    <div class="muted" style="font-size:13px">Administrátor a správcovia Dopravy dostanú každé ráno e-mailový prehľad termínov, ktoré sa blížia alebo sú po termíne.</div></div>`}
 
 function vehDetailHTML(m){
   const C=catOf(m),st=vehStatus(m);
@@ -2427,7 +2452,7 @@ function tasksPaneHTML(){
       ${tab==="mine"&&sent.length?sec(`Odovzdané na kontrolu <span class="num">${sent.length}</span>`,"sent",`<ul class="tasklist">${sent.map(t=>`<li class="task done"><span class="task-main"><b>${esc(t.title)}</b><span class="muted">splnené ${dt(t.doneAt)} · čaká na kontrolu ${esc(user(t.by)?.name||"")}</span></span></li>`).join("")}</ul>`):""}
       ${assigner?(newForm||`<button class="btn small" data-a="taskNew" style="align-self:flex-start">+ Nová úloha</button>`):""}
       ${done.length?`<details class="tp-done"><summary>Hotové (${done.length})</summary><ul class="tasklist">${done.map(t=>`<li class="task done"><span class="task-main"><b>${esc(t.title)}</b><span class="muted">${esc(user(t.doneBy)?.name||"")} · ${dt(t.doneAt)}${t.doneNote?` · ${esc(t.doneNote)}`:""}${t.checkedBy&&t.checkedBy!==t.doneBy?` · skontroloval ${esc(user(t.checkedBy)?.name||"")}`:""}</span></span></li>`).join("")}</ul></details>`:""}
-      ${assigner?`<div class="hint">Úlohu priradíš pri termíne alebo servise stroja, na Nástenke alebo pri kontrolnom dni tlačidlom „Priradiť ako úlohu“. Po obnove termínu alebo zápise servisu sa úloha sama označí ako hotová.</div>`:""}
+      ${assigner?`<div class="hint">Úlohu priradíš pri termíne alebo servise stroja, na Nástenke alebo pri kontrolnom dni tlačidlom „Priradiť ako úlohu“. Po obnove termínu alebo zápise servisu sa úloha sama označí ako hotová. Používateľovi príde aj e-mail.</div>`:""}
     </div>`}
 let TP_COL=(()=>{try{return localStorage.getItem("sf-tpcol")==="1"}catch(e){return false}})();
 const tpCollapsed=()=>TP_COL&&!view.tpMax&&matchMedia("(min-width:920px)").matches;
@@ -2466,12 +2491,12 @@ document.addEventListener("submit",ev=>{const f=ev.target.id;if(!me)return;
     if(!uidv){toast("Vyber používateľa");return}if(!canAssignSrc(src))return;const info=srcInfo(src)||{title:"Úloha"};
     S.tasks=S.tasks||[];let t=openTaskFor(key);
     if(t)Object.assign(t,{assignee:uidv,note,due:info.due||t.due});else{t={id:uid("tk"),key,src,title:info.title,due:info.due||"",assignee:uidv,note,by:me.id,at:nowIso(),status:"open"};S.tasks.push(t)}
-    view.assignFor=null;save();toast(`Úloha priradená: ${user(uidv)?.name||""}`);render()}
+    view.assignFor=null;save();toast(`Úloha priradená: ${user(uidv)?.name||""}`);render();mailTask(t)}
   else if(f==="taskRetForm"){ev.preventDefault();const t=S.tasks.find(x=>x.id===ev.target.dataset.id),n=($("#trtNote").value||"").trim();if(!t||!n)return;
     t.status="open";t.note=`Vrátené: ${n}`;t.returnedAt=nowIso();delete t.doneAt;delete t.doneBy;delete t.doneNote;view.retFor=null;save();toast(`Úloha vrátená: ${user(t.assignee)?.name||""}`);render()}
   else if(f==="taskNewForm"){ev.preventDefault();const title=($("#tnTitle").value||"").trim(),uidv=$("#tnUser").value;if(!title||!uidv){toast("Zadaj úlohu a vyber používateľa");return}
-    (S.tasks=S.tasks||[]).push({id:uid("tk"),key:"manual:"+uid(""),src:{t:"manual"},title,due:$("#tnDue").value||"",assignee:uidv,note:"",by:me.id,at:nowIso(),status:"open"});
-    view.taskNew=false;save();toast("Úloha pridaná");render()}
+    const t={id:uid("tk"),key:"manual:"+uid(""),src:{t:"manual"},title,due:$("#tnDue").value||"",assignee:uidv,note:"",by:me.id,at:nowIso(),status:"open"};(S.tasks=S.tasks||[]).push(t);
+    view.taskNew=false;save();toast("Úloha pridaná");render();mailTask(t)}
 });
 function SEED_TASKS(){return [
   {id:"tk1",key:"svc:m5:s51",src:{t:"svc",m:"m5",i:"s51"},title:"Servis: Servisná prehliadka – Škoda Octavia Combi",due:"2026-11-05",assignee:"u2",note:"Objednať v autorizovanom servise",by:"u1",at:"2026-10-20T09:00",status:"open"},
@@ -2492,7 +2517,7 @@ function usersHTML(){
           <label class="${r==="edit"?"sel":""}"><input type="radio" name="ul_${u.id}_${k}" value="edit" data-ul="${u.id}" data-umod="${k}" ${r==="edit"?"checked":""} ${!admin||A||!r?"disabled":""}> Administrácia</label></div>
         ${off?`<span class="hint">modul nie je v predplatnom</span>`:""}</div>`}).join("");
     return `<div class="card stack ucard ${A?"isadmin":""}">
-      <div class="entry-head"><div style="min-width:0"><b>${esc(u.name||u.email)}</b>${self?' <span class="muted">(ty)</span>':""}<div class="muted" style="font-size:13px;overflow-wrap:anywhere">${esc(u.email)}${u.pending?" · pozvaný, ešte sa nezaregistroval":""}</div>
+      <div class="entry-head"><div style="min-width:0"><b>${esc(u.name||u.email)}</b>${self?' <span class="muted">(ty)</span>':""}<div class="muted" style="font-size:13px;overflow-wrap:anywhere">${esc(u.email)}${u.pending?` · pozvaný, ešte sa neprihlásil${admin?` <button type="button" class="btn small ghost" data-a="invResend" data-id="${u.id}" style="padding:1px 8px;font-size:12px;margin-left:4px">Poslať pozvánku znova</button>`:""}`:""}</div>
         ${pr.length?`<div class="muted" style="font-size:12px">Na stavbách: ${esc(pr.join(", "))}</div>`:""}</div>
         <div class="row">${A?rolePill("admin"):""}
           ${admin&&!self&&!(A&&adminCount<2)?`<label class="chk admchk"><input type="checkbox" data-uadmin="${u.id}" ${A?"checked":""}> Administrátor</label>`:""}</div></div>
@@ -2506,7 +2531,7 @@ function usersHTML(){
         <div class="grid2"><label>Meno a priezvisko<input id="unName" required></label><label>E-mail<input type="email" id="unEmail" required placeholder="meno@firma.sk"></label></div>
         <div class="mrights">${RIGHT_MODS.map(([k,l])=>`<div class="mright"><label class="chk mname"><input type="checkbox" id="un_${k}">${icon(k==="stavba"?"home":k,"mr-ic")}<span>${l}</span></label>
           <div class="lvl"><label><input type="radio" name="unl_${k}" value="view" checked> Zobrazenie</label><label><input type="radio" name="unl_${k}" value="edit"> Administrácia</label></div></div>`).join("")}</div>
-        <div class="muted" style="font-size:13px">Pozvánka sa zatiaľ neposiela automaticky – daj kolegovi vedieť, nech sa zaregistruje na www.stavebnafirma.eu práve týmto e-mailom. Do firmy sa potom pridá sám, s pridelenými právami.</div>
+        <div class="muted" style="font-size:13px">Kolegovi príde pozvánka e-mailom s odkazom na nastavenie hesla. Po prihlásení uvidí firmu s pridelenými právami.</div>
         <div class="row"><button class="btn primary" type="submit">Pridať používateľa</button><button type="button" class="btn ghost" data-a="userNewNo">Zrušiť</button></div></form>`
       :`<button class="btn primary" data-a="userNew" style="align-self:flex-start">+ Pridať používateľa</button>`):""}
     ${list.map(card).join("")}
@@ -4694,7 +4719,7 @@ function nastenkaHTML(){
     <div class="dash nbdash">${bubbles.join("")||`<div class="card muted">Pre tvoju rolu tu zatiaľ nie sú žiadne prehľady.</div>`}</div></div>`}
 function firmaHTML(){
   const t=firmTabCur(),tabs="";
-  const body=t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():t==="ponuka"?marketHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML()+accDelHTML("firm"));
+  const body=t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():t==="ponuka"?marketHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML()+mailSetHTML()+accDelHTML("firm"));
   return `<div class="stack"><div><div class="eyebrow">Firma</div><h1>${esc(S.firm.name||"Firma")}</h1></div>${tabs}${t==="udaje"&&!view.firmEditing?firmStartRowHTML():""}${body}</div>`}
 const P_TABS=[["emp","Zamestnanci"],["att","Dochádzka"],["mzdy","Podklady pre mzdy"],["sc","Služobné cesty"],["skol","Školenia"],["ost","Ostatné"]];
 /* služobné cesty sa skladajú z dní "SC" v dochádzke; po sebe idúce dni jedného zamestnanca = jedna cesta */
@@ -4882,6 +4907,14 @@ function profileHTML(){
   </div>`}
 /* ---------- zrušenie účtu a firmy ----------
    scope "me" = len môj účet (firma ostáva), "firm" = celá firma (účet ostáva), "firmMe" = jediný administrátor: firma aj účet */
+/* e-mailové upozornenia firmy (posiela server; prepínače číta funkcia notify zo S.firm.mail) */
+function mailSetHTML(){if(me.companyRole!=="admin")return "";const M=S.firm.mail||{};
+  return `<div class="card stack"><h3>E-mailové upozornenia</h3>
+    <label class="chk"><input type="checkbox" id="mailTasks" ${M.tasks===false?"":"checked"}> Výzvy stavebnému dozoru, úlohy a súpisy prác posielať aj e-mailom</label>
+    <label class="chk"><input type="checkbox" id="mailDigest" ${M.digest===false?"":"checked"}> Ranný prehľad – termíny strojov a vozidiel a jazdy na fakturáciu (Doprava a logistika)</label>
+    <div class="muted" style="font-size:13px">Pozvánky kolegom a na kontrolné dni sa posielajú vždy. Ranný prehľad dostane administrátor a správcovia Dopravy, len keď je čo hlásiť. E-maily odchádzajú z adresy noreply@stavebnafirma.eu, odpoveď príde priamo tomu, kto akciu urobil.</div></div>`}
+document.addEventListener("change",ev=>{const t=ev.target;if(!me||!["mailTasks","mailDigest"].includes(t.id)||me.companyRole!=="admin")return;
+  S.firm.mail={...(S.firm.mail||{}),[t.id==="mailTasks"?"tasks":"digest"]:t.checked};save();toast(t.checked?"E-maily zapnuté":"E-maily vypnuté")});
 function soleAdmin(){return me.companyRole==="admin"&&!(S.users||[]).some(u=>u.id!==me.id&&isAdmin(u))}
 function accDelHTML(where){
   if(!me||isExternal(me))return "";const fn=esc(S.firm.name||"firma");
@@ -4921,6 +4954,8 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
   if(a==="profile"){view={screen:"profile",prev:view};render();window.scrollTo(0,0)}
   else if(a==="profileClose"){const pv=view.prev;view=pv&&pv.screen!=="profile"?pv:{screen:startScreen()};view.profDraft=null;render()}
   else if(a==="pfStampClear"){readProfileSoft();view.profDraft.stamp=null;render()}});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me||!view.draft||!t.matches('.mrow select[data-f="machineId"]'))return;readDraft();render();
+  if(t.value==="__new"){const r=t.closest(".mrow")?.dataset.i,x=$(`#mach_x_${r}`);if(x)x.focus()}});
 document.addEventListener("change",async ev=>{const t=ev.target;if(!me||t.id!=="pfStampFile"||!t.files[0])return;const f=t.files[0];t.value="";
   if(!/^image\//.test(f.type)){toast("Vyber obrázok, napr. PNG alebo JPG.");return}readProfileSoft();
   try{view.profDraft.stamp=await processImage(f,900,true);render()}catch(e){toast("Obrázok sa nepodarilo načítať. Skús iný súbor.")}});
@@ -4936,7 +4971,10 @@ document.addEventListener("submit",ev=>{const f=ev.target.id;if(!me)return;
 
 /* ---------- render ---------- */
 let _rendering=false,_again=false;
-function render(){if(_rendering){_again=true;return}_rendering=true;try{render0()}finally{_rendering=false}if(_again){_again=false;setTimeout(render,0)}}
+const DF_KEEP=["dDate","dWeather","dTemp","dWork"];
+function render(){if(_rendering){_again=true;return}_rendering=true;
+  try{const k=$("#diaryForm")?{e:view.editId,v:DF_KEEP.map(i=>$("#"+i)?.value)}:null;render0();   /* prekreslenie nesmie zmazať rozpísaný denný záznam */
+    if(k&&$("#diaryForm")&&view.editId===k.e)DF_KEEP.forEach((i,j)=>{const el=$("#"+i);if(el&&k.v[j]!=null)el.value=k.v[j]})}finally{_rendering=false}if(_again){_again=false;setTimeout(render,0)}}
 function render0(){renderBar();const a=$("#app");
   if(me&&needsSetup())view.screen="setup";
   else if(me&&needsProfile())view.screen="profile";
@@ -5127,13 +5165,17 @@ function projectHTML(){
 const CREW_MODES={names:"Menný zoznam pracovníkov",count:"Iba počet pracovníkov"};
 const MACH_MODES={list:"Zoznam strojov",count:"Iba počet strojov",off:"Stroje nesledovať"};
 const machine=id=>(S.machines||[]).find(m=>m.id===id);
+/* stroj v dennom zázname: z vlastného parku (machineId) alebo cudzí, dopísaný ručne (ext) – cudzie sa pamätajú pri stavbe (p.extMach) */
+const curProj=()=>S.projects.find(x=>x.id===view.projectId);
+const machName=c=>c.ext||machine(c.machineId)?.name||"?";
+const machType=c=>c.ext?"cudzí stroj":machine(c.machineId)?.type||"";
 const GROUPS={
   crew:{title:"Pracovníci",add:"+ Pridať pracovníka",hrs:c=>hours(c),
     blank:()=>({workerId:S.workers[0]?.id,from:"07:00",to:"15:30",brk:30})},
   crewC:{title:"Pracovníci (počet)",add:"+ Pridať profesiu",hrs:c=>(+c.count||0)*(+c.hours||0),
     blank:()=>({label:"",count:1,hours:8})},
   mach:{title:"Stroje a mechanizmy",add:"+ Pridať stroj",hrs:c=>+c.hours||0,
-    blank:()=>({machineId:(S.machines||[])[0]?.id,hours:8})},
+    blank:()=>{const f=(S.machines||[])[0],x=(curProj()?.extMach||[])[0];return f?{machineId:f.id,hours:8}:x?{machineId:"",ext:x,hours:8}:{machineId:"__new",ext:"",hours:8}}},
   machC:{title:"Stroje a mechanizmy (počet)",add:"+ Pridať druh stroja",hrs:c=>(+c.count||0)*(+c.hours||0),
     blank:()=>({label:"",count:1,hours:8})}
 };
@@ -5149,7 +5191,7 @@ function diarySeenText(e){return (e.seen||[]).map(s=>`Videné – Stavebný dozo
 function entryPeopleText(e){const out=[];
   (e.crew||[]).forEach(c=>{const w=worker(c.workerId);out.push(`${w?fullName(w):"?"}${w&&w.profession?` (${w.profession})`:""} ${c.from}–${c.to}, ${h(hours(c))} h`)});
   (e.crewC||[]).forEach(c=>out.push(`${c.label||"Pracovníci"}: ${+c.count||0} × ${h(+c.hours||0)} h`));return out}
-function entryMachText(e){const out=[];(e.mach||[]).forEach(c=>{const m=machine(c.machineId);out.push(`${m?m.name:"?"}: ${h(+c.hours||0)} h`)});
+function entryMachText(e){const out=[];(e.mach||[]).forEach(c=>{out.push(`${machName(c)}: ${h(+c.hours||0)} h`)});
   (e.machC||[]).forEach(c=>out.push(`${c.label||"Stroje"}: ${+c.count||0} × ${h(+c.hours||0)} h`));return out}
 const entryWritten=e=>e.createdAt?dt(e.createdAt):"";
 /* záznamy do PDF (spoločné pre celý denník aj export za obdobie) */
@@ -5257,7 +5299,7 @@ function entryTable(g,rows){
   const tot=grpHours(g,rows);
   if(g==="crew"){const b=rows.map(c=>{const w=worker(c.workerId);return `<tr><td>${esc(w?.name||"?")}</td><td class="muted">${esc(w?.profession||"")}</td><td class="num">${c.from}–${c.to}</td><td class="num r">${c.brk}</td><td class="num r">${h(hours(c))}</td></tr>`}).join("");
     return tbl(["Pracovník","Profesia","Čas","Prest. min","Hod."],[0,0,0,1,1],b,`Spolu ${rows.length} ${pl(rows.length,"pracovník","pracovníci","pracovníkov")}`,tot,5)}
-  if(g==="mach"){const b=rows.map(c=>{const m=machine(c.machineId);return `<tr><td>${esc(m?.name||"?")}</td><td class="muted">${esc(m?.type||"")}</td><td class="num r">${h(+c.hours||0)}</td></tr>`}).join("");
+  if(g==="mach"){const b=rows.map(c=>{return `<tr><td>${esc(machName(c))}</td><td class="muted">${esc(machType(c))}</td><td class="num r">${h(+c.hours||0)}</td></tr>`}).join("");
     return tbl(["Stroj","Druh","Hod."],[0,0,1],b,`Spolu ${rows.length} ${pl(rows.length,"stroj","stroje","strojov")}`,tot,3)}
   const n=headCount(rows),isC=g==="crewC";
   const b=rows.map(c=>`<tr><td>${esc(c.label||(isC?"Pracovníci":"Stroje"))}</td><td class="num r">${+c.count||0}</td><td class="num r">${h(+c.hours||0)}</td><td class="num r">${h(GROUPS[g].hrs(c))}</td></tr>`).join("");
@@ -5285,10 +5327,11 @@ function diaryForm(p,e){
     <div class="grid2"><label>Dátum<input type="date" id="dDate" value="${e?e.date:today}" required></label>
       <div class="grid2"><label>Počasie<select id="dWeather">${WEATHER.map(w=>`<option ${e&&e.weather===w?"selected":""}>${w}</option>`).join("")}</select></label>
       <label>Teplota °C<input type="number" id="dTemp" value="${e?esc(e.temp):""}"></label></div></div>
-    <div class="wx stack"><div class="row"><button type="button" class="btn small" data-a="wxLoad">Načítať počasie z SHMÚ</button><span class="muted" style="font-size:13px">podľa dátumu a miesta stavby</span></div>
+    <div class="wx stack"><div class="row"><button type="button" class="btn small" data-a="wxLoad" ${view.wxBusy?"disabled":""}>${view.wxBusy?"Načítavam počasie…":"Načítať počasie"}</button><span class="muted" style="font-size:13px">podľa dátumu a miesta stavby</span></div>
+      ${view.wxErr?`<div class="note">${esc(view.wxErr)}</div>`:""}
       ${view.wxMsg?`<div class="note">${view.wxMsg}</div>`:""}
       ${view.wxMsg?`<label class="chk wxchk"><input type="checkbox" id="wxOk"> Počasie som skontroloval a zodpovedá skutočnosti na stavbe</label>`:""}
-      <div class="hint">Počasie evidované na webovej stránke shmu.sk sa môže s reálnym počasím na danej lokalite v danom čase líšiť, preto je potrebné tento údaj manuálne skontrolovať.</div></div>
+      <div class="hint">Počasie sa načíta z modelových údajov meteorologickej služby Open-Meteo pre polohu stavby. Od skutočného počasia na stavbe sa môže líšiť, preto ho treba skontrolovať.</div></div>
     <label>Vykonané práce<textarea id="dWork" required placeholder="Čo sa dnes na stavbe robilo">${e?esc(e.work):""}</textarea></label>
     ${blocks}
     ${photoFormBlock()}
@@ -5304,8 +5347,12 @@ function rowHTML(g,c,i){
     return `<div class="wrow" data-i="${i}"><label class="wsel">Pracovník<select data-f="workerId" id="${id("w")}">${o}</select></label>
       <label>Od<input type="time" data-f="from" id="${id("f")}" value="${c.from}"></label><label>Do<input type="time" data-f="to" id="${id("t")}" value="${c.to}"></label>
       <label>Prest. min<input type="number" min="0" step="5" data-f="brk" id="${id("b")}" value="${c.brk}"></label>${del}</div>`}
-  if(g==="mach"){const o=(S.machines||[]).map(m=>`<option value="${m.id}" ${m.id===c.machineId?"selected":""}>${esc(m.name)}</option>`).join("");
-    return `<div class="mrow" data-i="${i}"><label class="wsel">Stroj<select data-f="machineId" id="${id("m")}">${o}</select></label>
+  if(g==="mach"){const xs=curProj()?.extMach||[],isNew=c.machineId==="__new"||(c.ext&&!xs.includes(c.ext));
+    const o=(S.machines||[]).map(m=>`<option value="${m.id}" ${!c.ext&&!isNew&&m.id===c.machineId?"selected":""}>${esc(m.name)}</option>`).join("")
+      +(xs.length?`<optgroup label="Cudzie stroje na tejto stavbe">${xs.map(x=>`<option value="x:${esc(x)}" ${!isNew&&c.ext===x?"selected":""}>${esc(x)}</option>`).join("")}</optgroup>`:"")
+      +`<option value="__new" ${isNew?"selected":""}>✎ Iný stroj – dopísať…</option>`;
+    return `<div class="mrow" data-i="${i}"><label class="wsel">Stroj<select data-f="machineId" id="${id("m")}">${o}</select>
+      ${isNew?`<input data-f="ext" id="${id("x")}" value="${esc(c.ext||"")}" placeholder="napr. Rýpadlo EZ80 (KLC s.r.o.)" style="margin-top:6px">`:""}</label>
       <label>Hodiny<input type="number" min="0" step="0.5" data-f="hours" id="${id("h")}" value="${c.hours}"></label>${del}</div>`}
   const isC=g==="crewC";
   return `<div class="crow" data-i="${i}"><label class="wsel">${isC?"Profesia (nepovinné)":"Druh stroja (nepovinné)"}<input data-f="label" id="${id("l")}" value="${esc(c.label)}" placeholder="${isC?"napr. Murári":"napr. Rýpadlo"}" list="${isC?"profList":"machList"}"></label>
@@ -5314,7 +5361,8 @@ function rowHTML(g,c,i){
 }
 function readDraft(){document.querySelectorAll("[data-grp]").forEach(box=>{const g=box.dataset.grp;
   box.querySelectorAll("[data-i]").forEach(r=>{const i=+r.dataset.i,row=view.draft[g][i];if(!row)return;
-    r.querySelectorAll("[data-f]").forEach(f=>{const k=f.dataset.f;row[k]=["brk","count","hours"].includes(k)?(+f.value||0):f.value})})})}
+    r.querySelectorAll("[data-f]").forEach(f=>{const k=f.dataset.f;row[k]=["brk","count","hours"].includes(k)?(+f.value||0):f.value});
+    if(g==="mach"&&r.querySelector('[data-f="machineId"]')){if((row.machineId||"").startsWith("x:")){row.ext=row.machineId.slice(2);row.machineId=""}else if(row.machineId!=="__new")delete row.ext}})})}
 
 /* ---------- fotografie v dennom zázname ---------- */
 const PHOTO_MAX=1280, PHOTO_Q=0.7;
@@ -5365,7 +5413,7 @@ function requestsHTML(p,e){
         <label>Popis situácie<textarea id="reqText" required placeholder="napr. Pri výkope sa našlo nezakreslené potrubie, potrebujeme rozhodnutie o ďalšom postupe."></textarea></label>
         <div class="grid2"><label>Vyjadrenie potrebné do (nepovinné)<input type="date" id="reqDue"></label>
           <label class="chk" style="align-self:end"><input type="checkbox" id="reqUrgent"> Urgentné</label></div>
-        <div class="muted" style="font-size:13px">Upozornenie dostane v aplikácii: ${dz.map(u=>`${esc(u.name)} (${esc(u.email)})`).join(", ")}.</div>
+        <div class="muted" style="font-size:13px">Upozornenie dostane v aplikácii a e-mailom: ${dz.map(u=>`${esc(u.name)} (${esc(u.email)})`).join(", ")}.</div>
         <div class="row"><button class="btn primary" type="submit">Odoslať výzvu</button><button type="button" class="btn ghost" data-a="reqNo">Zrušiť</button></div></form>`}
     else form=dz.length?`<div class="row"><button class="btn small" data-a="reqAdd" data-id="${e.id}">Vyzvať stavebný dozor na vyjadrenie</button></div>`
       :`<div class="muted" style="font-size:13px">Na stavbu zatiaľ nie je pozvaný stavebný dozor, výzvu nemá kto prijať.</div>`;
@@ -5441,10 +5489,10 @@ function kdForm(p){
       ${c.map((x,i)=>`<label class="radio"><input type="checkbox" data-kdinv="${i}" ${x.pre?"checked":""}><span><b>${esc(x.name)}</b> <span class="muted">· ${esc(x.role)}</span><br><span class="muted">${esc(x.email||"bez e-mailu, pozvánka len v aplikácii")}</span></span></label>`).join("")}
       ${noInvEmail?`<div class="note">Investor nemá v kontaktoch stavby zadaný e-mail. Doplň ho v Nastaveniach stavby, aby dostal pozvánku.</div>`:""}
     </fieldset>
-    <div class="muted" style="font-size:13px">Pozvaní dostanú upozornenie v aplikácii. Oficiálnu pozvánku si môžeš stiahnuť ako PDF a poslať e-mailom.</div>
+    <div class="muted" style="font-size:13px">Pozvaní dostanú upozornenie v aplikácii a e-mailom pozvánku s PDF v prílohe.</div>
     <div class="row"><button class="btn primary" type="submit">Zvolať a odoslať pozvánky</button><button type="button" class="btn ghost" data-a="kdNo">Zrušiť</button></div></form>`}
-function kdPDF(p,k){
-  if(!window.jspdf||!window.jspdf.jsPDF){toast("Knižnica na PDF sa nenačítala. Skús stránku obnoviť.");return}
+function kdPDF(p,k,asData){
+  if(!window.jspdf||!window.jspdf.jsPDF){if(!asData)toast("Knižnica na PDF sa nenačítala. Skús stránku obnoviť.");return null}
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4"});
   doc.addFileToVFS("DVC.ttf",PDF_FONT_R);doc.addFont("DVC.ttf","DVC","normal");doc.addFileToVFS("DVCB.ttf",PDF_FONT_B);doc.addFont("DVCB.ttf","DVC","bold");
   const L=20,W=210;let y=24;
@@ -5463,6 +5511,7 @@ function kdPDF(p,k){
   const zv=user(k.by);doc.text(`V ${(p.locality||"").split(",")[0]||"............"} dňa ${plain(d2(k.at.slice(0,10)))}`,L,y);
   if(zv&&zv.stamp){const st=zv.stamp,sw=Math.min(55,22*st.w/st.h);try{doc.addImage(st.data,"PNG",W-L-62,y-1-sw*st.h/st.w,sw,sw*st.h/st.w)}catch(e){}}
   doc.line(W-L-70,y,W-L,y);doc.text(`${zv?.name||""}`,W-L-70,y+5);doc.text(`stavebný dozor${zv&&zv.phone?`, tel. ${zv.phone}`:""}`,W-L-70,y+10);
+  if(asData)return doc.output("datauristring").split(",")[1];
   offerFile(`Pozvanka_KD_${k.no}_${p.name}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_").slice(0,80)+".pdf",doc.output("arraybuffer"));
 }
 
@@ -5574,6 +5623,22 @@ function parseGPS(s){
   if(!m)return null;const lat=parseFloat(m[1].replace(",",".")),lng=parseFloat(m[2].replace(",","."));
   return Math.abs(lat)<=90&&Math.abs(lng)<=180?{lat,lng}:null}
 function gpsText(p){return p.gps?`${p.gps.lat.toFixed(6)}, ${p.gps.lng.toFixed(6)}`:""}
+/* počasie pre denný záznam – prototyp nemá prístup na internet, ostrá verzia volá server (live.js) */
+async function wxFetch(p,d){throw new Error("Prototyp nemôže čítať údaje z iných webov. V aplikácii na www.stavebnafirma.eu sa počasie načíta automaticky – tu ho zatiaľ zadaj ručne.")}
+/* ---------- e-maily z aplikácie ----------
+   mail(druh, údaje) – v prototype sa nič neodošle, ostrá verzia posiela cez server (funkcia notify, live.js).
+   druh: kd (kontrolný deň), req (výzva dozoru), task (úloha), supis (súpis prác) */
+function mailTo(ids){const users=[],emails=[];(ids||[]).forEach(id=>{const u=typeof id==="string"?user(id):id;if(!u||u.id===me.id)return;
+  if(String(u.id).startsWith("inv:")){if(u.email)emails.push({email:u.email,name:u.name||""})}else users.push(u.id)});return {users,emails}}
+function mail(kind,o){}
+function mailKd(p,k,cancel){
+  const em=(k.invitees||[]).filter(i=>i.email&&i.key!=="u:"+me.id).map(i=>({email:i.email,name:i.name||""}));if(!em.length)return;
+  const when=`${d2(k.date)} o ${k.time}`;
+  mail("kd",{emails:em,subject:`${cancel?"Zrušený kontrolný deň":"Pozvánka na kontrolný deň"} č. ${k.no} – ${p.name}`,
+    title:cancel?`Kontrolný deň č. ${k.no} sa ruší`:`Pozvánka na kontrolný deň č. ${k.no}`,
+    intro:cancel?`Kontrolný deň na stavbe ${p.name}, plánovaný na ${when}, sa nekoná.`:`${me.name||me.email} zvoláva kontrolný deň na stavbe ${p.name}. Prosíme o potvrdenie účasti v aplikácii alebo odpoveďou na tento e-mail.`,
+    rows:[["Stavba",p.name],["Termín",when],["Miesto",k.place||placeText(p)],...(cancel?[["Dôvod",k.cancelNote||""]]:[["Program",k.agenda||""]])],
+    button:"Otvoriť stavbu v aplikácii",attachment:cancel?null:(()=>{const d=kdPDF(p,k,true);return d?{name:`Pozvanka_KD_${k.no}.pdf`,data:d}:null})()})}
 function placeText(p){
   const loc=p.locality||"";
   if(p.locType==="gps"&&p.gps)return [loc,`GPS ${gpsText(p)}`].filter(Boolean).join(" · ");
@@ -5695,7 +5760,7 @@ function teamHTML(p){
     <label>Rola<select id="invRole">${inviteRoles(p).map(r=>`<option value="${r}">${ROLES[r]}</option>`).join("")}</select></label></div>
     <label>Meno (nepovinné)<input id="invName"></label>
     <button class="btn primary" type="submit">Poslať pozvánku</button>
-    <div class="muted" style="font-size:13px">Pozvánka sa zatiaľ neposiela automaticky – daj mu vedieť, nech sa zaregistruje na www.stavebnafirma.eu práve týmto e-mailom. Uvidí iba túto stavbu s pridelenými právami. <b>Stavebný dozor</b> si pri prvom prihlásení doplní meno, telefón a môže nahrať pečiatku s podpisom.</div></form>`:"";
+    <div class="muted" style="font-size:13px">Pozvaný dostane pozvánku e-mailom, nastaví si heslo a uvidí iba túto stavbu s pridelenými právami. <b>Stavebný dozor</b> si pri prvom prihlásení doplní meno, telefón a môže nahrať pečiatku s podpisom.</div></form>`:"";
   return `<div class="stack">${inv}<div class="eyebrow">Tím stavby</div>${rows||`<div class="card muted">Na stavbe zatiaľ nie je nikto pridelený.</div>`}<div class="eyebrow">Prístup cez modul Stavba</div>${admins}</div>`;
 }
 
@@ -5937,6 +6002,13 @@ function invPill(inv){const [l,c]=INV_ST[inv.status]||INV_ST.open;return `<span 
 const ACT={submitted:"Vystavil súpis a poslal na odsúhlasenie",approved:"Odsúhlasil súpis",approvedDirect:"Vystavil súpis (stavba nemá stavebný dozor)",returned:"Vrátil na prepracovanie",unlocked:"Odomkol súpis",invoiceNo:"Doplnil číslo faktúry"};
 function dt(iso){if(!iso)return "";const [d,t]=iso.split("T");return d2(d)+(t?" "+t.slice(0,5):"")}
 const nowIso=()=>{const d=new Date(),z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`};
+const invSumX=(p,inv)=>p.budget.items.reduce((a,i)=>a+(+inv.qty[i.id]||0)*i.price,0);
+function mailInvBack(p,inv,ok,note){const h=(inv.history||[]).slice().reverse().find(x=>x.action==="submitted");if(!h)return;
+  mail("supis",{...mailTo([h.by]),subject:`Súpis prác č. ${inv.no} ${ok?"odsúhlasený":"vrátený na prepracovanie"} – ${p.name}`,title:ok?`Stavebný dozor odsúhlasil súpis č. ${inv.no}`:`Stavebný dozor vrátil súpis č. ${inv.no}`,
+    intro:`${me.name||me.email} ${ok?"odsúhlasil":"vrátil na prepracovanie"} súpis vykonaných prác na stavbe ${p.name}.`,rows:[["Stavba",p.name],["Obdobie",periodLabel(inv)],["Suma bez DPH",eur(invSumX(p,inv))],["Dôvod",ok?"":note||""]]})}
+function mailTask(t){if(!t||t.assignee===me.id)return;
+  mail("task",{...mailTo([t.assignee]),subject:`Nová úloha: ${t.title}`,title:"Máš novú úlohu",intro:`${me.name||me.email} ti priradil úlohu v aplikácii Stavebná firma.`,
+    rows:[["Úloha",t.title],["Termín",t.due?d2(t.due):""],["Poznámka",t.note||""]],button:"Otvoriť úlohy v aplikácii"})}
 function logInv(inv,action,note){const h={at:nowIso(),by:me.id,action,note:note||""};if(action==="approved"){h.byName=me.name||me.email;if(me.stamp)h.stamp=me.stamp}(inv.history=inv.history||[]).push(h)}
 function approvalOf(inv){return (inv.history||[]).slice().reverse().find(h=>h.action==="approved"||h.action==="approvedDirect")}
 /* upozornenia pre prihláseného používateľa */
@@ -6309,15 +6381,17 @@ document.addEventListener("click",ev=>{
   else if(a==="delOopp"){b.closest(".oprow").remove()}
   else if(a==="roles"){view={screen:"firma",firmTab:"role"};render()}
   else if(a==="tab"){view.tab=b.dataset.tab;view.editId=null;view.draft=null;view.invId=null;view.newInv=null;view.kdNew=false;render()}
-  else if(a==="newEntry"){view.wxMsg=null;view.editId="__new";view.draft=null;render()}
-  else if(a==="edit"){view.wxMsg=null;view.editId=b.dataset.id;view.draft=null;render();window.scrollTo(0,0)}
-  else if(a==="cancel"){view.wxMsg=null;view.editId=null;view.draft=null;render()}
+  else if(a==="newEntry"){view.wxMsg=null;view.wxErr="";view.editId="__new";view.draft=null;render()}
+  else if(a==="edit"){view.wxMsg=null;view.wxErr="";view.editId=b.dataset.id;view.draft=null;render();window.scrollTo(0,0)}
+  else if(a==="cancel"){view.wxMsg=null;view.wxErr="";view.editId=null;view.draft=null;render()}
   else if(a==="addRow"){readDraft();view.draft[b.dataset.g].push(GROUPS[b.dataset.g].blank());render()}
   else if(a==="delRow"){readDraft();view.draft[b.dataset.g].splice(+b.dataset.i,1);render()}
   else if(a==="lock"){const e=S.diary.find(d=>d.id===b.dataset.id);if(can(p,"diary.lock",e)){e.locked=true;e.lockedBy=me.id;e.lockedAt=nowIso();save();toast("Záznam podpísaný a uzamknutý");render()}}
-  else if(a==="wxLoad"){const d=$("#dDate").value,loc=placeText(p)||"miesto stavby nie je zadané";readDraft();
-    view.wxDate=d;view.wxMsg=`Automatické načítanie počasia (${esc(d2(d))}, ${esc(loc)}) bude fungovať v ostrej verzii na serveri. Prototyp tu nemôže čítať údaje z iných webov, zatiaľ zadaj počasie ručne. Pod týmto textom vidíš potvrdenie, ktoré bude povinné pri každom automaticky načítanom počasí.`;
-    const keep={date:d,weather:$("#dWeather").value,temp:$("#dTemp").value,work:$("#dWork").value};render();$("#dDate").value=keep.date;$("#dWeather").value=keep.weather;$("#dTemp").value=keep.temp;$("#dWork").value=keep.work}
+  else if(a==="wxLoad"){const d=$("#dDate").value;if(!d){toast("Najprv zadaj dátum");return}readDraft();view.wxErr="";view.wxBusy=true;render();
+    wxFetch(p,d).then(r=>{view.wxBusy=false;view.wxDate=d;
+      view.wxMsg=`Načítané počasie ${esc(d2(d))}${r.place?` · ${esc(r.place)}`:""}: <b>${esc(r.weather)}, ${r.temp} °C</b> (priemer 7–15 h, ${r.tmin} až ${r.tmax} °C${r.precip?`, zrážky ${nf(r.precip)} mm`:""}${r.windMax>=25?`, vietor do ${r.windMax} km/h`:""}).`;
+      render();$("#dWeather").value=r.weather;$("#dTemp").value=r.temp})
+    .catch(e=>{view.wxBusy=false;view.wxMsg=null;view.wxErr=String(e.message||e);render()})}
   else if(a==="newProj"){view.screen="home";view.newProj=true;render()}
   else if(a==="cancelNewProj"){view.newProj=false;render()}
   else if(a==="addContact"){const box=document.getElementById(b.dataset.box);box.insertAdjacentHTML("beforeend",contactRow({}));box.lastElementChild.querySelector('[data-c="name"]').focus()}
@@ -6331,7 +6405,7 @@ document.addEventListener("click",ev=>{
   else if(a==="lockAsk"){view.lockAsk=true;render()}
   else if(a==="lockNo"){view.lockAsk=false;render()}
   else if(a==="unlockInv"){const inv=p.invoices.find(x=>x.id===view.invId);if(can(p,"inv.unlock")){inv.status="open";logInv(inv,"unlocked");save();toast("Súpis odomknutý");render()}}
-  else if(a==="approveInv"){const inv=p.invoices.find(x=>x.id===view.invId);if(inv.status==="submitted"&&can(p,"inv.approve")){inv.status="approved";logInv(inv,"approved");save();toast(`Súpis č. ${inv.no} odsúhlasený`);render()}}
+  else if(a==="approveInv"){const inv=p.invoices.find(x=>x.id===view.invId);if(inv.status==="submitted"&&can(p,"inv.approve")){inv.status="approved";logInv(inv,"approved");save();toast(`Súpis č. ${inv.no} odsúhlasený`);render();mailInvBack(p,inv,true)}}
   else if(a==="retAsk"){view.retAsk=true;render();const t=$("#retNote");if(t)t.focus()}
   else if(a==="phDel"){const i=+b.dataset.i;readCaptions();view.draftPhotos.splice(i,1);refreshPhotoEdit()}
   else if(a==="phOpen"){view.lightbox={e:b.dataset.e,i:+b.dataset.i};render()}
@@ -6459,7 +6533,11 @@ document.addEventListener("submit",ev=>{
   else if(f==="diaryForm"){readDraft();
     const data={date:$("#dDate").value,weather:$("#dWeather").value,temp:$("#dTemp").value,work:$("#dWork").value.trim()};
     if(view.wxMsg){const ok=$("#wxOk");if(!ok||!ok.checked){toast("Najprv skontroluj počasie a potvrď to zaškrtnutím políčka");return}data.wxCheckedBy=me.id}
-    view.wxMsg=null;
+    view.wxMsg=null;view.wxErr="";
+    if(view.draft.mach){const bad=view.draft.mach.some(c=>c.machineId==="__new"&&!(c.ext||"").trim());if(bad){toast("Dopíš názov stroja, ktorý nie je z tvojho parku, alebo riadok odstráň");return}
+      view.draft.mach=view.draft.mach.map(c=>c.machineId==="__new"||c.ext?{...c,machineId:"",ext:String(c.ext).trim().replace(/\s+/g," ")}:c).filter(c=>c.machineId||c.ext);
+      const nx=view.draft.mach.map(c=>c.ext).filter(x=>x&&!(p.extMach||[]).some(y=>y.toLowerCase()===x.toLowerCase()));
+      if(nx.length)p.extMach=[...(p.extMach||[]),...new Set(nx)]}
     Object.keys(GROUPS).forEach(g=>{data[g]=view.draft[g]?view.draft[g].filter(c=>g.endsWith("C")?(+c.count>0):true):undefined});
     if(!(data.crew&&data.crew.length)&&!(data.crewC&&data.crewC.length)){toast("Zadaj aspoň jedného pracovníka alebo počet pracovníkov");return}
     readCaptions();data.photos=view.draftPhotos||[];
@@ -6471,7 +6549,9 @@ document.addEventListener("submit",ev=>{
     const list=invList(p);const inv={id:uid("f"),no:(list.length?list[list.length-1].no:0)+1,from:n.from,to:n.to,status:"open",qty:{}};p.invoices.push(inv);
     view.newInv=null;view.invId=inv.id;save();toast(`Súpis č. ${inv.no} založený`);render();window.scrollTo(0,0)}
   else if(f==="lockForm"){const inv=p.invoices.find(x=>x.id===view.invId);if(!can(p,"inv.edit")||frozen(inv))return;
-    if(needsApproval(p)){inv.status="submitted";logInv(inv,"submitted");toast(`Súpis č. ${inv.no} odoslaný stavebnému dozoru na odsúhlasenie`)}
+    if(needsApproval(p)){inv.status="submitted";logInv(inv,"submitted");toast(`Súpis č. ${inv.no} odoslaný stavebnému dozoru na odsúhlasenie`);
+      setTimeout(()=>mail("supis",{...mailTo(dozorsOf(p)),subject:`Súpis prác č. ${inv.no} na odsúhlasenie – ${p.name}`,title:`Súpis prác č. ${inv.no} čaká na odsúhlasenie`,
+        intro:`${me.name||me.email} poslal súpis vykonaných prác na stavbe ${p.name} na odsúhlasenie stavebným dozorom.`,rows:[["Stavba",p.name],["Obdobie",periodLabel(inv)],["Suma bez DPH",eur(invSumX(p,inv))]],button:"Skontrolovať súpis v aplikácii"}),0)}
     else{inv.status="approved";logInv(inv,"approvedDirect");toast(`Súpis č. ${inv.no} vystavený a uzamknutý`)}
     view.lockAsk=false;save();render()}
   else if(f==="kdForm"){if(!can(p,"kd.convene"))return;const c=kdCandidates(p);
@@ -6479,18 +6559,22 @@ document.addEventListener("submit",ev=>{
     if(!inv.length){toast("Vyber aspoň jedného pozvaného");return}
     const date=$("#kdDate").value,time=$("#kdTime").value;if(!date||!time){toast("Zadaj dátum a čas");return}
     p.inspections=p.inspections||[];const k={id:uid("kd"),no:p.inspections.length+1,date,time,place:$("#kdPlace").value.trim(),agenda:$("#kdAgenda").value.trim(),by:me.id,at:nowIso(),invitees:inv,rsvp:{},status:"planned"};
-    p.inspections.push(k);view.kdNew=false;view.kdOpen=k.id;save();toast(`Kontrolný deň č. ${k.no} zvolaný, pozvánky odoslané (${inv.length})`);render()}
+    p.inspections.push(k);view.kdNew=false;view.kdOpen=k.id;save();toast(`Kontrolný deň č. ${k.no} zvolaný, pozvánky odoslané (${inv.length})`);render();mailKd(p,k)}
   else if(f==="kdMinForm"){const k=p.inspections.find(x=>x.id===ev.target.dataset.id),t=$("#kdMinText").value.trim();if(!t)return;k.minutes={by:me.id,at:nowIso(),text:t};k.status="held";completeTasksFor(taskKey({t:"kd",p:p.id,i:k.id}),"zápis z kontrolného dňa");view.kdMin=null;save();toast("Zápis uložený");render()}
-  else if(f==="kdCancelForm"){const k=p.inspections.find(x=>x.id===ev.target.dataset.id);k.status="cancelled";k.cancelNote=$("#kdCancelText").value.trim();view.kdCancel=null;save();toast("Kontrolný deň zrušený, pozvaní dostanú upozornenie");render()}
+  else if(f==="kdCancelForm"){const k=p.inspections.find(x=>x.id===ev.target.dataset.id);k.status="cancelled";k.cancelNote=$("#kdCancelText").value.trim();view.kdCancel=null;save();toast("Kontrolný deň zrušený, pozvaní dostanú upozornenie");render();mailKd(p,k,true)}
   else if(f==="reqForm"){const e=S.diary.find(d=>d.id===ev.target.dataset.e),txt=$("#reqText").value.trim();if(!txt||!can(p,"diary.request"))return;
-    (e.requests=e.requests||[]).push({id:uid("rq"),by:me.id,at:nowIso(),text:txt,due:$("#reqDue").value,urgent:$("#reqUrgent").checked});view.reqFor=null;save();
-    toast(`Výzva odoslaná: ${dozorsOf(p).map(u=>u.name).join(", ")}`);render()}
+    const rq={id:uid("rq"),by:me.id,at:nowIso(),text:txt,due:$("#reqDue").value,urgent:$("#reqUrgent").checked};(e.requests=e.requests||[]).push(rq);view.reqFor=null;save();
+    toast(`Výzva odoslaná: ${dozorsOf(p).map(u=>u.name).join(", ")}`);render();
+    mail("req",{...mailTo(dozorsOf(p)),subject:`${rq.urgent?"URGENTNÉ – ":""}Výzva na vyjadrenie stavebného dozoru – ${p.name}`,title:"Výzva stavebnému dozoru na vyjadrenie",
+      intro:`${me.name||me.email} žiada o vyjadrenie k dennému záznamu na stavbe ${p.name}.`,rows:[["Stavba",p.name],["Denný záznam",d2(e.date)],["Vyjadrenie do",rq.due?d2(rq.due):""],["Naliehavosť",rq.urgent?"urgentné":""]],text:txt,button:"Vyjadriť sa v aplikácii"})}
   else if(f==="answerForm"){const e=S.diary.find(d=>d.id===ev.target.dataset.e),r=e.requests.find(x=>x.id===ev.target.dataset.r),txt=$("#ansText").value.trim();if(!txt||!can(p,"diary.note"))return;
-    r.answer={by:me.id,at:nowIso(),text:txt};view.answerFor=null;save();toast("Vyjadrenie odoslané");render()}
+    r.answer={by:me.id,at:nowIso(),text:txt};view.answerFor=null;save();toast("Vyjadrenie odoslané");render();
+    mail("req",{...mailTo([r.by]),subject:`Vyjadrenie stavebného dozoru – ${p.name}`,title:"Stavebný dozor sa vyjadril",intro:`${me.name||me.email} odpovedal na výzvu k dennému záznamu ${d2(e.date)} na stavbe ${p.name}.`,
+      rows:[["Stavba",p.name],["Výzva",r.text]],text:txt})}
   else if(f==="dnoteForm"){const e=S.diary.find(d=>d.id===ev.target.dataset.id),txt=$("#dnoteText").value.trim();if(!txt||!can(p,"diary.note"))return;
     (e.dozorNotes=e.dozorNotes||[]).push({by:me.id,at:nowIso(),text:txt});view.noteFor=null;save();toast("Zápis dozoru uložený");render()}
   else if(f==="returnForm"){const inv=p.invoices.find(x=>x.id===view.invId);const note=$("#retNote").value.trim();if(!note){toast("Napíš poznámku pre zhotoviteľa");return}
-    if(inv.status==="submitted"&&can(p,"inv.approve")){inv.status="returned";logInv(inv,"returned",note);view.retAsk=false;save();toast("Súpis vrátený zhotoviteľovi");render()}}
+    if(inv.status==="submitted"&&can(p,"inv.approve")){inv.status="returned";logInv(inv,"returned",note);view.retAsk=false;save();toast("Súpis vrátený zhotoviteľovi");render();mailInvBack(p,inv,false,note)}}
   else if(f==="invNoForm"){const inv=p.invoices.find(x=>x.id===view.invId);if(!can(p,"inv.edit"))return;inv.invoiceNo=$("#invNo").value.trim();logInv(inv,"invoiceNo",inv.invoiceNo);save();toast("Číslo faktúry uložené");render()}
   else if(f==="inviteForm"){const email=$("#invEmail").value.trim().toLowerCase(),role=$("#invRole").value;
     if(!inviteRoles(p).includes(role))return;

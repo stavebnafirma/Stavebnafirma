@@ -137,7 +137,7 @@ async function syncUsers(){const cur=new Map(S.users.map(u=>[u.id,u]));
   for(const u of S.users){const st=userState(u),js=JSON.stringify(st);if(USNAP.get(u.id)===js)continue;
     if(u.id.startsWith("inv:")){const row={role:st.role==="admin"?"clen":st.role,rights:st.rights,projects:st.projects,email:u.email,name:u.name||null};
       const q=USNAP.has(u.id)?SB.from("invites").update(row).eq("id",u.id.slice(4)):SB.from("invites").insert({id:u.id.slice(4),tenant_id:TID,created_by:authUser.id,...row});
-      const {error}=await q;if(error)throw permErr(error,"Pozývať a meniť prístupy môže administrátor firmy.");}
+      const isNew=!USNAP.has(u.id);const {error}=await q;if(error)throw permErr(error,"Pozývať a meniť prístupy môže administrátor firmy.");if(isNew)sendInvite(u.id.slice(4),u.email);}
     else{const {error}=await SB.from("members").update(st).eq("tenant_id",TID).eq("user_id",u.id);if(error)throw permErr(error,"Prístupy používateľov mení administrátor firmy.")}
     USNAP.set(u.id,js)}
   for(const id of [...USNAP.keys()]){if(cur.has(id))continue;
@@ -172,10 +172,11 @@ async function boot(){
   view={screen:"home",auth:"loading"};render();
   SB.auth.onAuthStateChange((ev,s)=>{if(ev==="PASSWORD_RECOVERY"){me=null;TID=null;view={screen:"home",auth:"newpw"};render()}});
   const hash=location.hash||"";if(/type=recovery/.test(hash))return;
+  if(/type=invite/.test(hash)){view={screen:"home",auth:"newpw",invite:true};render();return}   /* odkaz z pozvánky: najprv si nastaví heslo */
   if(/error_description=/.test(hash)){const m=decodeURIComponent((hash.match(/error_description=([^&]*)/)||[])[1]||"").replace(/\+/g," ");history.replaceState(null,"",location.pathname);view={screen:"home",auth:"login",loginErr:/expired/i.test(m)?"Odkaz v e-maile už neplatí. Prihlás sa alebo si vyžiadaj nový.":m};render();return}
   if(!navigator.onLine&&await openFromCache())return;
   let session=null;try{({data:{session}}=await SB.auth.getSession())}catch(e){if(await openFromCache())return}
-  if(session&&session.user)await afterLogin(session.user);else if(lsGet("sf-uid")&&!navigator.onLine&&await openFromCache())return;else{view={screen:"home",auth:/[?&]prihlasenie/.test(location.search)?"login":"landing",loginErr:""};render()}}
+  if(session&&session.user)await afterLogin(session.user);else if(lsGet("sf-uid")&&!navigator.onLine&&await openFromCache())return;else{const rg=(location.search.match(/[?&]registracia=([^&]*)/)||[])[1];view={screen:"home",auth:rg!=null?"register":/[?&]prihlasenie/.test(location.search)?"login":"landing",loginErr:"",regPrefill:rg?decodeURIComponent(rg):""};render()}}
 async function afterLogin(u){authUser=u;lsSet("sf-uid",u.id);view={screen:"home",auth:"loading"};render();
   try{await SB.rpc("accept_invites");
     const {data:ms,error}=await SB.from("members").select("tenant_id,role,tenants(name)").eq("user_id",u.id);if(error)throw error;
@@ -212,7 +213,7 @@ function loginHTML(){
   if(A==="register")return registerHTML();
   if(A==="checkmail")return authShell("Skontroluj e-mail","Registrácia",`<div class="card stack"><div>Na adresu <b>${esc(view.regEmail||"")}</b> sme poslali odkaz na overenie. Klikni naň a potom sa prihlás.</div>
     <div class="muted" style="font-size:13px">Ak e-mail neprišiel do pár minút, pozri priečinok Spam alebo Hromadné.</div><button class="btn" data-a="authGo" data-to="login" style="align-self:flex-start">Na prihlásenie</button></div>`);
-  if(A==="newpw")return authShell("Nové heslo","Obnovenie hesla",`<form class="card stack" id="newPwForm">
+  if(A==="newpw")return authShell(view.invite?"Nastav si heslo":"Nové heslo",view.invite?"Prijatie pozvánky":"Obnovenie hesla",`<form class="card stack" id="newPwForm">${view.invite?`<div class="muted">Vitaj v aplikácii Stavebná firma. Zvoľ si heslo, ktorým sa budeš odteraz prihlasovať. Po uložení sa ti otvorí firma, ktorá ťa pozvala.</div>`:""}
       <div class="grid2"><label>Nové heslo<input id="npPw" type="password" required minlength="8" autocomplete="new-password"></label><label>Heslo znova<input id="npPw2" type="password" required minlength="8" autocomplete="new-password"></label></div>
       ${view.loginErr?`<div class="err">${esc(view.loginErr)}</div>`:""}<button class="btn primary" type="submit">Uložiť heslo a prihlásiť sa</button></form>`);
   if(A==="pick")return authShell("Vyber firmu","Máš prístup do viacerých firiem",`${myTenants.map(t=>`<button class="card demo" data-a="pickTenant" data-id="${t.tenant_id}"><span><b>${esc((t.tenants||{}).name||"Firma")}</b><br><span class="muted">${esc({admin:"administrátor",spravca:"správca",clen:"člen",dozor:"stavebný dozor"}[t.role]||t.role)}</span></span></button>`).join("")}
@@ -231,7 +232,7 @@ function registerHTML(){
   return authShell("Registrácia","Nový účet",`
     <form class="card stack" id="registerForm">
       <label>Meno a priezvisko<input id="rgName" required autocomplete="name"></label>
-      <label>E-mail<input id="rgEmail" type="email" required autocomplete="username" placeholder="meno@firma.sk"></label>
+      <label>E-mail<input id="rgEmail" type="email" required autocomplete="username" placeholder="meno@firma.sk" value="${esc(view.regPrefill||"")}"></label>
       <div class="grid2"><label>Heslo<input id="rgPw" type="password" required minlength="8" autocomplete="new-password"></label>
         <label>Heslo znova<input id="rgPw2" type="password" required minlength="8" autocomplete="new-password"></label></div>
       <span class="hint">Aspoň 8 znakov.</span>
@@ -284,7 +285,16 @@ async function loadBilling(){if(!TID)return;const {data,error}=await SB.rpc("bil
 let PADMIN=false;
 async function loadPadmin(){try{const {data,error}=await SB.rpc("is_platform_admin");const v=!error&&!!data;if(v!==PADMIN){PADMIN=v;render()}}catch(e){PADMIN=false}}
 isPlatformAdmin=()=>!!me&&PADMIN;
-platformLoad=async()=>{const {data,error}=await SB.rpc("platform_overview");if(error)throw new Error(error.message);return data||[]};
+platformLoad=async()=>{let r=await SB.rpc("platform_overview");
+  if(r.error&&/permission denied|JWT|401/i.test(r.error.message+(r.status||""))){await SB.auth.refreshSession().catch(()=>{});r=await SB.rpc("platform_overview")}
+  if(r.error)throw new Error(/permission denied|JWT/i.test(r.error.message)?"Prihlásenie vypršalo. Odhlás sa a prihlás znova.":r.error.message);return r.data||[]};
+/* po návrate k oknu (napr. po uspatí počítača) obnoviť prihlásenie skôr, než aplikácia niečo načíta alebo uloží */
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&SB&&authUser)SB.auth.getSession().then(({data})=>{const e=data&&data.session&&data.session.expires_at;if(!e||e*1000-Date.now()<120000)return SB.auth.refreshSession()}).catch(()=>{})});
+/* počasie pre denný záznam: server (funkcia weather, Open-Meteo) podľa GPS alebo obce stavby */
+wxFetch=async(p,d)=>{const body={date:d};if(p.locType==="gps"&&p.gps){body.lat=p.gps.lat;body.lng=p.gps.lng}else body.place=[p.locality,p.address].filter(Boolean).join(", ");
+  const {data,error}=await SB.functions.invoke("weather",{body});
+  if(error){let msg=error.message;try{const j=await error.context.json();if(j&&j.error)msg=j.error}catch(e){}throw new Error(msg)}
+  if(data&&data.error)throw new Error(data.error);return data};
 /* zosúladenie so Stripe – pri otvorení firmy a po návrate z platby (ak by potvrdenie zo Stripe meškalo) */
 async function syncBilling(){if(!TID||!BILL||!BILL.has_customer)return false;try{const {data,error}=await SB.functions.invoke("billing",{body:{action:"sync",tenant_id:TID}});
   if(error||!data||!data.synced)return false;const before=JSON.stringify(BILL.active);await loadBilling();if(JSON.stringify(BILL.active)!==before){await loadTenant(TID);render()}return true}catch(e){return false}}
@@ -355,6 +365,20 @@ accountDelete=async(scope,pw)=>{
   if(gone){try{await SB.auth.signOut({scope:"local"})}catch(e){}lsSet("sf-uid","");me=null;authUser=null;TID=null;S=blankState();SNAP=new Map();USNAP=new Map();VER=new Map();
     view={screen:"home",auth:"landing",loginErr:""};render();window.scrollTo(0,0);toast(scope==="me"?"Tvoj účet bol zrušený.":"Firma aj tvoj účet boli zrušené. Ďakujeme, že si používal Stavebnú firmu.")}
   else{lsSet("sf-tenant","");toast("Firma bola zrušená.");setTimeout(()=>location.replace(location.pathname),1200)}};
+/* ---------- e-maily (funkcia notify) ---------- */
+async function notifyCall(body){const {data,error}=await SB.functions.invoke("notify",{body:{tenant_id:TID,...body}});
+  if(error){let msg=error.message;try{const j=await error.context.json();if(j&&j.error)msg=j.error}catch(e){}throw new Error(msg)}
+  if(data&&data.error)throw new Error(data.error);return data||{}}
+const mailToast=t=>setTimeout(()=>toast(t),1600);
+mail=async(kind,o)=>{if(!TID||!navigator.onLine)return;if(!(o.users||[]).length&&!(o.emails||[]).length)return;
+  try{await saveQ.catch(()=>{});const d=await notifyCall({action:"send",kind,...o});
+    if(d.sent)mailToast(`E-mail odoslaný (${d.sent} ${pl(d.sent,"príjemca","príjemcovia","príjemcov")})`)}
+  catch(e){console.error(e);mailToast("E-mail sa nepodarilo odoslať: "+(e.message||e))}};
+async function sendInvite(id,email){try{const d=await notifyCall({action:"invite",invite_id:id});
+    mailToast(d.existing?`${email} už má účet – poslali sme mu e-mail, že ho pridávaš`:`Pozvánka odoslaná na ${email}`)}
+  catch(e){console.error(e);mailToast("Pozvánku sa nepodarilo odoslať e-mailom: "+(e.message||e))}}
+document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="invResend"]');if(!b||!me)return;ev.stopImmediatePropagation();
+  const u=S.users.find(x=>x.id===b.dataset.id);if(u){b.disabled=true;toast("Posielam pozvánku…");sendInvite(u.id.slice(4),u.email)}},true);
 async function billCall(body){billBusy=true;render();
   try{const {data,error}=await SB.functions.invoke("billing",{body:{...body,tenant_id:TID}});
     if(error){let msg=error.message;try{const j=await error.context.json();if(j&&j.error)msg=j.error}catch(e){}throw new Error(msg)}
