@@ -5932,10 +5932,16 @@ function econAuto(p){const es=S.diary.filter(d=>d.projectId===p.id);let ph=0,pc=
     (e.mach||[]).forEach(c=>{const hh=+c.hours||0,mm=machine(c.machineId);mh+=hh;mc+=hh*(mm?.rate||0)+(mm?.rateDay||0)});
     (e.machC||[]).forEach(c=>{mh+=GROUPS.machC.hrs(c)})});
   const jobs=(S.jobs||[]).filter(j=>j.projectId===p.id),jc=jobs.reduce((s,j)=>s+jobCennik(j),0),jh=jobs.reduce((s,j)=>s+jobHours(j)*Math.max(1,(j.machines||[]).length),0);
-  return {ph,pc,cntH,mh,mc,jobs,jc,jh}}
+  const cntRate=numIn(p.cntRate),cc=cntH*cntRate;   /* hodiny zapísané počtom pracovníkov × priemerný hodinový náklad zadaný v Ekonomike */
+  return {ph,pc,cntH,cntRate,cc,mh,mc,jobs,jc,jh}}
+/* priemerný hodinový náklad na pracovníka pre hodiny zapísané v denníku iba počtom (bez mena a sadzby) */
+function cntRateHTML(p,A,ed){if(!A.cntH)return "";
+  if(A.cntRate&&!view.cntRateEdit)return `<div class="muted" style="font-size:13px">${h(A.cntH)} h zapísaných v denníku počtom pracovníkov sa počíta sadzbou ${eur(A.cntRate)}/h.${ed?` <button type="button" class="btn small ghost" data-a="ecRateEdit">Zmeniť sadzbu</button>`:""}</div>`;
+  return `<div class="note stack" style="gap:8px"><div>${h(A.cntH)} h je v dennom zázname zapísaných iba počtom pracovníkov, bez mena a sadzby, preto zatiaľ nie sú v personálnych nákladoch.${ed?" Zadaj priemerný hodinový náklad na jedného pracovníka (mzda s odvodmi) a hodiny sa započítajú.":" Sadzbu doplní správca stavby v tejto karte."}</div>
+    ${ed?`<div class="row" style="align-items:flex-end"><label style="max-width:220px">Hodinový náklad na pracovníka (€/h)<input id="cntRate" inputmode="decimal" placeholder="napr. 15,00" value="${A.cntRate?esc(String(A.cntRate).replace(".",",")):""}"></label><button type="button" class="btn small primary" data-a="ecRateSave">Uložiť sadzbu</button>${A.cntRate?`<button type="button" class="btn small ghost" data-a="ecRateNo">Zrušiť</button>`:""}</div>`:""}</div>`}
 function econHTML(p){const A=econAuto(p),costs=costsOf(p).sort((a,b)=>(b.date||"").localeCompare(a.date||"")),ed=can(p,"econ.edit"),pers=hasMod("personal"),dop=hasMod("doprava");
   const man={};COST_CATS.forEach(([k])=>man[k]=0);costs.forEach(c=>man[c.cat]=(man[c.cat]||0)+numIn(c.amount));
-  const auto={pers:pers?A.pc:0,dop:(dop?A.jc:0)+A.mc};const tot=k=>(man[k]||0)+(auto[k]||0),all=COST_CATS.reduce((s,[k])=>s+tot(k),0);
+  const auto={pers:(pers?A.pc:0)+A.cc,dop:(dop?A.jc:0)+A.mc};const tot=k=>(man[k]||0)+(auto[k]||0),all=COST_CATS.reduce((s,[k])=>s+tot(k),0);
   const B=p.budget?p.budget.sum:0,T=p.budget&&p.invoices&&p.invoices.length?invTotals(p):{lock:0,open:0},inv=T.lock,res=inv-all;
   const bar=(v,max,cls)=>`<div class="ecbar"><i class="${cls||""}" style="width:${max>0?Math.min(100,v/max*100):0}%"></i></div>`;
   const X=view.ec||{},flt=X.cat||"";const shown=costs.filter(c=>!flt||c.cat===flt);
@@ -5951,31 +5957,35 @@ function econHTML(p){const A=econAuto(p),costs=costsOf(p).sort((a,b)=>(b.date||"
       <div class="muted" style="font-size:13px">Sumu a údaje z dokladu prepíš ručne. Fotka dokladu sa uloží k nákladu a otvorí ju každý, kto vidí ekonomiku stavby.</div>
       <div class="row"><button class="btn primary" type="submit" ${view.ecBusy?"disabled":""}>${view.ecBusy?"Ukladám…":"Uložiť náklad"}</button>${view.ecEdit!=="__new"?(view.ecDel?`<button type="button" class="btn small" data-a="ecDelYes" style="color:var(--bad)">Naozaj odstrániť</button>`:`<button type="button" class="btn small ghost" data-a="ecDel">Odstrániť</button>`):""}</div></form>`:"";
   const catRows=COST_CATS.map(([k,l])=>{const a=auto[k]||0,m=man[k]||0;if(!a&&!m)return "";
-    const note=k==="pers"?(pers?`z denníka ${h(A.ph)} h × hodinový náklad pracovníka${m?` + ručne ${eur(m)}`:""}`:"zapnite modul Personalistika pre výpočet z denníka"):k==="dop"?[dop&&A.jobs.length?`plánovač ${A.jobs.length} ${pl(A.jobs.length,"úloha","úlohy","úloh")} ${eur(A.jc)}`:"",A.mc?`stroje z denníka ${eur(A.mc)}`:"",m?`ručne ${eur(m)}`:""].filter(Boolean).join(" · "):`${costs.filter(c=>c.cat===k).length} ${pl(costs.filter(c=>c.cat===k).length,"doklad","doklady","dokladov")}`;
+    const note=k==="pers"?[pers&&A.ph-A.cntH>0?`z denníka ${h(A.ph-A.cntH)} h × hodinový náklad pracovníka`:!pers&&A.ph-A.cntH>0?"menné hodiny: zapnite modul Personalistika pre výpočet z denníka":"",A.cc?`počtom ${h(A.cntH)} h × ${eur(A.cntRate)}/h`:"",m?`ručne ${eur(m)}`:""].filter(Boolean).join(" · "):k==="dop"?[dop&&A.jobs.length?`plánovač ${A.jobs.length} ${pl(A.jobs.length,"úloha","úlohy","úloh")} ${eur(A.jc)}`:"",A.mc?`stroje z denníka ${eur(A.mc)}`:"",m?`ručne ${eur(m)}`:""].filter(Boolean).join(" · "):`${costs.filter(c=>c.cat===k).length} ${pl(costs.filter(c=>c.cat===k).length,"doklad","doklady","dokladov")}`;
     return `<div class="ecrow"><div><b>${l}</b><span class="muted">${esc(note)}</span></div><b class="num">${eur(a+m)}</b>${bar(a+m,Math.max(all,1))}</div>`}).join("");
   const list=shown.map(c=>`<li><span class="ectag c-${c.cat}">${costCat(c.cat)}</span><div class="docmain"><b>${esc(c.desc||c.supplier||costCat(c.cat))}</b><span class="muted">${d2(c.date)}${c.supplier?` · ${esc(c.supplier)}`:""}${c.docNo?` · ${esc(c.docNo)}`:""}${c.part&&multiPart(p)?` · ${esc((p.budget.parts.find(x=>x.id===c.part)||{}).name||"")}`:""}</span></div>
       <b class="num">${eur(numIn(c.amount))}</b><div class="docbtn">${c.file?`<button class="btn small ghost" data-a="ecOpen" data-id="${c.id}">Doklad</button>`:""}${ed?`<button class="btn small ghost" data-a="ecEdit" data-id="${c.id}">Upraviť</button>`:""}</div></li>`).join("");
   return `<div class="stack">
     <div class="card stack"><div class="entry-head"><div class="eyebrow">Náklady podľa kategórií</div></div>
       ${catRows||`<div class="muted">Zatiaľ bez nákladov. Personálne náklady sa počítajú z denníka, doprava z plánovača úloh priradených k tejto stavbe.</div>`}
-      ${A.cntH?`<div class="muted" style="font-size:13px">${h(A.cntH)} h je v denníku zapísaných iba počtom pracovníkov, bez sadzby – nie sú v personálnych nákladoch.</div>`:""}</div>
-    ${form}
-    <div class="card stack"><div class="entry-head ecdh"><div class="eyebrow">Doklady</div><div class="ecdh-r">${ed&&!D?`<button class="btn small primary" data-a="ecNew">+ Pridať náklad</button>`:""}<select id="ecFlt" aria-label="Filtrovať kategóriu"><option value="">všetky kategórie</option>${COST_CATS.map(([k,l])=>`<option value="${k}" ${flt===k?"selected":""}>${l}</option>`).join("")}</select></div></div>
-      ${list?`<ul class="doclist eclist">${list}</ul>`:`<div class="muted">${costs.length?"V tejto kategórii nie sú žiadne doklady.":"Zatiaľ žiadne ručne zadané náklady."}</div>`}
-      ${costs.length?`<div class="row"><button class="btn small ghost" data-a="ecXls">Export nákladov do Excelu</button></div>`:""}</div>
+      ${cntRateHTML(p,A,ed)}</div>
     <div class="eckpi"><div class="card"><div class="muted">Rozpočet bez DPH</div><div class="total num">${B?eur(B):"–"}</div></div>
       <div class="card"><div class="muted">Vyfakturované (odsúhlasené súpisy)</div><div class="total num">${eur(inv)}</div>${T.open?`<div class="muted" style="font-size:13px">+ ${eur(T.open)} rozpracované</div>`:""}</div>
       <div class="card"><div class="muted">Náklady spolu</div><div class="total num">${eur(all)}</div>${B?`<div class="muted" style="font-size:13px">${nf1(Math.round(all/B*1000)/10)} % rozpočtu</div>`:""}</div>
       <div class="card"><div class="muted">Výsledok (fakturované − náklady)</div><div class="total num" style="color:var(--${res>=0?"ok":"bad"})">${eur(res)}</div></div></div>
-    ${B?`<div class="card stack"><div class="eyebrow">Čerpanie</div><div class="ecvs"><span>Vyfakturované</span>${bar(inv,B,"ok")}<span class="num">${B?nf1(Math.round(inv/B*1000)/10):0} %</span><span>Náklady</span>${bar(all,B,all>inv?"bad":"")}<span class="num">${nf1(Math.round(all/B*1000)/10)} %</span></div></div>`:""}</div>`}
+    ${B?`<div class="card stack"><div class="eyebrow">Čerpanie</div><div class="ecvs"><span>Vyfakturované</span>${bar(inv,B,"ok")}<span class="num">${B?nf1(Math.round(inv/B*1000)/10):0} %</span><span>Náklady</span>${bar(all,B,all>inv?"bad":"")}<span class="num">${nf1(Math.round(all/B*1000)/10)} %</span></div></div>`:""}
+    ${form}
+    <div class="card stack"><div class="entry-head ecdh"><div class="eyebrow">Doklady</div><div class="ecdh-r">${ed&&!D?`<button class="btn small primary" data-a="ecNew">+ Pridať náklad</button>`:""}<select id="ecFlt" aria-label="Filtrovať kategóriu"><option value="">všetky kategórie</option>${COST_CATS.map(([k,l])=>`<option value="${k}" ${flt===k?"selected":""}>${l}</option>`).join("")}</select></div></div>
+      ${list?`<ul class="doclist eclist">${list}</ul>`:`<div class="muted">${costs.length?"V tejto kategórii nie sú žiadne doklady.":"Zatiaľ žiadne ručne zadané náklady."}</div>`}
+      ${costs.length?`<div class="row"><button class="btn small ghost" data-a="ecXls">Export nákladov do Excelu</button></div>`:""}</div></div>`}
 function ecXLSX(p){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.");return}const A=econAuto(p);
   const rows=costsOf(p).sort((a,b)=>(a.date||"").localeCompare(b.date||"")).map(c=>[d2(c.date),costCat(c.cat),c.supplier||"",c.docNo||"",c.desc||"",r2(numIn(c.amount))]);
-  if(hasMod("personal")&&A.pc)rows.push(["","Personálne","","","z denníka "+h(A.ph)+" h",r2(A.pc)]);
+  if(hasMod("personal")&&A.pc)rows.push(["","Personálne","","","z denníka "+h(A.ph-A.cntH)+" h",r2(A.pc)]);if(A.cc)rows.push(["","Personálne","","","počtom pracovníkov "+h(A.cntH)+" h × "+A.cntRate+" €/h",r2(A.cc)]);
   if(hasMod("doprava")&&A.jc)rows.push(["","Doprava","","","plánovač, "+A.jobs.length+" úloh",r2(A.jc)]);if(A.mc)rows.push(["","Doprava","","","stroje z denníka",r2(A.mc)]);
   const ws=XLSX.utils.aoa_to_sheet([[`Náklady stavby – ${p.name}`],[],["Dátum","Kategória","Dodávateľ","Doklad","Popis","Suma bez DPH €"],...rows]);ws["!cols"]=[10,14,26,16,40,14].map(w=>({wch:w}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Náklady");offerFile(diaryFile(p,"naklady").replace("Stavebny_dennik_","Naklady_")+".xlsx",XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me||view.screen!=="project")return;const a=b.dataset.a;if(!/^ec[A-Z]/.test(a))return;
   const p=S.projects.find(x=>x.id===view.projectId);if(!p)return;const c=(S.costs||[]).find(x=>x.id===(b.dataset.id||view.ecEdit));
+  if(a==="ecRateEdit"){view.cntRateEdit=true;render();$("#cntRate")?.focus();return}
+  if(a==="ecRateNo"){view.cntRateEdit=false;render();return}
+  if(a==="ecRateSave"){if(!can(p,"econ.edit"))return;const v=numIn($("#cntRate")?.value);if(v<0||v>500){toast("Zadaj sadzbu v eurách za hodinu, napr. 15,00");return}
+    if(v)p.cntRate=Math.round(v*100)/100;else delete p.cntRate;view.cntRateEdit=false;save();toast(v?"Sadzba uložená, hodiny sa započítali do personálnych nákladov":"Sadzba odstránená");render();return}
   if(a==="ecNew"){view.ecEdit="__new";view.ecDel=false;render()}else if(a==="ecEdit"){view.ecEdit=b.dataset.id;view.ecDel=false;render()}
   else if(a==="ecCancel"){view.ecEdit=null;render()}else if(a==="ecDel"){view.ecDel=true;render()}
   else if(a==="ecDelYes"&&c&&can(p,"econ.edit")){if(c.file)FILESTORE.del(c.file.path).catch(()=>{});S.costs=S.costs.filter(x=>x.id!==c.id);view.ecEdit=null;save();toast("Náklad odstránený");render()}
