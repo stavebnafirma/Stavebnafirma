@@ -61,9 +61,12 @@ export function moduleOfPrice(price: { lookup_key?: string | null; metadata?: Re
 }
 export async function pricesByKey(): Promise<Record<string, any>> {
   const keys = allLookupKeys();
-  const r = await stripe("GET", "prices", { lookup_keys: keys, active: true, limit: 100 });
   const out: Record<string, any> = {};
-  for (const p of r.data || []) if (p.lookup_key) out[p.lookup_key] = p;
+  // Stripe prijme najviac 10 kľúčov v jednej požiadavke
+  for (let i = 0; i < keys.length; i += 10) {
+    const r = await stripe("GET", "prices", { lookup_keys: keys.slice(i, i + 10), active: true, limit: 100 });
+    for (const p of r.data || []) if (p.lookup_key) out[p.lookup_key] = p;
+  }
   return out;
 }
 
