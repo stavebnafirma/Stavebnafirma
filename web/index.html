@@ -4829,12 +4829,12 @@ function personalHTML(){const t=view.pTab||"emp",title=(P_TABS.find(x=>x[0]===t)
   return `<div class="stack"><div><div class="eyebrow">Personalistika</div><h1>${title}</h1></div>${body}</div>`}
 function startChecklist(){
   if(me.companyRole!=="admin")return "";const F=S.firm||{};
-  const items=[["Údaje o firme",!firmMissing(F).length,"firma:udaje"],["Logo a pečiatka s podpisom",!!(F.logo&&F.stamp),"firma:udaje"]];
+  const items=[["Údaje o firme",!firmMissing(F).length,"firma:udaje"],["Logo a pečiatka s podpisom",!!(F.logo&&F.stamp),"firma:udaje:img"]];
   items.push(["Zoznam zamestnancov",S.workers.length>0,"firma:zam"],["Strojový a vozový park",(S.machines||[]).length>0,"firma:park"]);
   if(hasMod("stavba"))items.push(["Prvá stavba",S.projects.length>0,"home"]);
   if(items.every(i=>i[1]))return "";const done=items.filter(i=>i[1]).length;
   return `<div class="card stack start"><div class="entry-head"><h3>Začíname</h3><span class="muted num">${done} / ${items.length}</span></div>
-    ${items.map(([l,ok,sec])=>`<div class="chkitem ${ok?"done":""}"><span class="tick" aria-hidden="true">${ok?"✓":""}</span><span>${l}</span>${ok?"":sec==="home"?`<button class="btn small" data-a="newProj">Založiť</button>`:`<button class="btn small" data-a="sec" data-sec="${sec.split(":")[0]}" data-tab="${sec.split(":")[1]||""}">Doplniť</button>`}</div>`).join("")}</div>`}
+    ${items.map(([l,ok,sec])=>`<div class="chkitem ${ok?"done":""}"><span class="tick" aria-hidden="true">${ok?"✓":""}</span><span>${l}</span>${ok?"":sec==="home"?`<button class="btn small" data-a="newProj">Založiť</button>`:`<button class="btn small" data-a="sec" data-sec="${sec.split(":")[0]}" data-tab="${sec.split(":")[1]||""}"${sec.split(":")[2]?` data-edit="${sec.split(":")[2]}"`:""}>Doplniť</button>`}</div>`).join("")}</div>`}
 
 /* ---------- externý stavebný dozor a profil používateľa ---------- */
 /* externý = pozvaný iba ako stavebný dozor, bez prístupu k modulom; vidí len svoje stavby */
@@ -6224,8 +6224,8 @@ document.addEventListener("click",ev=>{
   if(a==="authGo"){view={screen:"home",auth:b.dataset.to,loginErr:""};render();window.scrollTo(0,0)}
   else if(a==="secLocked"){const k=SEC_MOD[b.dataset.sec];view={screen:"firma",firmTab:"moduly"};render();toast(`Modul ${modName(k)} nie je predplatený. Predplatiť ho môžeš tu.`)}
   else if(a==="sec"){view={screen:b.dataset.sec,tab:"dennik",newProj:false};if(b.dataset.dtab)view.dTab=b.dataset.dtab;
-    if(b.dataset.tab){view.firmTab=b.dataset.tab;if(b.dataset.tab==="udaje"&&me.companyRole==="admin"&&firmMissing(S.firm).length){view.firmEditing=true;view.firmDraft=null}}
-    render();window.scrollTo(0,0)}
+    if(b.dataset.tab){view.firmTab=b.dataset.tab;if(b.dataset.tab==="udaje"&&me.companyRole==="admin"&&(firmMissing(S.firm).length||b.dataset.edit)){view.firmEditing=true;view.firmDraft=null}}
+    render();const fi=b.dataset.edit==="img"&&$("#firmForm .imgs");if(fi)fi.closest("fieldset").scrollIntoView({block:"center"});else window.scrollTo(0,0)}
   else if(a==="fzNew"){view.fzEdit="__new";render();const e=$("#fzFirst");if(e)e.focus()}
   else if(a==="fzEdit"){view.fzEdit=b.dataset.id;view.wDel=null;render();window.scrollTo(0,0)}
   else if(a==="fzNo"){view.fzEdit=null;view.wDel=null;render()}
