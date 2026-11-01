@@ -4665,7 +4665,7 @@ function pfStatus(t){const now=new Date(),paid=Object.entries(t.paid_modules||{}
   if(t.trial_ends_at&&new Date(t.trial_ends_at)>now){const d=Math.ceil((new Date(t.trial_ends_at)-now)/864e5);return {t:`Skúšobné · ${d} ${pl(d,"deň","dni","dní")}`,c:"s-wait",k:"trial"}}
   return {t:"Neplatí – zamknuté",c:"s-lock",k:"off"}}
 /* súčet platieb firmy podľa cien balíčkov: interval "month" = mesačné predplatné, "year" = ročné */
-function pfSum(t,interval){const now=new Date();return Object.entries(t.paid_modules||{}).reduce((s,[k,v])=>{if(!v||new Date(v.until)<=now||!PLANS[k]||(v.interval||"month")!==interval)return s;
+function pfSum(t,interval){const now=new Date();if(t.complimentary)return 0;return Object.entries(t.paid_modules||{}).reduce((s,[k,v])=>{if(!v||new Date(v.until)<=now||!PLANS[k]||(v.interval||"month")!==interval)return s;
   const x=PLANS[k].tiers.find(z=>z[0]===(v.tier||0))||PLANS[k].tiers[0];return s+(interval==="year"?x[3]:x[2])},0)}
 function platformHTML(){
   if(view.pdata===undefined){view.pdata=null;platformLoad().then(d=>{view.pdata=d;view.perr="";render()}).catch(e=>{view.pdata=[];view.perr=e.message||String(e);render()})}
@@ -4692,7 +4692,7 @@ function platformHTML(){
       <div class="muted" style="font-size:12px;margin-top:4px">registrovaná ${dmy0(t.created_at)}</div></td>
       <td><span class="pill ${st.c}">${esc(st.t)}</span>${m1?`<div class="muted num" style="margin-top:4px">${eur(m1)} / mesiac</div>`:""}${y1?`<div class="muted num" style="margin-top:4px">${eur(y1)} / rok</div>`:""}</td>
       <td><div class="pfmods">${mods}</div></td><td class="pfuse">${use}</td>
-      <td><b>${esc(fo.name||"–")}</b>${fo.email?`<div><a href="mailto:${esc(fo.email)}">${esc(fo.email)}</a></div>`:""}${fo.phone?`<div>${tel(fo.phone)}</div>`:`<div class="muted">telefón nezadaný</div>`}</td>
+      <td><b>${esc(fo.name||"–")}</b>${fo.email?`<div><a href="mailto:${esc(fo.email)}">${esc(fo.email)}</a></div>`:""}${fo.phone?`<div>${tel(fo.phone)}</div>`:`<div class="muted">telefón v profile nezadaný</div>`}</td>
       <td class="muted"><div>zmena údajov</div><div style="color:var(--fg)">${dmy0(t.last_activity)||"–"}</div>${fo.last_sign_in?`<div style="margin-top:4px">prihlásenie</div><div style="color:var(--fg)">${dmy0(fo.last_sign_in)}</div>`:""}</td></tr>`}).join("");
   return `<div class="stack">${head}
     <div class="pfkpis">${kpi.map(([l,n,k])=>`<button class="card pfkpi${flt===k?" on":""}" data-a="pfFilter" data-k="${k}"><span class="muted">${l}</span><b class="num">${n}</b></button>`).join("")}
