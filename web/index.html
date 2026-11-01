@@ -942,6 +942,13 @@ table.jlog th.r,table.jlog td.r{text-align:right}
 :root[data-theme="dark"] .ld-mcard:not(.base){background:rgba(24,27,31,.84);color:#eceef0;border-color:rgba(255,255,255,.12)}:root[data-theme="dark"] .ld-mcard:not(.base) span{color:#b5bcc4}:root[data-theme="dark"] .ld-mcard:not(.base) b svg{color:#f39a52}
 @media (max-width:760px){:root[data-theme="dark"] .ld-hero.ld-photo{background:linear-gradient(180deg,#141a22 0,#2f4a6b var(--top),#5d84ad calc(var(--ph) - var(--ih) * .45),var(--l-card) calc(var(--ph) - var(--ih) * .3)) no-repeat}:root[data-theme="dark"] .ld-photo::before{background:linear-gradient(180deg,rgba(0,0,0,0),var(--l-card))}}
 @media (max-width:760px) and (prefers-color-scheme:dark){:root:not([data-theme="light"]) .ld-hero.ld-photo{background:linear-gradient(180deg,#141a22 0,#2f4a6b var(--top),#5d84ad calc(var(--ph) - var(--ih) * .45),var(--l-card) calc(var(--ph) - var(--ih) * .3)) no-repeat}:root:not([data-theme="light"]) .ld-photo::before{background:linear-gradient(180deg,rgba(0,0,0,0),var(--l-card))}}
+.closedbar{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:10px;background:var(--lock-bg);color:var(--fg);border:1px solid var(--line)}
+.closedbar svg{width:20px;height:20px;flex:none;color:var(--lock);margin-top:1px}
+.pill svg,h3 svg,.btn svg{width:15px;height:15px;vertical-align:-2px;margin-right:5px}
+.card.proj.closed{opacity:.85}
+.closedlist>summary{cursor:pointer;list-style:none}.closedlist>summary::-webkit-details-marker{display:none}.closedlist>summary::before{content:"▸ ";color:var(--muted)}.closedlist[open]>summary::before{content:"▾ "}
+.closebox{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
+.warnlist{margin:0;padding-left:18px;color:var(--warn);font-size:14px}
 .modcard.bill{display:flex;gap:12px;align-items:flex-start}.modcard.bill.on{border-color:var(--accent);background:var(--tint)}.bprice{white-space:nowrap;font-weight:600;font-size:14px}
 .spinner{width:34px;height:34px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--accent);animation:spin 0.9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 .saveind{font-size:12px;color:var(--brand-hi);margin-right:8px;white-space:nowrap}.saveind.off{color:#fff;background:#b3261e;padding:3px 8px;border-radius:999px}
@@ -1496,7 +1503,10 @@ const editsSomething=()=>RIGHT_MODS.some(([k])=>canEdit(k));
 function roleIn(p){if(isAdmin(me))return"admin";if(canEdit("stavba"))return"spravca";const m=p.members.find(m=>m.userId===me.id);if(m)return m.role;if(canSee("stavba"))return"sledovanie";return null}
 function can(p,act,entry){
   const r0=roleIn(p),r=r0==="spravca"?"admin":r0;
+  /* ukončená stavba je natrvalo uzamknutá – dá sa len otvoriť, prezerať a exportovať */
+  if(p&&p.closed&&!["econ.view","inv.view"].includes(act))return false;
   switch(act){
+    case"close":return r==="admin";
     case"diary.create":return["admin","stavbyveduci","majster"].includes(r);
     case"diary.edit":return entry&&!entry.locked&&(r==="admin"||r==="stavbyveduci"||(r==="majster"&&entry.authorId===me.id));
     case"diary.lock":return entry&&!entry.locked&&["admin","stavbyveduci"].includes(r);
@@ -3491,7 +3501,7 @@ const BILL_STOP=new Set("a v vo na do z zo s so k ku pre pri o od za po mesto me
 /* podobnosť textov bez diakritiky, pádov (prvých 5 písmen) a poradia slov */
 const nameTokens=s=>new Set(normText(s).replace(/[^a-z0-9 ]+/g," ").split(" ").filter(w=>w.length>2&&!BILL_STOP.has(w)).map(w=>w.slice(0,5)));
 function nameScore(a,b){const A=nameTokens(a),B=nameTokens(b);if(!A.size||!B.size)return 0;let c=0;A.forEach(t=>{if(B.has(t))c++});return c<2&&Math.min(A.size,B.size)>1?c/Math.max(A.size,B.size):c/Math.min(A.size,B.size)}
-const activeProjects=()=>S.projects.filter(p=>!p.closed&&p.status!=="done");
+const activeProjects=()=>S.projects.filter(p=>!p.closed&&p.status!=="done"&&p.status!=="closed");
 function projGuess(texts){texts=(Array.isArray(texts)?texts:[texts]).filter(Boolean);let best=null;activeProjects().forEach(p=>texts.forEach(text=>{const s=Math.max(nameScore(text,p.name),nameScore(text,[p.name,placeText(p)].join(" ")));if(s>=.6&&(!best||s>best.s))best={p,s}}));return best}
 const jobText=j=>[j.place,j.desc,[j.place,j.desc].filter(Boolean).join(" "),j.client].filter(Boolean);
 /* úlohy bez priradenej stavby, ktoré sa názvom podobajú na stavbu */
@@ -4731,17 +4741,21 @@ document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="theme
 function rolePill(r){return `<span class="pill r-${r}">${ROLES[r]}</span>`}
 
 function homeHTML(){
-  const ps=visibleProjects();
-  const list=ps.map(p=>{const r=roleIn(p);const n=S.diary.filter(d=>d.projectId===p.id).length;
-    return `<button class="card proj" data-a="open" data-id="${p.id}"><div class="entry-head"><h3>${esc(p.name)}</h3>${rolePill(r)}</div>
-      <div class="muted">${esc([p.client,placeText(p)].filter(Boolean).join(" · "))}</div><div class="muted" style="font-size:13px;margin-top:4px">${n} denných záznamov · ${p.members.length} členov tímu</div></button>`}).join("")
-    ||`<div class="card muted">${canCreateProject()?"Firma zatiaľ nemá žiadnu stavbu. Založ prvú tlačidlom nižšie.":"Zatiaľ nie si pridelený na žiadnu stavbu. Požiadaj stavbyvedúceho o pozvánku."}</div>`;
+  const all=visibleProjects(),ps=all.filter(p=>!p.closed),done=all.filter(p=>p.closed);
+  const card=p=>{const r=roleIn(p);const n=S.diary.filter(d=>d.projectId===p.id).length;
+    return `<button class="card proj${p.closed?" closed":""}" data-a="open" data-id="${p.id}"><div class="entry-head"><h3>${p.closed?icon("lock"):""}${esc(p.name)}</h3>${p.closed?`<span class="pill s-lock">Ukončená ${d2((p.closed.at||"").slice(0,10))}</span>`:rolePill(r)}</div>
+      <div class="muted">${esc([p.client,placeText(p)].filter(Boolean).join(" · "))}</div><div class="muted" style="font-size:13px;margin-top:4px">${n} denných záznamov · ${p.members.length} členov tímu</div></button>`};
+  const list=ps.map(card).join("")
+    ||`<div class="card muted">${done.length?"Všetky stavby sú ukončené. Novú založíš tlačidlom nižšie.":""}${done.length?"":canCreateProject()?"Firma zatiaľ nemá žiadnu stavbu. Založ prvú tlačidlom nižšie.":"Zatiaľ nie si pridelený na žiadnu stavbu. Požiadaj stavbyvedúceho o pozvánku."}</div>`;
+  const doneHTML=done.length?`<details class="card closedlist"${view.showClosed?" open":""}><summary><b>Ukončené stavby</b> <span class="muted">· ${done.length} · len na prezeranie</span></summary><div class="stack" style="margin-top:12px">${done.map(card).join("")}</div></details>`:"";
   const admin=me.companyRole==="admin";
   return `<div class="stack">
     <div class="entry-head"><div><div class="eyebrow">${canSee("stavba")?"Všetky stavby firmy":"Moje stavby"}</div><h1>Stavby</h1></div>
 </div>
     ${(()=>{const n=myNotices(),d=diaryNotices(),kk=kdNotices();return n.length+d.length+kk.length?`<div class="eyebrow">Upozornenia</div>${kk.map(x=>`<button class="card proj notice n-${x.kind}" data-a="goKd" data-p="${x.p.id}" data-id="${x.k.id}"><div class="eyebrow">${esc(x.p.name)} · kontrolný deň</div><div>${esc(x.text)}</div></button>`).join("")}${noticesHTML(n)}${d.map(x=>`<button class="card proj notice n-${x.kind}" data-a="goEntry" data-p="${x.p.id}" data-id="${x.e.id}"><div class="eyebrow">${esc(x.p.name)} · denný záznam</div><div>${esc(x.text)}</div></button>`).join("")}`:""})()}
+    ${ps.length||done.length?`<div class="muted" style="font-size:13px">Aktívne stavby: <b>${ps.length}</b>${done.length?` · ukončené: ${done.length}`:""}</div>`:""}
     ${list}
+    ${doneHTML}
     ${canCreateProject()?(view.newProj?`<form class="card stack" id="newProject"><h3>Nová stavba</h3>
       ${projectFields("np",{})}
       ${modeFields("np","count","off")}
@@ -4756,7 +4770,7 @@ function projectTabs(p){
   const tabs=[["dennik","Denný záznam",dn],["kd","Kontrolné dni",kn],["tim","Tím"],["rozpocet","Rozpočet"]];
   if(can(p,"inv.view"))tabs.push(["faktury","Fakturácia",myNotices().filter(x=>x.p===p).length]);
   if(can(p,"econ.view"))tabs.push(["ekonomika","Ekonomika"]);
-  if(can(p,"settings"))tabs.push(["nastavenia","Nastavenia"]);
+  if(can(p,"settings")||(p.closed&&canDelProj()))tabs.push(["nastavenia","Nastavenia"]);
   tabs.push(["dokumentacia","Dokumentácia",0]);
   return tabs}
 /* druhý rad menu: podkarty aktuálnej sekcie */
@@ -4786,7 +4800,8 @@ function projectHTML(){
   else if(view.tab==="kd")body=kdHTML(p);
   else body=invoicesHTML(p);
   return `<div class="stack">
-    <div><div class="eyebrow">${esc([p.client,placeText(p)].filter(Boolean).join(" · "))}</div><h1>${esc(p.name)}</h1><div style="margin-top:6px">Tvoja rola: ${rolePill(r)}</div></div>
+    <div><div class="eyebrow">${esc([p.client,placeText(p)].filter(Boolean).join(" · "))}</div><h1>${esc(p.name)}</h1><div style="margin-top:6px">Tvoja rola: ${rolePill(r)}${p.closed?` <span class="pill s-lock">${icon("lock")}Ukončená</span>`:""}</div></div>
+    ${p.closed?`<div class="closedbar">${icon("lock")}<div><b>Stavba je ukončená a natrvalo uzamknutá.</b> ${closedText(p)}. Môžeš ju prezerať a exportovať, úpravy už nie sú možné.</div></div>`:""}
     ${projectInfoHTML(p)}${body}</div>`;
 }
 
@@ -4899,7 +4914,7 @@ function diaryHTML(p){
   let out="";
   if(editing) out+=diaryForm(p,editing.new?null:editing);
   else if(can(p,"diary.create")) out+=`<button class="btn primary" data-a="newEntry" style="align-self:flex-start">+ Nový denný záznam</button>`;
-  else out+=`<div class="note">Máš prístup iba na čítanie. Záznamy zapisuje majster alebo stavbyvedúci.</div>`;
+  else if(!p.closed) out+=`<div class="note">Máš prístup iba na čítanie. Záznamy zapisuje majster alebo stavbyvedúci.</div>`;
   if(entries.length&&!editing)out+=diaryExportHTML(p,entries.length);
   out+=entries.map(e=>{
     const status=e.locked?`<span class="pill s-lock">Uzamknuté · ${esc(user(e.lockedBy)?.name||"")}</span>`:`<span class="pill s-open">Rozpracované</span>`;
@@ -5039,7 +5054,7 @@ function requestsHTML(p,e){
   }
   return list+form;
 }
-function diaryNotices(){const out=[];visibleProjects().forEach(p=>S.diary.filter(e=>e.projectId===p.id).forEach(e=>(e.requests||[]).forEach(r=>{
+function diaryNotices(){const out=[];visibleProjects().filter(p=>!p.closed).forEach(p=>S.diary.filter(e=>e.projectId===p.id).forEach(e=>(e.requests||[]).forEach(r=>{
   if(!r.answer&&can(p,"diary.note"))out.push({p,e,kind:r.urgent?"ret":"wait",text:`${r.urgent?"Urgentná výzva":"Výzva"} na vyjadrenie (${fmtDate(e.date)}${r.due?`, termín ${d2(r.due)}`:""}): ${r.text.slice(0,120)}`});
   if(r.answer&&r.by===me.id&&!r.ackAt)out.push({p,e,kind:"ok",text:`Stavebný dozor sa vyjadril k výzve z ${fmtDate(e.date)}: „${r.answer.text.slice(0,120)}“`})})));return out}
 
@@ -5060,7 +5075,7 @@ function kdList(p){return (p.inspections||[]).slice().sort((a,b)=>(b.date+b.time
 function kdStatus(k){if(k.status==="cancelled")return ["Zrušený","s-ret"];if(k.status==="held")return ["Uskutočnený","s-ok"];
   return k.date<todayIso()?["Čaká na zápis","s-open"]:["Zvolaný","s-wait"]}
 function kdInvitedMe(k){return k.invitees.some(i=>i.key==="u:"+me.id)}
-function kdNotices(){const out=[];visibleProjects().forEach(p=>(p.inspections||[]).forEach(k=>{
+function kdNotices(){const out=[];visibleProjects().filter(p=>!p.closed).forEach(p=>(p.inspections||[]).forEach(k=>{
   if(k.status==="planned"&&k.date>=todayIso()&&kdInvitedMe(k)&&!(k.rsvp||{})[me.id]&&k.by!==me.id)
     out.push({p,k,kind:"wait",text:`Pozvánka na kontrolný deň č. ${k.no}: ${fmtDate(k.date)} o ${k.time}, ${k.place}`});
   if(k.status==="cancelled"&&kdInvitedMe(k)&&!(k.seen||{})[me.id]&&k.by!==me.id)
@@ -5094,7 +5109,7 @@ function kdHTML(p){
   const nd=dozorsOf(p).length;
   return `<div class="stack">
     ${canConv?`<button class="btn primary" data-a="kdNew" style="align-self:flex-start">+ Zvolať kontrolný deň</button>`
-      :`<div class="muted" style="font-size:13px">${nd?"Kontrolný deň zvoláva stavebný dozor. Pozvánka príde do aplikácie aj e-mailom.":"Kontrolný deň zvoláva stavebný dozor. Na stavbu zatiaľ nie je pozvaný."}</div>`}
+      :p.closed?"":`<div class="muted" style="font-size:13px">${nd?"Kontrolný deň zvoláva stavebný dozor. Pozvánka príde do aplikácie aj e-mailom.":"Kontrolný deň zvoláva stavebný dozor. Na stavbu zatiaľ nie je pozvaný."}</div>`}
     ${cards||`<div class="card muted">Zatiaľ nebol zvolaný žiadny kontrolný deň.</div>`}</div>`}
 function kdForm(p){
   const c=kdCandidates(p),next=(p.inspections||[]).length+1;
@@ -5298,12 +5313,37 @@ function modeFields(pre,crew,mach){
   <fieldset class="modes"><legend>Stroje a mechanizmy</legend>${Object.entries(MACH_MODES).map(([k,l])=>{const off=false;return `<label class="radio ${off?"dis":""}"><input type="radio" name="${pre}Mach" value="${k}" ${(off?false:mach===k)?"checked":""} ${off?"disabled":""}><span><b>${l}</b><br><span class="muted">${off?"Vyžaduje modul Doprava a logistika":k==="list"?"Konkrétny stroj z číselníka a hodiny":k==="count"?"Len druh, počet strojov a hodiny":"Denný záznam bez strojov"}</span></span></label>`}).join("")}</fieldset>`
 }
 function settingsHTML(p){
+  if(p.closed)return `<div class="card stack"><h3>${icon("lock")}Stavba je ukončená</h3><div class="muted">${closedText(p)}. Stavba je natrvalo uzamknutá – dá sa otvoriť, prezerať a exportovať, ale nedá sa upravovať.</div></div>${projDelHTML(p)}`;
   return `<form class="card stack" id="settingsForm"><h3>Údaje o stavbe</h3>
     ${projectFields("st",p)}
     ${modeFields("st",p.crewMode,p.machMode)}
     <div class="muted" style="font-size:13px">Zmena platí pre nové denné záznamy. Staré záznamy si ponechajú svoj formát.</div>
-    <button class="btn primary" type="submit" style="align-self:flex-start">Uložiť nastavenia</button></form>${projDelHTML(p)}`;
+    <button class="btn primary" type="submit" style="align-self:flex-start">Uložiť nastavenia</button></form>${projCloseHTML(p)}${projDelHTML(p)}`;
 }
+const closedText=p=>`Ukončená ${d2((p.closed.at||"").slice(0,10))}${user(p.closed.by)?` · uzamkol ${user(p.closed.by).name}`:""}`;
+/* ukončenie stavby: natrvalo ju uzamkne, prestane sa rátať medzi aktívne stavby predplatného */
+function projCloseHTML(p){if(!can(p,"close"))return"";
+  if(view.projClose!==p.id)return `<div class="card stack"><h3>Ukončenie stavby</h3><div class="muted" style="font-size:13px">Po dokončení stavbu ukonči. Natrvalo sa uzamkne – ostane dostupná na prezeranie a export denníka, súpisov a dokumentácie, ale už sa nebude dať upravovať a nebude sa rátať medzi aktívne stavby v predplatnom.</div>
+    <button type="button" class="btn" data-a="projCloseAsk" style="align-self:flex-start">${icon("lock")}Ukončiť a uzamknúť stavbu…</button></div>`;
+  const D=S.diary.filter(e=>e.projectId===p.id),open=D.filter(e=>!e.locked).length,
+    inv=(p.invoices||[]).filter(i=>!["approved","invoiced"].includes(i.status)).length,
+    kd=(p.inspections||[]).filter(k=>k.status==="planned"&&k.date>=todayIso()).length;
+  const warn=[open?`${open} ${pl(open,"denný záznam nie je podpísaný","denné záznamy nie sú podpísané","denných záznamov nie je podpísaných")} – po ukončení už nepôjde upraviť ani podpísať`:"",
+    inv?`${inv} ${pl(inv,"súpis prác nie je odsúhlasený","súpisy prác nie sú odsúhlasené","súpisov prác nie je odsúhlasených")}`:"",
+    kd?`${kd} ${pl(kd,"naplánovaný kontrolný deň","naplánované kontrolné dni","naplánovaných kontrolných dní")} ešte len bude`:""].filter(Boolean);
+  return `<div class="card stack delbox closebox"><b>Naozaj ukončiť a uzamknúť stavbu ${esc(p.name)}?</b>
+    ${warn.length?`<ul class="warnlist">${warn.map(w=>`<li>${w}</li>`).join("")}</ul>`:""}
+    <div class="muted">Tento krok je <b>natrvalo</b> – stavbu už nebude možné odomknúť ani upravovať. Zostane len na prezeranie a export.</div>
+    <label>Na potvrdenie napíš <b>UKONČIŤ</b><input id="projCloseTxt" autocomplete="off" style="max-width:220px"></label>
+    <div class="row"><button type="button" class="btn primary" data-a="projCloseYes">Ukončiť a uzamknúť</button><button type="button" class="btn ghost" data-a="projCloseNo">Späť</button></div></div>`}
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(!["projCloseAsk","projCloseNo","projCloseYes"].includes(a))return;const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"close"))return;
+  if(a==="projCloseNo"){view.projClose=null;render();return}
+  if(a==="projCloseAsk"){view.projClose=p.id;render();const el=$("#projCloseTxt");if(el){el.scrollIntoView({block:"center",behavior:"smooth"});el.focus()}return}
+  if(normText(($("#projCloseTxt")||{}).value||"")!=="ukoncit"){toast("Na potvrdenie napíš slovo UKONČIŤ");const el=$("#projCloseTxt");if(el)el.focus();return}
+  p.closed={at:new Date().toISOString(),by:me.id};p.status="closed";
+  (S.tasks||[]).forEach(t=>{if(t.status==="open"&&((t.src&&t.src.p===p.id)||String(t.key||"").split(":")[1]===p.id))t.status="done"});
+  view.projClose=null;view.tab="dennik";view.editId=null;view.draft=null;save();toast(`Stavba ${p.name} je ukončená a uzamknutá`);render();window.scrollTo(0,0)});
 /* odstránenie celej stavby – iba administrátor alebo správca firmy, s potvrdením napísaním slova */
 const canDelProj=()=>!!me&&(isAdmin(me)||me.companyRole==="spravca");
 function projDelHTML(p){if(!canDelProj())return"";
@@ -5534,7 +5574,7 @@ const nowIso=()=>{const d=new Date(),z=n=>String(n).padStart(2,"0");return `${d.
 function logInv(inv,action,note){const h={at:nowIso(),by:me.id,action,note:note||""};if(action==="approved"){h.byName=me.name||me.email;if(me.stamp)h.stamp=me.stamp}(inv.history=inv.history||[]).push(h)}
 function approvalOf(inv){return (inv.history||[]).slice().reverse().find(h=>h.action==="approved"||h.action==="approvedDirect")}
 /* upozornenia pre prihláseného používateľa */
-function myNotices(){const out=[];visibleProjects().forEach(p=>(p.invoices||[]).forEach(inv=>{
+function myNotices(){const out=[];visibleProjects().filter(p=>!p.closed).forEach(p=>(p.invoices||[]).forEach(inv=>{
   if(inv.status==="submitted"&&can(p,"inv.approve"))out.push({p,inv,kind:"wait",text:`Súpis prác č. ${inv.no} (${periodLabel(inv)}) čaká na tvoje odsúhlasenie`});
   if(inv.status==="returned"&&can(p,"inv.edit")){const h=(inv.history||[]).slice().reverse().find(x=>x.action==="returned");out.push({p,inv,kind:"ret",text:`Stavebný dozor vrátil súpis č. ${inv.no} na prepracovanie${h&&h.note?`: „${h.note}“`:""}`})}}));return out}
 function noticesHTML(list){return list.map(n=>`<button class="card proj notice n-${n.kind}" data-a="goInv" data-p="${n.p.id}" data-id="${n.inv.id}"><div class="eyebrow">${esc(n.p.name)}</div><div>${esc(n.text)}</div></button>`).join("")}
