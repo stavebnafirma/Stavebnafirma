@@ -279,7 +279,12 @@ async function offerFile(filename,data){
    PREDPLATNÉ MODULOV (Stripe) – stav načítaný zo servera, moduly zapína len server
    ===================================================================== */
 let BILL=null,PRICES=null,billBusy=false;
-async function loadBilling(){if(!TID)return;const {data,error}=await SB.rpc("billing_status",{t:TID});if(!error&&data)BILL=data}
+async function loadBilling(){if(!TID)return;const {data,error}=await SB.rpc("billing_status",{t:TID});if(!error&&data)BILL=data;loadPadmin()}
+/* admin platformy: tlačidlo a prehľad len pre overený účet info@stavebnafirma.eu (rozhoduje databáza) */
+let PADMIN=false;
+async function loadPadmin(){try{const {data,error}=await SB.rpc("is_platform_admin");const v=!error&&!!data;if(v!==PADMIN){PADMIN=v;render()}}catch(e){PADMIN=false}}
+isPlatformAdmin=()=>!!me&&PADMIN;
+platformLoad=async()=>{const {data,error}=await SB.rpc("platform_overview");if(error)throw new Error(error.message);return data||[]};
 /* zosúladenie so Stripe – pri otvorení firmy a po návrate z platby (ak by potvrdenie zo Stripe meškalo) */
 async function syncBilling(){if(!TID||!BILL||!BILL.has_customer)return false;try{const {data,error}=await SB.functions.invoke("billing",{body:{action:"sync",tenant_id:TID}});
   if(error||!data||!data.synced)return false;const before=JSON.stringify(BILL.active);await loadBilling();if(JSON.stringify(BILL.active)!==before){await loadTenant(TID);render()}return true}catch(e){return false}}

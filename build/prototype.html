@@ -954,6 +954,23 @@ table.jlog th.r,table.jlog td.r{text-align:right}
 .mcusage{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 .modcard.bill:not(.on),.modcard.bill:not(.on):has(input:checked){border-color:var(--line);background:var(--surface)}
 .tier.none.on{border-color:var(--muted);box-shadow:none;background:var(--bg)}.tier.none.on b{color:var(--fg)}
+.padmin{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--accent);color:var(--ink);background:var(--tint);border-radius:8px;padding:6px 10px;font-weight:600;font-size:13px;cursor:pointer}
+.padmin svg{width:15px;height:15px}.padmin.on{background:var(--accent);color:var(--accent-ink)}
+@media (max-width:760px){.padmin span{display:none}}
+.pfkpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.pfkpi{display:flex;flex-direction:column;gap:4px;text-align:left;padding:12px 14px;font:inherit;color:var(--fg)}
+button.pfkpi{cursor:pointer}.pfkpi b{font-size:24px}.pfkpi.on{border-color:var(--accent);background:var(--tint)}
+@media (max-width:1100px){.pfkpis{grid-template-columns:repeat(3,minmax(0,1fr))}}@media (max-width:600px){.pfkpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pftable{padding:0;overflow:hidden}.pftable .tscroll{overflow-x:auto}
+table.pft{width:100%;border-collapse:collapse;font-size:13.5px;min-width:980px}
+table.pft th{text-align:left;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line)}
+table.pft td{padding:12px;border-bottom:1px solid var(--line);vertical-align:top}
+table.pft tr:last-child td{border-bottom:0}
+.pfmods{display:flex;flex-wrap:wrap;gap:4px;max-width:220px}
+.pfmod{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--bg);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.pfmod.on{background:var(--tint);color:var(--ink);border-color:var(--accent-soft)}.pfmod.paid{background:var(--ok-bg);color:var(--ok);border-color:transparent;font-weight:600}
+.pfuse div{line-height:1.5}
+.pfkpi b,table.pft .num{font-family:inherit;font-variant-numeric:tabular-nums}
 </style>
 
 <header class="bar"><div class="bar-in" id="bar"></div><div class="subnav" id="subnav"></div></header>
@@ -1068,7 +1085,8 @@ function seed(){
       {id:"u2",email:"stavbyveduci@kalimis.sk",name:"Peter Baláž",companyRole:"clen"},
       {id:"u3",email:"majster@kalimis.sk",name:"Milan Hudec",companyRole:"clen"},
       {id:"u4",email:"dozor@investor.sk",name:"Ing. Eva Tóthová",companyRole:"clen"},
-      {id:"u5",email:"ekonom@kalimis.sk",name:"Ing. Jana Vargová",companyRole:"ekonom"}
+      {id:"u5",email:"ekonom@kalimis.sk",name:"Ing. Jana Vargová",companyRole:"ekonom"},
+      {id:"u6",email:"info@stavebnafirma.eu",name:"Správca platformy",companyRole:"admin"}
     ],
     projects:[
       {id:"p3",name:"Rekonštrukcia miestnych komunikácií – časť A",client:"Mesto Tornaľa",place:"Tornaľa",
@@ -4491,6 +4509,7 @@ function render0(){renderBar();const a=$("#app");
   else if(view.screen==="personal"||view.screen==="workers") a.innerHTML=personalHTML();
   else if(view.screen==="doprava") a.innerHTML=dopravaHTML();
   else if(view.screen==="pozicovna") a.innerHTML=rentHTML();
+  else if(view.screen==="platform"&&isPlatformAdmin()) a.innerHTML=platformHTML();
   else if(view.screen==="roles"){view.screen="firma";view.firmTab="role";a.innerHTML=firmaHTML()}
   else a.innerHTML=projectHTML();
   if(me&&view.lightbox)a.insertAdjacentHTML("beforeend",lightboxHTML());
@@ -4504,7 +4523,7 @@ function renderBar(){
   const F=me?S.firm||{}:{};
   const sn=subnavHTML();const se=$("#subnav");se.innerHTML=sn;se.hidden=!sn;
   (se.querySelectorAll?se.querySelectorAll(".sub-in"):[]).forEach(si=>{const ss=si.querySelector('[aria-selected="true"]');if(ss&&si.scrollWidth>si.clientWidth){const r=ss.offsetLeft+ss.offsetWidth-si.clientWidth;si.scrollLeft=r>0?r+16:0}});
-  $("#bar").innerHTML=navHTML()+`<div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true" class="cone"><path d="M10.4 2.6h3.2l5.2 16.4H5.2z" fill="#e8792f"/><path d="M8.64 8h6.72l.78 2.5H7.86zM6.92 13.5h10.16l.78 2.5H6.14z" fill="#fff"/><rect x="2.5" y="18.6" width="19" height="3" rx="1.2" fill="currentColor"/></svg><span class="bname">Stavebná firma</span>${themeBtn()}</div>`+(me?`<div class="acct"><button type="button" class="who" data-a="profile" title="Môj profil">${F.logo?`<span class="blogo"><img src="${F.logo.data}" alt=""></span>`:""}<span class="wtext"><b>${esc(me.name)}</b><span class="wmail">${esc(F.name||S.company||me.email)}</span></span></button><button class="logout" data-a="logout">Odhlásiť</button></div>`:"");
+  $("#bar").innerHTML=navHTML()+`<div class="brand"><svg viewBox="0 0 24 24" aria-hidden="true" class="cone"><path d="M10.4 2.6h3.2l5.2 16.4H5.2z" fill="#e8792f"/><path d="M8.64 8h6.72l.78 2.5H7.86zM6.92 13.5h10.16l.78 2.5H6.14z" fill="#fff"/><rect x="2.5" y="18.6" width="19" height="3" rx="1.2" fill="currentColor"/></svg><span class="bname">Stavebná firma</span>${themeBtn()}</div>`+(me?`<div class="acct"><button type="button" class="who" data-a="profile" title="Môj profil">${F.logo?`<span class="blogo"><img src="${F.logo.data}" alt=""></span>`:""}<span class="wtext"><b>${esc(me.name)}</b><span class="wmail">${esc(F.name||S.company||me.email)}</span></span></button>${isPlatformAdmin()?`<button class="padmin${view.screen==="platform"?" on":""}" data-a="platform" title="Prehľad všetkých firiem na platforme">${icon("lock")}<span>Admin</span></button>`:""}<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");
 }
 /* prepínač svetlej a tmavej verzie: voľba sa pamätá v prehliadači, bez voľby sa riadi nastavením zariadenia */
 const THEME_KEY="sf-theme";
@@ -4518,6 +4537,70 @@ function themeBtn(){const d=themeNow()==="dark",l=d?"Prepnúť na svetlú verziu
     :`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a8.5 8.5 0 1 0 10.8 10.8z" fill="currentColor"/></svg>`}</button>`}
 document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="theme"]');if(!b)return;const t=themeNow()==="dark"?"light":"dark";
   themeApply(t);try{localStorage.setItem(THEME_KEY,t)}catch(e){}render()});
+/* ---------- admin platformy: prehľad registrovaných firiem (len účet info@stavebnafirma.eu) ----------
+   V ostrej verzii údaje vydáva databáza (funkcia platform_overview) iba overenému správcovi platformy. */
+function isPlatformAdmin(){return !!me&&me.email==="info@stavebnafirma.eu"}
+async function platformLoad(){const F=S.firm||{},cnt=k=>(S[k]||[]).length,admin=S.users.find(u=>u.companyRole==="admin")||{};
+  const day=n=>new Date(Date.now()-n*864e5).toISOString();
+  return [
+    {id:"t1",name:F.name||"Kalimis s.r.o.",created_at:day(20),trial_ends_at:day(6),complimentary:true,paid_modules:{},billing:{},modules:S.modules||ALL_MODS,
+     active:{personal:true,doprava:true,stavba:true,pozicovna:true},firm:{ico:F.ico,city:F.city,phone:F.phone,email:F.email},
+     founder:{name:admin.name,email:admin.email,phone:"+421 900 000 000",last_sign_in:day(0)},
+     counts:{projects_active:S.projects.filter(p=>!p.closed).length,projects_closed:S.projects.filter(p=>p.closed).length,diary:cnt("diary"),workers_active:S.workers.filter(w=>w.active!==false).length,machines:cnt("machines"),jobs:cnt("jobs"),rent_items:cnt("rentItems"),rentals:cnt("rentals"),members:S.users.length},last_activity:day(0)},
+    {id:"t2",name:"Ukážka – Stavby Novák s.r.o.",created_at:day(9),trial_ends_at:day(-5),complimentary:false,paid_modules:{},billing:{},modules:{stavba:true,personal:true},
+     active:{personal:true,doprava:true,stavba:true,pozicovna:true},firm:{ico:"12345678",city:"Lučenec",phone:"",email:"info@novak.sk"},
+     founder:{name:"Peter Novák",email:"novak@novak.sk",phone:"+421 905 123 456",last_sign_in:day(1)},
+     counts:{projects_active:2,projects_closed:0,diary:14,workers_active:8,machines:3,jobs:0,rent_items:0,rentals:0,members:3},last_activity:day(1)},
+    {id:"t3",name:"Ukážka – Zemné práce Horváth",created_at:day(45),trial_ends_at:day(31),complimentary:false,
+     paid_modules:{doprava:{until:day(-20),interval:"month",tier:2,status:"active"},personal:{until:day(-20),interval:"month",tier:1,status:"active"}},billing:{status:"active",interval:"month"},modules:{doprava:true,personal:true},
+     active:{personal:true,doprava:true,stavba:false,pozicovna:false},firm:{ico:"87654321",city:"Rimavská Sobota",phone:"+421 47 555 666",email:""},
+     founder:{name:"Ján Horváth",email:"horvath@zemne.sk",phone:"",last_sign_in:day(3)},
+     counts:{projects_active:0,projects_closed:0,diary:0,workers_active:17,machines:31,jobs:212,rent_items:0,rentals:0,members:5},last_activity:day(3)}]}
+const dmy0=iso=>{if(!iso)return"";const d=new Date(iso);return `${d.getDate()}. ${d.getMonth()+1}. ${d.getFullYear()}`};
+function pfStatus(t){const now=new Date(),paid=Object.entries(t.paid_modules||{}).filter(([k,v])=>v&&new Date(v.until)>now);
+  if(t.complimentary)return {t:"Bezplatný prístup",c:"s-ok",k:"free"};
+  if(paid.length)return {t:`Platí · ${(t.billing||{}).interval==="year"?"ročne":"mesačne"}${(t.billing||{}).status==="past_due"?" · platba neprešla":""}`,c:(t.billing||{}).status==="past_due"?"s-ret":"s-ok",k:"paid"};
+  if(t.trial_ends_at&&new Date(t.trial_ends_at)>now){const d=Math.ceil((new Date(t.trial_ends_at)-now)/864e5);return {t:`Skúšobné obdobie · ešte ${d} ${pl(d,"deň","dni","dní")}`,c:"s-wait",k:"trial"}}
+  return {t:"Neplatí – zamknuté",c:"s-lock",k:"off"}}
+/* odhad mesačného príjmu z predplatného (ročné predplatné / 12) podľa cien balíčkov */
+function pfMrr(t){const now=new Date();return Object.entries(t.paid_modules||{}).reduce((s,[k,v])=>{if(!v||new Date(v.until)<=now||!PLANS[k])return s;
+  const x=PLANS[k].tiers.find(z=>z[0]===(v.tier||0))||PLANS[k].tiers[0];return s+(v.interval==="year"?x[3]/12:x[2])},0)}
+function platformHTML(){
+  if(view.pdata===undefined){view.pdata=null;platformLoad().then(d=>{view.pdata=d;view.perr="";render()}).catch(e=>{view.pdata=[];view.perr=e.message||String(e);render()})}
+  const D=view.pdata;
+  const head=`<div class="entry-head"><div><div class="eyebrow">Správa platformy</div><h1>Registrované firmy</h1></div><button class="btn" data-a="platformBack">Späť do aplikácie</button></div>`;
+  if(D===null)return `<div class="stack">${head}<div class="card muted">Načítavam prehľad firiem…</div></div>`;
+  if(view.perr)return `<div class="stack">${head}<div class="note cnote hard">Prehľad sa nepodarilo načítať: ${esc(view.perr)}</div></div>`;
+  const q=normText(view.pq||""),flt=view.pf||"all";
+  const list=D.filter(t=>(!q||normText([t.name,(t.firm||{}).ico,(t.firm||{}).city,(t.founder||{}).email,(t.founder||{}).name].join(" ")).includes(q))&&(flt==="all"||pfStatus(t).k===flt));
+  const by=k=>D.filter(t=>pfStatus(t).k===k).length,mrr=D.reduce((s,t)=>s+pfMrr(t),0);
+  const kpi=[["Firiem spolu",D.length,"all"],["V skúšobnom období",by("trial"),"trial"],["Platiace",by("paid"),"paid"],["Bezplatný prístup",by("free"),"free"],["Bez predplatného",by("off"),"off"]];
+  const MODS=[["stavba","Stavba"],["personal","Personál"],["doprava","Doprava"],["pozicovna","Požičovňa"]];
+  const rows=list.map(t=>{const st=pfStatus(t),c=t.counts||{},f=t.firm||{},fo=t.founder||{},now=new Date();
+    const mods=MODS.map(([k,l])=>{const pm=(t.paid_modules||{})[k],paid=pm&&new Date(pm.until)>now,on=(t.active||{})[k]&&((t.modules||{})[k]!==false||paid);
+      return `<span class="pfmod${paid?" paid":on?" on":""}" title="${paid?"Zaplatené":on?"Dostupné (skúšobné / bezplatné)":"Nepoužíva"}">${l}${paid&&pm.tier&&PLANS[k].tiers.length>1?` · ${PLANS[k].tiers.find(z=>z[0]===pm.tier)[1]||"∞"}`:""}</span>`}).join("");
+    const use=[c.projects_active||c.projects_closed||c.diary?`Stavby: <b>${c.projects_active}</b> ${pl(c.projects_active,"aktívna","aktívne","aktívnych")}${c.projects_closed?`, ${c.projects_closed} ukonč.`:""} · ${c.diary} ${pl(c.diary,"denný záznam","denné záznamy","denných záznamov")}`:"",
+      c.workers_active?`Zamestnanci: <b>${c.workers_active}</b>`:"",c.machines||c.jobs?`Stroje: <b>${c.machines}</b>${c.jobs?` · ${c.jobs} ${pl(c.jobs,"úloha","úlohy","úloh")} v doprave`:""}`:"",
+      c.rent_items||c.rentals?`Požičovňa: <b>${c.rent_items}</b> ${pl(c.rent_items,"položka","položky","položiek")} · ${c.rentals} ${pl(c.rentals,"výpožička","výpožičky","výpožičiek")}`:"",
+      `Používatelia: <b>${c.members||0}</b>`].filter(Boolean).map(x=>`<div>${x}</div>`).join("");
+    const mrr1=pfMrr(t);
+    return `<tr><td><b>${esc(t.name)}</b><div class="muted">${[f.ico?`IČO ${esc(f.ico)}`:"",esc(f.city||"")].filter(Boolean).join(" · ")}</div><div class="muted">registrovaná ${dmy0(t.created_at)}</div></td>
+      <td><span class="pill ${st.c}">${esc(st.t)}</span>${mrr1?`<div class="muted num" style="margin-top:4px">${eur(mrr1)} / mesiac</div>`:""}</td>
+      <td><div class="pfmods">${mods}</div></td><td class="pfuse">${use}</td>
+      <td><b>${esc(fo.name||"–")}</b>${fo.email?`<div><a href="mailto:${esc(fo.email)}">${esc(fo.email)}</a></div>`:""}${fo.phone?`<div><a href="tel:${esc(fo.phone.replace(/\s/g,""))}">${esc(fo.phone)}</a></div>`:f.phone?`<div><a href="tel:${esc(f.phone.replace(/\s/g,""))}">${esc(f.phone)}</a> <span class="muted">(firma)</span></div>`:`<div class="muted">telefón nezadaný</div>`}</td>
+      <td class="muted">${dmy0(t.last_activity)||"–"}${fo.last_sign_in?`<div>prihlásený ${dmy0(fo.last_sign_in)}</div>`:""}</td></tr>`}).join("");
+  return `<div class="stack">${head}
+    <div class="pfkpis">${kpi.map(([l,n,k])=>`<button class="card pfkpi${flt===k?" on":""}" data-a="pfFilter" data-k="${k}"><span class="muted">${l}</span><b class="num">${n}</b></button>`).join("")}
+      <div class="card pfkpi"><span class="muted">Mesačný príjem z predplatného</span><b class="num">${eur(mrr)}</b><small class="muted">bez DPH, ročné ÷ 12</small></div></div>
+    <input id="pfSearch" type="search" placeholder="Hľadať firmu, IČO, mesto alebo e-mail…" value="${esc(view.pq||"")}" style="max-width:420px">
+    <div class="card pftable"><div class="tscroll"><table class="pft"><thead><tr><th>Firma</th><th>Stav</th><th>Moduly</th><th>Využitie</th><th>Zakladateľ účtu</th><th>Aktivita</th></tr></thead>
+      <tbody>${rows||`<tr><td colspan="6" class="muted">Žiadna firma nevyhovuje filtru.</td></tr>`}</tbody></table></div></div>
+    <div class="muted" style="font-size:13px">Prehľad vidí iba účet info@stavebnafirma.eu. Údaje sú len na čítanie – do firiem sa odtiaľto nedá vstúpiť ani ich meniť.</div></div>`}
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(a==="platform"&&isPlatformAdmin()){view={screen:"platform",pq:"",pf:"all"};render();window.scrollTo(0,0)}
+  else if(a==="platformBack"){view={screen:startScreen()};render()}
+  else if(a==="pfFilter"){view.pf=b.dataset.k;render()}});
+document.addEventListener("input",ev=>{if(ev.target.id!=="pfSearch")return;view.pq=ev.target.value;const pos=ev.target.selectionStart;render();const e=$("#pfSearch");if(e){e.focus();e.setSelectionRange(pos,pos)}});
 function rolePill(r){return `<span class="pill r-${r}">${ROLES[r]}</span>`}
 
 function homeHTML(){
