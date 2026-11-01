@@ -2132,7 +2132,7 @@ function termsOverviewHTML(){
     <div class="card tablewrap" style="padding:6px 8px"><table><thead><tr><th>Stav</th><th>Stroj / vozidlo</th><th>Termín</th><th>Platnosť</th></tr></thead><tbody>
     ${list.map(i=>`<tr class="clickrow" data-a="vehOpen" data-id="${i.m.id}"><td>${stPill(i.st,i.st==="ok"?"OK":i.st==="none"?"–":undefined)}</td><td><b>${esc(i.m.name)}</b>${i.m.ecv?`<br><span class="muted num">${esc(i.m.ecv)}</span>`:""}</td><td>${esc(i.name)}${i.kind==="svc"?' <span class="muted">· servis</span>':""}</td><td class="num">${esc(i.text)}</td></tr>`).join("")
       ||`<tr><td colspan="4" class="muted">${only?"Všetko je v poriadku, žiadny termín nekončí do 30 dní.":"Zatiaľ nie sú zadané žiadne termíny."}</td></tr>`}</tbody></table></div>
-    <div class="muted" style="font-size:13px">V ostrej verzii dostane zodpovedná osoba a administrátor upozornenie aj e-mailom.</div></div>`}
+    <div class="muted" style="font-size:13px">Zodpovedná osoba a administrátor uvidia upozornenie v aplikácii.</div></div>`}
 
 function vehDetailHTML(m){
   const C=catOf(m),st=vehStatus(m);
@@ -2414,7 +2414,7 @@ function tasksPaneHTML(){
       ${tab==="mine"&&sent.length?sec(`Odovzdané na kontrolu <span class="num">${sent.length}</span>`,"sent",`<ul class="tasklist">${sent.map(t=>`<li class="task done"><span class="task-main"><b>${esc(t.title)}</b><span class="muted">splnené ${dt(t.doneAt)} · čaká na kontrolu ${esc(user(t.by)?.name||"")}</span></span></li>`).join("")}</ul>`):""}
       ${assigner?(newForm||`<button class="btn small" data-a="taskNew" style="align-self:flex-start">+ Nová úloha</button>`):""}
       ${done.length?`<details class="tp-done"><summary>Hotové (${done.length})</summary><ul class="tasklist">${done.map(t=>`<li class="task done"><span class="task-main"><b>${esc(t.title)}</b><span class="muted">${esc(user(t.doneBy)?.name||"")} · ${dt(t.doneAt)}${t.doneNote?` · ${esc(t.doneNote)}`:""}${t.checkedBy&&t.checkedBy!==t.doneBy?` · skontroloval ${esc(user(t.checkedBy)?.name||"")}`:""}</span></span></li>`).join("")}</ul></details>`:""}
-      ${assigner?`<div class="hint">Úlohu priradíš pri termíne alebo servise stroja, na Nástenke alebo pri kontrolnom dni tlačidlom „Priradiť ako úlohu“. Po obnove termínu alebo zápise servisu sa úloha sama označí ako hotová. V ostrej verzii príde používateľovi aj e-mail.</div>`:""}
+      ${assigner?`<div class="hint">Úlohu priradíš pri termíne alebo servise stroja, na Nástenke alebo pri kontrolnom dni tlačidlom „Priradiť ako úlohu“. Po obnove termínu alebo zápise servisu sa úloha sama označí ako hotová.</div>`:""}
     </div>`}
 let TP_COL=(()=>{try{return localStorage.getItem("sf-tpcol")==="1"}catch(e){return false}})();
 const tpCollapsed=()=>TP_COL&&!view.tpMax&&matchMedia("(min-width:920px)").matches;
@@ -2493,7 +2493,7 @@ function usersHTML(){
         <div class="grid2"><label>Meno a priezvisko<input id="unName" required></label><label>E-mail<input type="email" id="unEmail" required placeholder="meno@firma.sk"></label></div>
         <div class="mrights">${RIGHT_MODS.map(([k,l])=>`<div class="mright"><label class="chk mname"><input type="checkbox" id="un_${k}">${icon(k==="stavba"?"home":k,"mr-ic")}<span>${l}</span></label>
           <div class="lvl"><label><input type="radio" name="unl_${k}" value="view" checked> Zobrazenie</label><label><input type="radio" name="unl_${k}" value="edit"> Administrácia</label></div></div>`).join("")}</div>
-        <div class="muted" style="font-size:13px">Používateľ sa prihlási svojím e-mailom a pri prvom prihlásení si nastaví heslo. V ostrej verzii mu príde pozvánka e-mailom.</div>
+        <div class="muted" style="font-size:13px">Pozvánka sa zatiaľ neposiela automaticky – daj kolegovi vedieť, nech sa zaregistruje na www.stavebnafirma.eu práve týmto e-mailom. Do firmy sa potom pridá sám, s pridelenými právami.</div>
         <div class="row"><button class="btn primary" type="submit">Pridať používateľa</button><button type="button" class="btn ghost" data-a="userNewNo">Zrušiť</button></div></form>`
       :`<button class="btn primary" data-a="userNew" style="align-self:flex-start">+ Pridať používateľa</button>`):""}
     ${list.map(card).join("")}
@@ -5316,7 +5316,7 @@ function requestsHTML(p,e){
         <label>Popis situácie<textarea id="reqText" required placeholder="napr. Pri výkope sa našlo nezakreslené potrubie, potrebujeme rozhodnutie o ďalšom postupe."></textarea></label>
         <div class="grid2"><label>Vyjadrenie potrebné do (nepovinné)<input type="date" id="reqDue"></label>
           <label class="chk" style="align-self:end"><input type="checkbox" id="reqUrgent"> Urgentné</label></div>
-        <div class="muted" style="font-size:13px">Upozornenie dostane v aplikácii a e-mailom: ${dz.map(u=>`${esc(u.name)} (${esc(u.email)})`).join(", ")}. V prototype sa e-mail neodošle.</div>
+        <div class="muted" style="font-size:13px">Upozornenie dostane v aplikácii: ${dz.map(u=>`${esc(u.name)} (${esc(u.email)})`).join(", ")}.</div>
         <div class="row"><button class="btn primary" type="submit">Odoslať výzvu</button><button type="button" class="btn ghost" data-a="reqNo">Zrušiť</button></div></form>`}
     else form=dz.length?`<div class="row"><button class="btn small" data-a="reqAdd" data-id="${e.id}">Vyzvať stavebný dozor na vyjadrenie</button></div>`
       :`<div class="muted" style="font-size:13px">Na stavbu zatiaľ nie je pozvaný stavebný dozor, výzvu nemá kto prijať.</div>`;
@@ -5392,7 +5392,7 @@ function kdForm(p){
       ${c.map((x,i)=>`<label class="radio"><input type="checkbox" data-kdinv="${i}" ${x.pre?"checked":""}><span><b>${esc(x.name)}</b> <span class="muted">· ${esc(x.role)}</span><br><span class="muted">${esc(x.email||"bez e-mailu, pozvánka len v aplikácii")}</span></span></label>`).join("")}
       ${noInvEmail?`<div class="note">Investor nemá v kontaktoch stavby zadaný e-mail. Doplň ho v Nastaveniach stavby, aby dostal pozvánku.</div>`:""}
     </fieldset>
-    <div class="muted" style="font-size:13px">Pozvaní dostanú upozornenie v aplikácii a e-mailom oficiálnu pozvánku. V prototype sa e-mail neodošle, pozvánku si môžeš stiahnuť ako PDF.</div>
+    <div class="muted" style="font-size:13px">Pozvaní dostanú upozornenie v aplikácii. Oficiálnu pozvánku si môžeš stiahnuť ako PDF a poslať e-mailom.</div>
     <div class="row"><button class="btn primary" type="submit">Zvolať a odoslať pozvánky</button><button type="button" class="btn ghost" data-a="kdNo">Zrušiť</button></div></form>`}
 function kdPDF(p,k){
   if(!window.jspdf||!window.jspdf.jsPDF){toast("Knižnica na PDF sa nenačítala. Skús stránku obnoviť.");return}
@@ -5646,7 +5646,7 @@ function teamHTML(p){
     <label>Rola<select id="invRole">${inviteRoles(p).map(r=>`<option value="${r}">${ROLES[r]}</option>`).join("")}</select></label></div>
     <label>Meno (nepovinné)<input id="invName"></label>
     <button class="btn primary" type="submit">Poslať pozvánku</button>
-    <div class="muted" style="font-size:13px">Pozvaný dostane pozvánku e-mailom, nastaví si heslo a uvidí iba túto stavbu s pridelenými právami. <b>Stavebný dozor</b> si pri prvom prihlásení doplní meno, telefón a môže nahrať pečiatku s podpisom. V prototype sa e-mail neodošle, prihlás sa jeho e-mailom.</div></form>`:"";
+    <div class="muted" style="font-size:13px">Pozvánka sa zatiaľ neposiela automaticky – daj mu vedieť, nech sa zaregistruje na www.stavebnafirma.eu práve týmto e-mailom. Uvidí iba túto stavbu s pridelenými právami. <b>Stavebný dozor</b> si pri prvom prihlásení doplní meno, telefón a môže nahrať pečiatku s podpisom.</div></form>`:"";
   return `<div class="stack">${inv}<div class="eyebrow">Tím stavby</div>${rows||`<div class="card muted">Na stavbe zatiaľ nie je nikto pridelený.</div>`}<div class="eyebrow">Prístup cez modul Stavba</div>${admins}</div>`;
 }
 

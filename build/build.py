@@ -37,6 +37,20 @@ rep('  else if(a==="forgot"){toast("V ostrej verzii príde na e-mail odkaz na na
 i = s.index('  if(f==="loginForm"){view.loginEmail='); j = s.index('  else if(f==="modForm")', i)
 s = s[:i] + '  if(false){}\n' + s[j:]
 
+# 2b) texty z prototypu: ostrá verzia zatiaľ neposiela e-maily (pozvánky ani upozornenia)
+REG = "www.stavebnafirma.eu"
+rep('Používateľ sa prihlási svojím e-mailom a pri prvom prihlásení si nastaví heslo. V ostrej verzii mu príde pozvánka e-mailom.',
+    f'Pozvánka sa zatiaľ neposiela automaticky – daj kolegovi vedieť, nech sa zaregistruje na {REG} práve týmto e-mailom. Do firmy sa potom pridá sám, s pridelenými právami.')
+rep('V ostrej verzii dostane zodpovedná osoba a administrátor upozornenie aj e-mailom.', 'Zodpovedná osoba a administrátor uvidia upozornenie v aplikácii.')
+rep(' V ostrej verzii príde používateľovi aj e-mail.', '')
+rep('Upozornenie dostane v aplikácii a e-mailom: ', 'Upozornenie dostane v aplikácii: ')
+rep('. V prototype sa e-mail neodošle.</div>', '.</div>')
+rep('Pozvaní dostanú upozornenie v aplikácii a e-mailom oficiálnu pozvánku. V prototype sa e-mail neodošle, pozvánku si môžeš stiahnuť ako PDF.',
+    'Pozvaní dostanú upozornenie v aplikácii. Oficiálnu pozvánku si môžeš stiahnuť ako PDF a poslať e-mailom.')
+cut('Pozvaný dostane pozvánku e-mailom, nastaví si heslo a uvidí iba túto stavbu', ' s pridelenými právami.',
+    f'Pozvánka sa zatiaľ neposiela automaticky – daj mu vedieť, nech sa zaregistruje na {REG} práve týmto e-mailom. Uvidí iba túto stavbu')
+rep(' V prototype sa e-mail neodošle, prihlás sa jeho e-mailom.', '')
+
 # 3) založenie firmy pri prvom nastavení
 rep('const setup=ev.target.dataset.mode==="setup";S.firm={...view.firmDraft,setupDone:true};S.company=S.firm.name;if(setup&&!me.name)me.name=S.firm.repName;\n    view.firmDraft=null;view.firmErr="";view.firmEditing=false;if(save())toast(setup?"Firma nastavená. Môžeš začať.":"Údaje o firme uložené");\n    view=setup?{screen:startScreen(),tab:"dennik"}:{screen:"firma",firmTab:"udaje"};render();window.scrollTo(0,0)}',
     'const setup=ev.target.dataset.mode==="setup";(async()=>{if(!TID){try{await createFirm(view.firmDraft.name)}catch(e){view.firmErr="Firmu sa nepodarilo založiť: "+errText(e);render();return}}\n    S.firm={...view.firmDraft,setupDone:true};S.company=S.firm.name;if(setup&&!me.name)me.name=S.firm.repName;\n    view.firmDraft=null;view.firmErr="";view.firmEditing=false;if(save())toast(setup?"Firma nastavená. Môžeš začať.":"Údaje o firme uložené");\n    view=setup?{screen:startScreen(),tab:"dennik"}:{screen:"firma",firmTab:"udaje"};render();window.scrollTo(0,0)})()}')
@@ -98,6 +112,9 @@ s = ('<!doctype html>\n<html lang="sk">\n<head>\n<meta charset="utf-8">\n<meta n
      + s[:head_end] + '</head>\n<body>\n' + s[head_end:] + '\n</body>\n</html>\n')
 
 # kontrola: v ostrej verzii nesmú ostať odkazy na úložisko prototypu
+import re as _re
+for m in _re.finditer(r"V ostrej verzii(?! údaje vydáva)|V prototype sa (?!balíček)", s):
+    sys.exit(f"Build: v ostrej verzii ostal text z prototypu: {s[m.start():m.start()+90]}")
 for bad in ["ROOT.", "localStorage.setItem(KEY", "findAccount(", "useTenant(", "hashPw(", "window.claude", "DEMO_IDS"]:
     if bad in s:
         sys.exit(f"Build: v ostrej verzii ostal odkaz na prototyp: {bad}")
