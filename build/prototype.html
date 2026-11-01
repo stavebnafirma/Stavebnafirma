@@ -938,14 +938,15 @@ table.jlog th.r,table.jlog td.r{text-align:right}
 .closedlist>summary{cursor:pointer;list-style:none}.closedlist>summary::-webkit-details-marker{display:none}.closedlist>summary::before{content:"▸ ";color:var(--muted)}.closedlist[open]>summary::before{content:"▾ "}
 .closebox{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--surface))}
 .warnlist{margin:0;padding-left:18px;color:var(--warn);font-size:14px}
-.tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tiers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%;align-self:stretch;box-sizing:border-box}.tiers.n2{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tier.none b{color:var(--muted)}
 .tier{position:relative;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--surface)}
 .tier input{position:absolute;opacity:0;pointer-events:none}
 .tier b{font-size:14px}.tier span{font-size:13px;color:var(--muted)}.tier small{font-size:12px;color:var(--bad)}
 .tier.on{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent);background:var(--tint)}
 .tier.off{opacity:.55;cursor:not-allowed}
 .tier:focus-within{outline:2px solid var(--accent);outline-offset:2px}
-@media (max-width:640px){.tiers{grid-template-columns:1fr}}
+@media (max-width:760px){.tiers{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .ld-tiers{display:flex;flex-direction:column;gap:4px;margin:4px 0 10px;font-size:13.5px}
 .ld-tiers>div{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed var(--l-line)}
 .ld-tiers>div b{white-space:nowrap}.ld-tiers small{color:var(--l-mut);font-size:12px;margin-top:2px}
@@ -4195,20 +4196,23 @@ function planGuard(k,add){const lim=planLimit(k);if(!lim)return true;const u=pla
 function planCount(k){const lim=planLimit(k),u=planUsage(k),P=PLANS[k];return lim?`${u} z ${lim} ${P.u[2]} v balíčku`:""}
 function tierPrice(k,t,i){const x=PLANS[k].tiers.find(z=>z[0]===t);return x?(i==="year"?x[3]:x[2]):0}
 const eur0=n=>n.toLocaleString("sk-SK")+" €";
-/* výber balíčka pri module (karta Moduly) */
-function tierPicker(k,sel,interval,name){const P=PLANS[k],u=planUsage(k);if(P.tiers.length<2)return "";
-  return `<div class="tiers" role="radiogroup" aria-label="Balíček ${P.n}">${P.tiers.map((x,i)=>{const lim=x[1],small=lim&&u>lim;
-    return `<label class="tier${sel===x[0]?" on":""}${small?" off":""}"><input type="radio" name="${name}" value="${x[0]}" data-tmod="${k}" ${sel===x[0]?"checked":""} ${small?"disabled":""}>
-      <b>${tierLabel(k,x[0])}</b><span>${eur0(interval==="year"?x[3]:x[2])} / ${interval==="year"?"rok":"mesiac"}</span>${small?`<small>máš ${u} – najprv ich zníž</small>`:""}</label>`}).join("")}</div>`}
-document.addEventListener("change",ev=>{const t=ev.target;if(!t.dataset||!t.dataset.tmod)return;const g=t.closest(".tiers");if(g)g.querySelectorAll(".tier").forEach(l=>l.classList.toggle("on",l.contains(t)))});
+/* výber pri module (karta Moduly): „Nepoužívam“ alebo jeden z balíčkov; zvolením balíčka sa modul zapne.
+   priceFn(k,t,interval) vráti cenu (alebo null), attr = názov data-atribútu pre spracovanie zmeny */
+function tierPicker(k,sel,interval,name,priceFn,attr){const P=PLANS[k],u=planUsage(k);priceFn=priceFn||tierPrice;attr=attr||"tmod";
+  const per=interval==="year"?"rok":"mesiac";
+  const opt=(val,label,sub,on,dis,warn)=>`<label class="tier${on?" on":""}${dis?" off":""}${val==="off"?" none":""}"><input type="radio" name="${name}" value="${val}" data-${attr}="${k}" ${on?"checked":""} ${dis?"disabled":""}><b>${label}</b>${sub?`<span>${sub}</span>`:""}${warn?`<small>${warn}</small>`:""}</label>`;
+  return `<div class="tiers n${P.tiers.length+1}" role="radiogroup" aria-label="${P.n}">${opt("off","Nepoužívam","",sel==="off",false,"")}${P.tiers.map(x=>{const lim=x[1],small=lim&&u>lim,a=priceFn(k,x[0],interval);
+    return opt(String(x[0]),tierLabel(k,x[0]),a!==null&&a!==undefined?`${eur0(a)} / ${per}`:"cena nie je v Stripe",String(sel)===String(x[0]),small,small?`máš ${u} – najprv ich zníž`:"")}).join("")}</div>`}
+document.addEventListener("change",ev=>{const t=ev.target;if(!t.dataset||!t.dataset.tmod)return;const g=t.closest(".tiers");if(g)g.querySelectorAll(".tier").forEach(l=>l.classList.toggle("on",l.contains(t)));const c=t.closest(".modcard");if(c)c.classList.toggle("on",t.value!=="off")});
 function minTier(k){const P=PLANS[k],u=planUsage(k);const x=P.tiers.find(z=>!z[1]||u<=z[1]);return x?x[0]:P.tiers[P.tiers.length-1][0]}
 function modulesHTML(){
   const M=S.modules||ALL_MODS,admin=me.companyRole==="admin";
   const hint=[!M.personal&&M.stavba?"Bez Personalistiky stavba nepočíta mzdové náklady, lebo mzdy sa zadávajú v Personalistike.":""].filter(Boolean);
   return `<div class="stack"><div class="card stack"><h2>Moduly</h2>
     <div class="muted">Karta Firma so základným zoznamom zamestnancov a strojovým a vozovým parkom je súčasťou každého užívateľa bezplatne. Ostatné moduly si vyberieš podľa vlastnej potreby – môžeš si zvoliť iba tie, ktoré potrebuješ pre fungovanie svojej firmy.</div>
-    ${admin?`<form class="stack" id="modForm">${modChecks("mm",M)}
-      <div class="stack" style="gap:14px"><b>Balíčky (ukážka)</b>${["stavba","personal","doprava"].map(k=>`<div><div class="muted" style="font-size:13px;margin-bottom:6px">${PLANS[k].n} – teraz ${planUsage(k)} ${pl(planUsage(k),...PLANS[k].u)}</div>${tierPicker(k,(S.plans||{})[k]||minTier(k),"month","mt_"+k)}</div>`).join("")}</div>
+    ${admin?`<form class="stack" id="modForm">${MODULES.map(([k,l,d])=>{const tiered=PLANS[k].tiers.length>1;
+        return `<div class="modcard bill${M[k]?" on":""}"><div><b>${l}</b><br><span class="muted">${d}</span>${tiered?`<br><span class="muted" style="font-size:12.5px">Teraz ${planUsage(k)} ${pl(planUsage(k),...PLANS[k].u)}</span>`:""}</div>
+          ${tierPicker(k,M[k]?(tiered?((S.plans||{})[k]||minTier(k)):0):"off","month","mt_"+k)}</div>`}).join("")}
       <div class="muted" style="font-size:13px">Vypnutím modulu sa údaje nezmažú. Po opätovnom zapnutí budú znova k dispozícii.</div>
       <button class="btn primary" type="submit" style="align-self:flex-start">Uložiť moduly</button></form>`
     :`<ul class="modlist">${MODULES.map(([k,l])=>`<li><span class="pill ${M[k]?"s-ok":"s-lock"}">${M[k]?"Aktívny":"Neaktívny"}</span> ${l}</li>`).join("")}</ul>`}
@@ -5844,8 +5848,10 @@ document.addEventListener("submit",ev=>{
   else if(f==="setPwForm"){(async()=>{const pw=$("#spPw").value,pw2=$("#spPw2").value;
     if(pw.length<8){view.loginErr="Heslo musí mať aspoň 8 znakov.";render();return}if(pw!==pw2){view.loginErr="Heslá sa nezhodujú.";render();return}
     const P=view.pending;useTenant(P.tid);const u=S.users.find(x=>x.id===P.uid);u.pw=await hashPw(pw);finishLogin(u);toast("Heslo nastavené")})()}
-  else if(f==="modForm"){if(me.companyRole!=="admin")return;const m=readMods();if(!Object.values(m).some(Boolean)){toast("Nechaj zapnutý aspoň jeden modul");return}
-    S.modules=m;S.plans={};["stavba","personal","doprava"].forEach(k=>{const r=document.querySelector(`input[name="mt_${k}"]:checked`);if(r)S.plans[k]=+r.value});save();toast("Moduly uložené");render()}
+  else if(f==="modForm"){if(me.companyRole!=="admin")return;const m={},pl2={};
+    MODULES.forEach(([k])=>{const r=document.querySelector(`input[name="mt_${k}"]:checked`),v=r?r.value:"off";m[k]=v!=="off";if(m[k]&&PLANS[k].tiers.length>1)pl2[k]=+v});
+    if(!Object.values(m).some(Boolean)){toast("Vyber aspoň jeden modul");return}
+    S.modules=m;S.plans=pl2;save();toast("Moduly uložené");render()}
   else if(f==="firmForm"){if(me.companyRole!=="admin")return;const err=readFirmForm();if(err){view.firmErr=err;render();const e2=document.querySelector("#firmForm .err");if(e2&&e2.scrollIntoView)e2.scrollIntoView({block:"center"});return}
     const setup=ev.target.dataset.mode==="setup";S.firm={...view.firmDraft,setupDone:true};S.company=S.firm.name;if(setup&&!me.name)me.name=S.firm.repName;
     view.firmDraft=null;view.firmErr="";view.firmEditing=false;if(save())toast(setup?"Firma nastavená. Môžeš začať.":"Údaje o firme uložené");

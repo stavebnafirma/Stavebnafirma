@@ -314,13 +314,12 @@ function modulesHTML(){
     :trial?`<div class="note"><b>Skúšobné obdobie do ${dmy(B.trial_ends_at)}</b> – zostáva ${daysLeft(B.trial_ends_at)} ${pl(daysLeft(B.trial_ends_at),"deň","dni","dní")}. Všetky moduly sú dovtedy dostupné. ${admin?"Moduly, ktoré chceš používať aj potom, si predplať nižšie.":""}</div>`
     :hasSub?(B.billing.status==="past_due"?`<div class="note cnote hard"><b>Platba za predplatné neprešla.</b> Skontroluj platobnú kartu v správe predplatného, inak sa moduly o pár dní zamknú.</div>`:B.billing.cancel_at_period_end?`<div class="note cnote">Predplatné je zrušené ku koncu obdobia. Moduly fungujú do dátumu uvedeného pri module.</div>`:"")
     :`<div class="note cnote hard"><b>Skúšobné obdobie skončilo.</b> ${admin?"Vyber moduly a predplať si ich – údaje ostali uložené a po zaplatení budú znova k dispozícii.":"Administrátor firmy môže moduly predplatiť v tejto karte."}</div>`;
-  const cards=MODULES.map(([k,l,d])=>{const st=modStatus(k),pm=(B.paid_modules||{})[k],on=D.mods.includes(k),tiered=tiersOf(k)[0],u=planUsage(k);
-    const picker=admin&&!B.complimentary&&on&&tiered?`<div class="tiers" role="radiogroup" aria-label="Balíček ${esc(l)}">${tiersOf(k).map(t=>{const x=PLANS[k].tiers.find(z=>z[0]===t),small=x[1]&&u>x[1],a=sPrice(k,t,D.interval);
-        return `<label class="tier${tierFor(k)===t?" on":""}${small?" off":""}"><input type="radio" name="bt_${k}" value="${t}" data-btier="${k}" ${tierFor(k)===t?"checked":""} ${small?"disabled":""}><b>${tierLabel(k,t)}</b><span>${a!==null?priceTxt(k,t,D.interval):"cena nie je v Stripe"}</span>${small?`<small>máš ${u} – najprv ich zníž</small>`:""}</label>`}).join("")}</div>`:"";
-    return `<div class="modcard bill ${on?"on":""}"><label class="mcrow">${admin&&!B.complimentary?`<input type="checkbox" data-bmod="${k}" ${on?"checked":""}>`:""}<span style="flex:1;min-width:0"><b>${l}</b> <span class="pill ${st.cls}">${esc(st.t)}</span><br><span class="muted">${esc(d)}</span>
+  const cards=MODULES.map(([k,l,d])=>{const st=modStatus(k),pm=(B.paid_modules||{})[k],on=D.mods.includes(k),tiered=tiersOf(k)[0],u=planUsage(k),edit=admin&&!B.complimentary;
+    return `<div class="modcard bill ${on?"on":""}"><div class="mcrow"><span style="flex:1;min-width:0"><b>${l}</b> <span class="pill ${st.cls}">${esc(st.t)}</span><br><span class="muted">${esc(d)}</span>
       ${tiered?`<br><span class="muted" style="font-size:12.5px">Teraz ${u} ${pl(u,...PLANS[k].u)}</span>`:""}
       ${pm&&st.paid?`<br><span class="muted" style="font-size:12.5px">Predplatené do ${dmy(new Date(new Date(pm.until)-3*864e5).toISOString())}</span>`:""}</span>
-      <span class="bprice">${priceTxt(k,tierFor(k),D.interval)}</span></label>${picker}</div>`}).join("");
+      ${on?`<span class="bprice">${priceTxt(k,tierFor(k),D.interval)}</span>`:""}</div>
+      ${edit?tierPicker(k,on?tierFor(k):"off",D.interval,"bt_"+k,sPrice,"btier"):""}</div>`}).join("");
   return `<div class="stack"><div class="card stack"><h2>Moduly a predplatné</h2>
     <div class="muted">Karta Firma so základným zoznamom zamestnancov a strojovým a vozovým parkom je súčasťou každého užívateľa bezplatne. Ostatné moduly si vyberieš podľa vlastnej potreby – môžeš si zvoliť iba tie, ktoré potrebuješ pre fungovanie svojej firmy.</div>
     ${banner}
@@ -354,7 +353,8 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
 document.addEventListener("change",ev=>{const t=ev.target;if(!me||!view.billDraft)return;
   if(t.dataset&&t.dataset.bmod){const D=view.billDraft;D.mods=t.checked?[...new Set([...D.mods,t.dataset.bmod])]:D.mods.filter(x=>x!==t.dataset.bmod);render()}
   else if(t.name==="bInt"){view.billDraft.interval=t.value;render()}
-  else if(t.dataset&&t.dataset.btier){view.billDraft.tiers[t.dataset.btier]=+t.value;render()}});
+  else if(t.dataset&&t.dataset.btier){const D=view.billDraft,k=t.dataset.btier;
+    if(t.value==="off")D.mods=D.mods.filter(x=>x!==k);else{D.mods=[...new Set([...D.mods,k])];D.tiers[k]=+t.value}render()}});
 /* návrat zo Stripe */
 async function afterPaymentReturn(){const q=new URLSearchParams(location.search),r=q.get("platba");if(!r)return;history.replaceState(null,"",location.pathname);
   view={screen:"firma",firmTab:"moduly"};
