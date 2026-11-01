@@ -28,8 +28,8 @@ begin
         'active', jsonb_build_object(
           'personal', public.module_active(t.id, 'personal'), 'doprava', public.module_active(t.id, 'doprava'),
           'stavba', public.module_active(t.id, 'stavba'), 'pozicovna', public.module_active(t.id, 'pozicovna')),
-        'firm', (select jsonb_build_object('ico', d.data->'v'->>'ico', 'city', d.data->'v'->>'city',
-                   'phone', d.data->'v'->>'phone', 'email', d.data->'v'->>'email')
+        'firm', (select jsonb_build_object('ico', d.data->'v'->>'ico', 'street', d.data->'v'->>'street', 'zip', d.data->'v'->>'zip',
+                   'city', d.data->'v'->>'city', 'phone', d.data->'v'->>'phone', 'email', d.data->'v'->>'email', 'web', d.data->'v'->>'web')
                  from public.docs d where d.tenant_id = t.id and d.kind = 'meta' and d.id = 'firm'),
         'founder', (select jsonb_build_object('email', u.email,
                       'name', coalesce(nullif(trim(coalesce(p.first_name, '') || ' ' || coalesce(p.last_name, '')), ''), u.raw_user_meta_data->>'name'),
