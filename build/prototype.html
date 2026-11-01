@@ -1085,8 +1085,7 @@ function seed(){
       {id:"u2",email:"stavbyveduci@kalimis.sk",name:"Peter Baláž",companyRole:"clen"},
       {id:"u3",email:"majster@kalimis.sk",name:"Milan Hudec",companyRole:"clen"},
       {id:"u4",email:"dozor@investor.sk",name:"Ing. Eva Tóthová",companyRole:"clen"},
-      {id:"u5",email:"ekonom@kalimis.sk",name:"Ing. Jana Vargová",companyRole:"ekonom"},
-      {id:"u6",email:"info@stavebnafirma.eu",name:"Správca platformy",companyRole:"admin"}
+      {id:"u5",email:"ekonom@kalimis.sk",name:"Ing. Jana Vargová",companyRole:"ekonom"}
     ],
     projects:[
       {id:"p3",name:"Rekonštrukcia miestnych komunikácií – časť A",client:"Mesto Tornaľa",place:"Tornaľa",
@@ -4539,7 +4538,8 @@ document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="theme
   themeApply(t);try{localStorage.setItem(THEME_KEY,t)}catch(e){}render()});
 /* ---------- admin platformy: prehľad registrovaných firiem (len účet info@stavebnafirma.eu) ----------
    V ostrej verzii údaje vydáva databáza (funkcia platform_overview) iba overenému správcovi platformy. */
-function isPlatformAdmin(){return !!me&&me.email==="info@stavebnafirma.eu"}
+/* v prototype je admin platformy ukážkovo aj Ján Kováč; v ostrej verzii rozhoduje databáza (len info@stavebnafirma.eu) */
+function isPlatformAdmin(){return !!me&&["info@stavebnafirma.eu","admin@kalimis.sk"].includes(me.email)}
 async function platformLoad(){const F=S.firm||{},cnt=k=>(S[k]||[]).length,admin=S.users.find(u=>u.companyRole==="admin")||{};
   const day=n=>new Date(Date.now()-n*864e5).toISOString();
   return [
