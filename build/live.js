@@ -176,7 +176,7 @@ async function boot(){
   if(/error_description=/.test(hash)){const m=decodeURIComponent((hash.match(/error_description=([^&]*)/)||[])[1]||"").replace(/\+/g," ");history.replaceState(null,"",location.pathname);view={screen:"home",auth:"login",loginErr:/expired/i.test(m)?"Odkaz v e-maile už neplatí. Prihlás sa alebo si vyžiadaj nový.":m};render();return}
   if(!navigator.onLine&&await openFromCache())return;
   let session=null;try{({data:{session}}=await SB.auth.getSession())}catch(e){if(await openFromCache())return}
-  if(session&&session.user)await afterLogin(session.user);else if(lsGet("sf-uid")&&!navigator.onLine&&await openFromCache())return;else{const rg=(location.search.match(/[?&]registracia=([^&]*)/)||[])[1];view={screen:"home",auth:rg!=null?"register":/[?&]prihlasenie/.test(location.search)?"login":"landing",loginErr:"",regPrefill:rg?decodeURIComponent(rg):""};render()}}
+  if(session&&session.user)await afterLogin(session.user);else if(lsGet("sf-uid")&&!navigator.onLine&&await openFromCache())return;else{const rg=(location.search.match(/[?&]registracia=([^&]*)/)||[])[1];view={screen:"home",auth:rg!=null?"register":/[?&]prihlasenie/.test(location.search)?"login":location.hash==="#ako-to-funguje"?"howto":"landing",loginErr:"",regPrefill:rg?decodeURIComponent(rg):""};render()}}
 async function afterLogin(u){authUser=u;lsSet("sf-uid",u.id);view={screen:"home",auth:"loading"};render();
   try{await SB.rpc("accept_invites");
     const {data:ms,error}=await SB.from("members").select("tenant_id,role,tenants(name)").eq("user_id",u.id);if(error)throw error;
