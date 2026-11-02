@@ -2630,7 +2630,8 @@ function pdfFirmHeader(doc,title,sub,noFirm){const F=S.firm||{},W=doc.internal.p
   if(F.logo&&!noFirm){const lh=10,lw=Math.min(40,lh*F.logo.w/F.logo.h);try{doc.addImage(F.logo.data,"PNG",14,8,lw,lw*F.logo.h/F.logo.w);x=14+lw+4}catch(e){}}
   doc.setFont("DVC","bold");doc.setFontSize(13);doc.text(title,x,14);doc.setFont("DVC","normal");doc.setFontSize(8.5);
   if(!noFirm)doc.text([F.name||S.company,[firmAddress(F),F.ico?`IČO ${F.ico}`:""].filter(Boolean).join(" · ")].filter(Boolean),W-14,10,{align:"right"});
-  if(sub){doc.setFontSize(10);doc.text(sub,x,20)}}
+  if(sub){const mw=W-x-(noFirm?14:78);doc.setFontSize(10);let ls=doc.splitTextToSize(String(sub),mw);   /* dlhý názov stavby: zalomiť, najviac 2 riadky */
+    if(ls.length>1){doc.setFontSize(8.5);ls=doc.splitTextToSize(String(sub),mw);if(ls.length>2){ls=ls.slice(0,2);ls[1]=ls[1].replace(/\s*\S*$/,"")+" …"}doc.text(ls,x,19)}else doc.text(ls,x,20)}}
 function attEmployeePage(doc,w,days,from,to){
   pdfFirmHeader(doc,"Evidencia dochádzky",`${fullName(w)}${w.persNo?` · os. č. ${w.persNo}`:""}${w.profession?` · ${w.profession}`:""}`);
   doc.setFontSize(9);doc.text(`Obdobie: ${plain(d2(from))} – ${plain(d2(to))}`,14,26);
