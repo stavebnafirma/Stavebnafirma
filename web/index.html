@@ -6287,7 +6287,7 @@ function exportPDF(p,inv){
   L.forEach((r,k)=>{doc.setFont("DVC","bold");doc.text(r[0],mL,18+k*4);doc.setFont("DVC","normal");doc.text(String(r[1]),mL+22,18+k*4)});
   R.forEach((r,k)=>{doc.setFont("DVC","bold");doc.text(r[0],170,18+k*4);doc.setFont("DVC","normal");doc.text(String(r[1]),196,18+k*4)});
   const body=[];let part=null,sec=null;
-  const grp=(label,g,fill,fs)=>body.push([{content:label,colSpan:5,styles:{fontStyle:"bold",fillColor:fill,fontSize:fs}},...["",E(g.b),"",E(g.pr),"",E(g.cu),"",E(g.zo)].map((v,k)=>({content:k===0?"":v,styles:{fontStyle:"bold",fillColor:fill,halign:"right",fontSize:fs}}))]);
+  const grp=(label,g,fill,fs)=>{const st=fs?{fontSize:fs}:{};body.push([{content:label,colSpan:5,styles:{fontStyle:"bold",fillColor:fill,...st}},...["",E(g.b),"",E(g.pr),"",E(g.cu),"",E(g.zo)].map((v,k)=>({content:k===0?"":v,styles:{fontStyle:"bold",fillColor:fill,halign:"right",...st}}))])};
   M.rows.forEach(r=>{const i=r.i;if(only&&!r.pq&&!r.cq)return;
     if(M.multi&&(i.partId||"")!==part){part=i.partId||"";sec=null;grp(partOf(p,part).name||"Časť stavby",M.parts[part],[253,236,222],7.4)}
     const sk=secKey(i);if(sk!==sec){sec=sk;if(i.section)grp(i.section,M.secs[sk],[238,240,242])}
@@ -6328,7 +6328,7 @@ function exportPDF(p,inv){
   const ap=approvalOf(inv);if(ap&&ap.action==="approved"){const au=user(ap.by),nm=ap.byName||(au&&au.name)||"",st=ap.stamp||(au&&au.stamp);
     pdfStamp(doc,st,W-mL-70,y+34,60,20);
     const [ad,at]=String(ap.at||"").split("T");doc.setFont("DVC","bold");doc.setFontSize(8.5);
-    doc.text(`Odsúhlasené: ${nm}${ad?` dňa ${plain(d2(ad))}`:""}${at?` o ${at.slice(0,5)}`:""}`,W-mL-70,y+11);doc.setFont("DVC","normal");doc.setFontSize(8)}
+    doc.text(doc.splitTextToSize(`Odsúhlasené: ${nm}`,70)[0],W-mL-70,y+7);if(ad)doc.text(`dňa ${plain(d2(ad))}${at?` o ${at.slice(0,5)}`:""}`,W-mL-70,y+11);doc.setFont("DVC","normal");doc.setFontSize(8)}
   const n=doc.internal.getNumberOfPages();
   for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(`${p.name} · súpis č. ${inv.no} · ${plain(periodLabel(inv))}`,mL,205);doc.text(`Strana ${k} / ${n}`,W-mL,205,{align:"right"});doc.setTextColor(0)}
   offerFile(fileBase(p,inv)+".pdf",doc.output("arraybuffer"));
