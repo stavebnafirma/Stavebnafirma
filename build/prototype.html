@@ -3120,7 +3120,7 @@ function landingHTML(){
 /* ---------- Ako to funguje: zoznam videí a návodov (samostatná stránka z úvodnej stránky) ---------- */
 /* url = odkaz na video na YouTube alebo Vimeo (stačí bežný odkaz zo zdieľania); prázdny = video ešte nie je zverejnené */
 const HOWTO=[
-  {t:"Založenie firmy",d:"Registrácia, výber modulov a nastavenie údajov o firme – logo, pečiatka a kontakty, ktoré sa použijú v dokumentoch.",url:"",poster:"videa/zalozenie-firmy.jpg",len:"1:52"}];
+  {t:"Založenie firmy",d:"Registrácia, výber modulov a nastavenie údajov o firme – logo, pečiatka a kontakty, ktoré sa použijú v dokumentoch.",url:"https://vimeo.com/1242483810",poster:"videa/zalozenie-firmy.jpg",len:"1:52"}];
 /* odkaz → adresa prehrávača; video sa načíta až po kliknutí (rýchlejšia stránka, YouTube/Vimeo neukladá cookies vopred) */
 function vidEmbed(u){u=String(u||"").trim();let m;
   if((m=u.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/)))return {src:`https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1&rel=0`,thumb:`https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg`};
