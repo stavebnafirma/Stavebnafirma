@@ -5010,6 +5010,17 @@ function tbl(heads,right,body,label,tot,cols){
   return `<div class="tablewrap"><table><thead><tr>${heads.map((x,i)=>`<th${right[i]?' class="r"':""}>${x}</th>`).join("")}</tr></thead><tbody>${body}</tbody>
     <tfoot><tr><td colspan="${cols-1}"><b>${label}</b></td><td class="num r"><b>${h(tot)}</b></td></tr></tfoot></table></div>`}
 
+/* prvý denný záznam stavby: predpísaný text prevzatia staveniska */
+const FIRST_ENTRY=`Prevzatie staveniska:
+Dnešným dňom bolo prevzaté stavenisko Zhotoviteľom. Práce začnú dňa ...
+
+Pripojenie elektrickej energie na stavbe: 
+Pripojenie vody na stavbe: 
+Zriadenie staveniska: 
+Zabezpečenie staveniska: 
+Prístup na stavenisko: 
+Manipulačné plochy: 
+Zabezpečenie toaliet pre personál stavby: `;
 function diaryForm(p,e){
   const today=new Date().toISOString().slice(0,10);
   const groups=e?entryGroups(e):[];projGroups(p).forEach(g=>{if(!groups.some(x=>x.slice(0,4)===g.slice(0,4)))groups.push(g)});
@@ -5032,7 +5043,8 @@ function diaryForm(p,e){
       ${view.wxMsg?`<div class="note">${view.wxMsg}</div>`:""}
       ${view.wxMsg?`<label class="chk wxchk"><input type="checkbox" id="wxOk"> Počasie som skontroloval a zodpovedá skutočnosti na stavbe</label>`:""}
       <div class="hint">Počasie sa načíta z modelových údajov meteorologickej služby Open-Meteo pre polohu stavby. Od skutočného počasia na stavbe sa môže líšiť, preto ho treba skontrolovať.</div></div>
-    <label>Vykonané práce<textarea id="dWork" required placeholder="Čo sa dnes na stavbe robilo">${e?esc(e.work):""}</textarea></label>
+    ${!e&&!S.diary.some(d=>d.projectId===p.id)?`<div class="note">Prvý záznam stavby – text o prevzatí staveniska je predvyplnený. Doplň údaje za dvojbodkami a uprav, čo treba.</div>`:""}
+    <label>Vykonané práce<textarea id="dWork" required placeholder="Čo sa dnes na stavbe robilo" ${!e&&!S.diary.some(d=>d.projectId===p.id)?'rows="11"':""}>${e?esc(e.work):!S.diary.some(d=>d.projectId===p.id)?esc(FIRST_ENTRY):""}</textarea></label>
     ${blocks}
     ${photoFormBlock()}
     <datalist id="profList">${[...new Set(S.workers.map(w=>w.profession))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
