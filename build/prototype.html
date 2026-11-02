@@ -2291,7 +2291,7 @@ const stampGap=()=>firmStamp()?12:0;
 function pdfStamp(doc,st,x,yLine,maxW,h){if(!st||!st.data||!st.w||!st.h)return;h=h||22;maxW=maxW||60;let w=h*st.w/st.h,hh=h;if(w>maxW){w=maxW;hh=w*st.h/st.w}
   try{doc.addImage(st.data,"PNG",x+4,yLine-1-hh,w,hh)}catch(e){}}
 function pdfFirmHeader(doc,title,sub,noFirm){const F=S.firm||{},W=doc.internal.pageSize.getWidth();let x=14;
-  if(F.logo){const lh=10,lw=Math.min(40,lh*F.logo.w/F.logo.h);try{doc.addImage(F.logo.data,"PNG",14,8,lw,lw*F.logo.h/F.logo.w);x=14+lw+4}catch(e){}}
+  if(F.logo&&!noFirm){const lh=10,lw=Math.min(40,lh*F.logo.w/F.logo.h);try{doc.addImage(F.logo.data,"PNG",14,8,lw,lw*F.logo.h/F.logo.w);x=14+lw+4}catch(e){}}
   doc.setFont("DVC","bold");doc.setFontSize(13);doc.text(title,x,14);doc.setFont("DVC","normal");doc.setFontSize(8.5);
   if(!noFirm)doc.text([F.name||S.company,[firmAddress(F),F.ico?`IČO ${F.ico}`:""].filter(Boolean).join(" · ")].filter(Boolean),W-14,10,{align:"right"});
   if(sub){doc.setFontSize(10);doc.text(sub,x,20)}}
@@ -4896,8 +4896,7 @@ async function diaryFullPDF(p){const es=S.diary.filter(d=>d.projectId===p.id).so
   /* 1. strana – titulná */
   doc.setFont("DVC","normal");doc.setFontSize(9);doc.setTextColor(110);doc.text("Objednávateľ",L,22);doc.text("Zhotoviteľ",W-L,22,{align:"right"});doc.setTextColor(31,35,40);
   doc.setFont("DVC","bold");doc.setFontSize(12);doc.text(doc.splitTextToSize(plain(p.client||p.investor||"–"),80),L,28);
-  let ry=26;if(F.logo){const lh=16,lw=Math.min(55,lh*F.logo.w/F.logo.h),h=lw*F.logo.h/F.logo.w;try{doc.addImage(F.logo.data,"PNG",W-L-lw,ry,lw,h)}catch(e){}ry+=h+5}else ry+=2;
-  doc.text(doc.splitTextToSize(plain(F.name||S.company||""),80),W-L,ry,{align:"right"});
+  doc.text(doc.splitTextToSize(plain(F.name||S.company||""),80),W-L,28,{align:"right"});
   doc.setFont("DVC","bold");doc.setFontSize(34);doc.text("STAVEBNÝ DENNÍK",W/2,132,{align:"center"});
   doc.setDrawColor(239,125,45);doc.setLineWidth(1);doc.line(W/2-30,140,W/2+30,140);doc.setLineWidth(0.2);doc.setDrawColor(0);
   doc.setFontSize(17);const nt=doc.splitTextToSize(plain(p.name),W-2*L-10);doc.text(nt,W/2,154,{align:"center"});
@@ -4923,21 +4922,26 @@ async function diaryFullPDF(p){const es=S.diary.filter(d=>d.projectId===p.id).so
   /* 5+ – denné záznamy */
   doc.addPage();pdfFirmHeader(doc,"Denné záznamy",plain(p.name),true);
   if(!es.length){doc.setFontSize(10);doc.text("Zatiaľ bez denných záznamov.",14,32)}else pdfDiaryEntries(doc,es,28);
-  /* úvodné strany príloh */
+  /* prílohy: strana s nadpisom prílohy, pod ktorý sa vloží prvá strana samotnej prílohy */
   const att=at.filter(canAttach),sep=[];
-  att.forEach((d,i)=>{doc.addPage();sep.push(doc.internal.getNumberOfPages());pdfFirmHeader(doc,`Príloha č. ${at.indexOf(d)+1}`,plain(p.name),true);
-    doc.setFont("DVC","bold");doc.setFontSize(18);doc.text(doc.splitTextToSize(plain(docTitle(d.name)),W-2*L),W/2,120,{align:"center"});doc.setFont("DVC","normal")});
+  att.forEach((d,i)=>{doc.addPage();sep.push(doc.internal.getNumberOfPages());doc.setFont("DVC","bold");doc.setFontSize(12);
+    doc.text(doc.splitTextToSize(plain(`Príloha č. ${at.indexOf(d)+1} – ${docTitle(d.name)}`),W-28),14,14);doc.setFont("DVC","normal")});
   pdfDiaryFooter(doc,p,"stavebný denník");
   const fname=diaryFile(p,todayIso())+".pdf";
   if(!att.length){offerFile(fname,doc.output("arraybuffer"));return}
   toast("Pripájam prílohy k denníku…");
   if(!(await loadPdfLib())){toast("Prílohy sa nepodarilo pripojiť (knižnica sa nenačítala). Denník sa stiahne bez nich.");offerFile(fname,doc.output("arraybuffer"));return}
   try{const {PDFDocument}=window.PDFLib,out=await PDFDocument.load(doc.output("arraybuffer"));let fail=0;
-    for(let i=att.length-1;i>=0;i--){const d=att[i],ext=docExt(d.name);let at0=sep[i];   // strana za úvodnou stranou prílohy (index od 0 = číslo strany)
+    // prvá strana prílohy sa zmenšene vloží pod nadpis, ďalšie strany idú za ňu celé
+    const fit=(w,h)=>{const top=841.89-58,bot=34,s=Math.min((595.28-56)/w,(top-bot)/h,1.5);return {s,x:(595.28-w*s)/2,y:top-h*s}};
+    for(let i=att.length-1;i>=0;i--){const d=att[i],ext=docExt(d.name),hp=out.getPage(sep[i]-1);
       try{const buf=await (await fetch(await FILESTORE.url(d.path,d.name,false))).arrayBuffer();
-        if(ext==="pdf"){const src=await PDFDocument.load(buf,{ignoreEncryption:true});const pages=await out.copyPages(src,src.getPageIndices());pages.forEach(pg=>out.insertPage(at0++,pg))}
-        else{const img=ext==="png"?await out.embedPng(buf):await out.embedJpg(buf);const pw=595.28,ph=841.89,m=28,s=Math.min((pw-2*m)/img.width,(ph-2*m)/img.height,1.5);
-          const pg=out.insertPage(at0,[pw,ph]);pg.drawImage(img,{x:(pw-img.width*s)/2,y:(ph-img.height*s)/2,width:img.width*s,height:img.height*s})}}
+        if(ext==="pdf"){const src=await PDFDocument.load(buf,{ignoreEncryption:true});const [first]=await out.embedPdf(src,[0]);const f=fit(first.width,first.height);
+          hp.drawRectangle({x:f.x,y:f.y,width:first.width*f.s,height:first.height*f.s,borderColor:window.PDFLib.rgb(.8,.82,.84),borderWidth:.5});
+          hp.drawPage(first,{x:f.x,y:f.y,width:first.width*f.s,height:first.height*f.s});
+          if(src.getPageCount()>1){const rest=await out.copyPages(src,src.getPageIndices().slice(1));rest.forEach((pg,k)=>out.insertPage(sep[i]+k,pg))}}
+        else{const img=ext==="png"?await out.embedPng(buf):await out.embedJpg(buf);const f=fit(img.width,img.height);
+          hp.drawImage(img,{x:f.x,y:f.y,width:img.width*f.s,height:img.height*f.s})}}
       catch(e){console.error(e);fail++}}
     const bytes=await out.save();offerFile(fname,bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));
     if(fail)toast(`Denník je hotový, ${fail} ${pl(fail,"prílohu","prílohy","príloh")} sa nepodarilo pripojiť`)}

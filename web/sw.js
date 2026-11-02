@@ -1,6 +1,6 @@
 /* Service worker aplikácie Stavebná firma – aplikácia sa otvorí aj bez signálu.
    Údaje firmy sa sem neukladajú (tie drží aplikácia v IndexedDB), iba samotná stránka a knižnice. */
-const V="sf-c0ad230ddf";
+const V="sf-70095b8c97";
 const SHELL=["/","/manifest.webmanifest","/icon-192.png","/icon-512.png"];
 const CDN=/^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
 self.addEventListener("install",e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});
