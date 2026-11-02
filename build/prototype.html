@@ -1006,6 +1006,8 @@ const BUDGET_FIELDS=[
   ["por","Poradové číslo"],["code","Kód položky"],["desc","Názov položky"],
   ["mj","Merná jednotka"],["qty","Množstvo"],["price","Jednotková cena"],["total","Cena spolu"]
 ];
+/* obrázok z údajov: povoliť len obrázkové data-URL, blob a https adresy (ochrana pred podvrhnutým kódom v adrese obrázka) */
+function safeSrc(u){u=String(u??"");return /^(data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,[A-Za-z0-9+\/=\s]*$|blob:|https:\/\/[^\s"'<>]+$)/i.test(u)?esc(u):""}
 function normText(v){return String(v??"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim()}
 function classifyHeader(v){
   const t=normText(v); if(!t||t.length>40) return null;
@@ -1310,7 +1312,7 @@ function firmAddress(F){return [F.street,[F.zip,F.city].filter(Boolean).join(" "
 function imgBox(kind,F){
   const im=F[kind],lab=kind==="logo"?"Logo firmy":"Pečiatka s podpisom";
   return `<div class="imgbox"><div class="eyebrow">${lab}</div>
-    <div class="imgprev ${kind}">${im?`<img src="${im.data}" alt="${lab}">`:`<span class="muted">${kind==="logo"?"Bez loga":"Bez pečiatky"}</span>`}</div>
+    <div class="imgprev ${kind}">${im?`<img src="${safeSrc(im.data)}" alt="${lab}">`:`<span class="muted">${kind==="logo"?"Bez loga":"Bez pečiatky"}</span>`}</div>
     <div class="row"><label class="btn small filebtn">${im?"Zmeniť":"Nahrať obrázok"}<input type="file" accept="image/*" id="up_${kind}"></label>
     ${im?`<button type="button" class="btn small ghost" data-a="imgClear" data-k="${kind}">Odstrániť</button>`:""}</div>
     ${kind==="stamp"?`<label class="chk"><input type="checkbox" id="stampWhite" ${view.stampWhite===false?"":"checked"}> Odstrániť biele pozadie</label>
@@ -1376,11 +1378,11 @@ function firmCardHTML(){
     ["Zápis v registri",F.orsr],["Oprávnená osoba",[F.repName,F.repRole].filter(Boolean).join(", ")],["Telefón",F.phone],["E-mail",F.email],["Web",F.web]].filter(r=>r[1]);
   const miss=firmMissing(F);
   return `<div class="card stack">
-    <div class="entry-head"><div>${F.logo?`<img class="firmlogo" src="${F.logo.data}" alt="Logo ${esc(F.name)}">`:""}<h2>${esc(F.name||"Firma")}</h2></div>
+    <div class="entry-head"><div>${F.logo?`<img class="firmlogo" src="${safeSrc(F.logo.data)}" alt="Logo ${esc(F.name)}">`:""}<h2>${esc(F.name||"Firma")}</h2></div>
       ${me.companyRole==="admin"?`<button class="btn small" data-a="firmEdit">Upraviť údaje</button>`:""}</div>
     ${miss.length&&me.companyRole==="admin"?`<div class="note">Chýba: ${miss.join(", ")}. Doplň ich, aby boli dokumenty úplné.</div>`:""}
     <dl class="dl">${rows.map(r=>`<dt>${r[0]}</dt><dd>${esc(r[1])}</dd>`).join("")}</dl>
-    ${F.stamp?`<div><div class="eyebrow">Pečiatka s podpisom</div><div class="imgprev stamp"><img src="${F.stamp.data}" alt="Pečiatka s podpisom"></div></div>`:""}
+    ${F.stamp?`<div><div class="eyebrow">Pečiatka s podpisom</div><div class="imgprev stamp"><img src="${safeSrc(F.stamp.data)}" alt="Pečiatka s podpisom"></div></div>`:""}
   </div>`}
 
 /* ---------- Firma: strediská (prevádzky, napr. recyklačné stredisko s váhou) ---------- */
@@ -1518,7 +1520,7 @@ const TECH_RULES=[
 function techNeeds(p){const out=new Map();/* poradie podľa pravidiel */((p.budget&&p.budget.items)||[]).forEach(i=>{const t=normText(i.desc);TECH_RULES.forEach(R=>{if(R.re.test(t)){if(!out.has(R.k))out.set(R.k,{R,items:[]});out.get(R.k).items.push(i)}})});return [...out.values()].sort((a,b)=>TECH_RULES.indexOf(a.R)-TECH_RULES.indexOf(b.R))}
 const offerText=o=>normText([o.name,o.type,o.note].join(" "));
 function offerCard(o,ref,why){const d=ref?kmBetween(ref,geoOf(o.place)):null;
-  return `<article class="offer${o.own?" own":""}"><div class="ofimg">${o.photo?`<img src="${o.photo}" alt="${esc(o.name)}" loading="lazy">`:`<div class="ofph">${icon(o.cat==="truck"||o.cat==="car"?"doprava":o.cat==="small"?"pozicovna":"doprava")}<span>${esc((CATS[o.cat]||CATS.other).l)}</span></div>`}
+  return `<article class="offer${o.own?" own":""}"><div class="ofimg">${o.photo?`<img src="${safeSrc(o.photo)}" alt="${esc(o.name)}" loading="lazy">`:`<div class="ofph">${icon(o.cat==="truck"||o.cat==="car"?"doprava":o.cat==="small"?"pozicovna":"doprava")}<span>${esc((CATS[o.cat]||CATS.other).l)}</span></div>`}
       ${o.own?`<span class="oftag">Naša firma</span>`:""}${d!=null?`<span class="ofkm">${nf1(Math.round(d))} km</span>`:""}</div>
     <div class="ofbody"><b>${esc(o.name)}</b>${o.type?`<span class="muted">${esc(o.type)}</span>`:""}
       <div class="ofprice">${esc(offerPriceText(o))}</div>${o.note?`<div class="ofnote">${esc(o.note)}</div>`:""}${why?`<div class="ofwhy">${esc(why)}</div>`:""}
@@ -1607,7 +1609,7 @@ function firmMachinesHTML(){
       <datalist id="typeList">${[...new Set((S.machines||[]).map(x=>x.type).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
       <div class="row"><button class="btn primary" type="submit">${m?"Uložiť":"Pridať"}</button><button type="button" class="btn ghost" data-a="fmNo">Zrušiť</button>
         ${m?`<button type="button" class="btn ghost" data-a="fmDel" data-id="${m.id}" style="margin-left:auto;color:var(--bad)">Odstrániť</button>`:""}</div>${m?machDelBox(m):""}</form>`:"";
-  const rows=(S.machines||[]).slice().sort((a,b)=>CAT_ORDER.indexOf(a.cat||"other")-CAT_ORDER.indexOf(b.cat||"other")).map(x=>`<tr><td class="fmname">${x.photo?`<img class="fmthumb" src="${x.photo}" alt="">`:""}<b>${esc(x.name)}</b>${x.offer?` <span class="pill s-ok" style="font-size:11px">v ponuke</span>`:""}${x.ecv?`<br><span class="muted num">${esc(x.ecv)}</span>`:""}</td><td>${esc(catOf(x).l)}${x.type?`<br><span class="muted">${esc(x.type)}</span>`:""}</td><td class="num r">${x.rate?eur(x.rate):"–"}</td><td class="num r">${x.rateKm?eur(x.rateKm):"–"}</td><td class="num r">${x.rateDay?eur(x.rateDay):"–"}</td><td class="r" style="white-space:normal;min-width:130px">${x.rateOther?`<span class="num">${eur(x.rateOther)} / ${esc(x.otherUnit||"j.")}</span>${x.otherName?`<br><span class="muted" style="font-size:12px">${esc(x.otherName)}</span>`:""}`:`<span class="num">–</span>`}</td>${ed?`<td class="r"><button class="btn small ghost" data-a="fmEdit" data-id="${x.id}">Upraviť</button></td>`:""}</tr>`).join("");
+  const rows=(S.machines||[]).slice().sort((a,b)=>CAT_ORDER.indexOf(a.cat||"other")-CAT_ORDER.indexOf(b.cat||"other")).map(x=>`<tr><td class="fmname">${x.photo?`<img class="fmthumb" src="${safeSrc(x.photo)}" alt="">`:""}<b>${esc(x.name)}</b>${x.offer?` <span class="pill s-ok" style="font-size:11px">v ponuke</span>`:""}${x.ecv?`<br><span class="muted num">${esc(x.ecv)}</span>`:""}</td><td>${esc(catOf(x).l)}${x.type?`<br><span class="muted">${esc(x.type)}</span>`:""}</td><td class="num r">${x.rate?eur(x.rate):"–"}</td><td class="num r">${x.rateKm?eur(x.rateKm):"–"}</td><td class="num r">${x.rateDay?eur(x.rateDay):"–"}</td><td class="r" style="white-space:normal;min-width:130px">${x.rateOther?`<span class="num">${eur(x.rateOther)} / ${esc(x.otherUnit||"j.")}</span>${x.otherName?`<br><span class="muted" style="font-size:12px">${esc(x.otherName)}</span>`:""}`:`<span class="num">–</span>`}</td>${ed?`<td class="r"><button class="btn small ghost" data-a="fmEdit" data-id="${x.id}">Upraviť</button></td>`:""}</tr>`).join("");
   return `<div class="stack">
     <div class="muted">Stroje a vozidlá firmy so základnou sadzbou na mernú jednotku (cenník pre fakturáciu úloh v logistike). Z tohto zoznamu vyberáš do denného záznamu stavieb, zadaná cena sa použije v nákladoch stavby.${hasMod("doprava")&&canSee("doprava")?" Rodný list, termíny a servis sú v module Doprava a logistika.":""}</div>
     ${form||(ed?`<button class="btn primary" data-a="fmNew" style="align-self:flex-start">+ Pridať stroj alebo vozidlo</button>`:"")}
@@ -1871,7 +1873,7 @@ function vehMainHTML(m){
     <dl class="dl">${rows.map(r=>`<dt>${r[0]}</dt><dd class="${["EČV","VIN"].includes(r[0])?"num":""}">${r[1]?esc(r[1]):'<span class="muted">nevyplnené</span>'}</dd>`).join("")}</dl></div>`}
 function oevHTML(m){
   const O=m.oev||{},has=OEV_FIELDS.some(([k])=>O[k]);
-  const photos=(m.oevPhotos||[]).map((d,i)=>`<button type="button" class="phthumb" data-a="oevPhoto" data-i="${i}"><img src="${d}" alt="OEV II, strana ${i+1}"></button>`).join("");
+  const photos=(m.oevPhotos||[]).map((d,i)=>`<button type="button" class="phthumb" data-a="oevPhoto" data-i="${i}"><img src="${safeSrc(d)}" alt="OEV II, strana ${i+1}"></button>`).join("");
   const body=view.oevEdit?`<form class="stack" id="oevForm"><div class="oevgrid">${OEV_FIELDS.map(([k,l,c])=>`<label>${l}${c?` <span class="muted">(${c})</span>`:""}<input id="oev_${k}" value="${esc(O[k]??"")}"></label>`).join("")}</div>
       <div class="row"><button class="btn primary" type="submit">Uložiť údaje</button><button type="button" class="btn ghost" data-a="oevEditNo">Zrušiť</button></div></form>`
     :has?`<dl class="dl oevdl">${OEV_FIELDS.filter(([k])=>O[k]!=null&&O[k]!=="").map(([k,l,c])=>`<dt>${l}${c?` <span class="muted">(${c})</span>`:""}</dt><dd>${esc(k==="firstReg"&&/^\d{4}-\d\d-\d\d$/.test(O[k])?d2(O[k]):O[k])}</dd>`).join("")}</dl>`
@@ -4206,7 +4208,7 @@ function rLoanForm(){const l0=view.rlEdit!=="__new"?rLoans().find(l=>l.id===view
     </fieldset>
     <fieldset class="modes"><legend>Cena bez DPH</legend>
       <div class="seg" role="radiogroup"><label><input type="radio" name="rlPrice" value="0" ${D.priceOwn?"":"checked"}><span>Podľa cenníka</span></label><label><input type="radio" name="rlPrice" value="1" ${D.priceOwn?"checked":""}><span>Dohodnutá cena</span></label></div>
-      ${D.priceOwn?`<label>Cena €<input data-rf="price" inputmode="decimal" value="${esc(D.price)}"></label>`:`<div class="costbox">${eur(price)} <span class="muted" style="font-weight:400">= ${D.items.map(id=>{const i=rItem(id);return i?`${i.name} ${eur(rItemPrice(i,days))}`:""}).filter(Boolean).join(" + ")||"vyber náradie"}</span></div>`}
+      ${D.priceOwn?`<label>Cena €<input data-rf="price" inputmode="decimal" value="${esc(D.price)}"></label>`:`<div class="costbox">${eur(price)} <span class="muted" style="font-weight:400">= ${D.items.map(id=>{const i=rItem(id);return i?`${esc(i.name)} ${eur(rItemPrice(i,days))}`:""}).filter(Boolean).join(" + ")||"vyber náradie"}</span></div>`}
       <div class="muted" style="font-size:13px">Záloha spolu: <b>${eur(rDeposit(D))}</b></div></fieldset>
     <label>Poznámka<input data-rf="note" value="${esc(D.note)}" placeholder="napr. stav pri výdaji, príslušenstvo"></label>
     <div class="row"><button class="btn primary small" type="submit">${l0?"Uložiť":"Uložiť výpožičku"}</button><button type="button" class="btn ghost small" data-a="rlNo">Zrušiť</button></div></form>`}
@@ -4609,7 +4611,7 @@ function profileHTML(){
       <div class="grid2"><label>Telefón${ext?" *":""}<input id="pfPhone" type="tel" value="${esc(D.phone)}" ${ext?"required":""} autocomplete="tel" placeholder="+421 9xx xxx xxx"></label>
         <label>E-mail (prihlasovací)<input value="${esc(u.email)}" disabled></label></div>
       <fieldset class="modes"><legend>Pečiatka s podpisom${ext?"":" (nepovinné)"}</legend>
-        <div class="imgbox"><div class="imgprev stamp">${D.stamp?`<img src="${D.stamp.data}" alt="Pečiatka s podpisom">`:`<span class="muted">Bez pečiatky</span>`}</div>
+        <div class="imgbox"><div class="imgprev stamp">${D.stamp?`<img src="${safeSrc(D.stamp.data)}" alt="Pečiatka s podpisom">`:`<span class="muted">Bez pečiatky</span>`}</div>
           <div class="row"><label class="btn small filebtn">${D.stamp?"Zmeniť":"Nahrať obrázok"}<input type="file" accept="image/*" id="pfStampFile"></label>${D.stamp?`<button type="button" class="btn small ghost" data-a="pfStampClear">Odstrániť</button>`:""}</div>
           <span class="hint">Odtlač pečiatku s podpisom na biely papier a odfoť ju. Biele pozadie sa odstráni. ${ext?"Použije sa pri odsúhlasení súpisu prác a v pozvánke na kontrolný deň.":""}</span></div></fieldset>
       ${view.profErr?`<div class="err">${esc(view.profErr)}</div>`:""}
@@ -4712,7 +4714,7 @@ function render0(){renderBar();const a=$("#app");
   else if(view.screen==="roles"){view.screen="firma";view.firmTab="role";a.innerHTML=firmaHTML()}
   else a.innerHTML=projectHTML();
   if(me&&view.lightbox)a.insertAdjacentHTML("beforeend",lightboxHTML());
-  if(me&&view.lightboxSrc)a.insertAdjacentHTML("beforeend",`<div class="lb"><figure class="lbin"><img src="${view.lightboxSrc}" alt="Doklad"><div class="row lbnav"><button class="btn small" data-a="srcClose" style="margin-left:auto">Zavrieť</button></div></figure></div>`);
+  if(me&&view.lightboxSrc)a.insertAdjacentHTML("beforeend",`<div class="lb"><figure class="lbin"><img src="${safeSrc(view.lightboxSrc)}" alt="Doklad"><div class="row lbnav"><button class="btn small" data-a="srcClose" style="margin-left:auto">Zavrieť</button></div></figure></div>`);
   if(a.classList){a.classList.toggle("ro-doprava",!!me&&view.screen==="doprava"&&!canEdit("doprava"));a.classList.toggle("ro-personal",!!me&&view.screen==="personal"&&!canEdit("personal"));a.classList.toggle("ro-pozicovna",!!me&&view.screen==="pozicovna"&&!canEdit("pozicovna"))}
   if(me&&$("#fmForm")){restoreFm();fmDrawCanvas()}
   renderTasks();
@@ -4722,7 +4724,7 @@ function renderBar(){
   const F=me?S.firm||{}:{};
   const sn=subnavHTML();const se=$("#subnav");se.innerHTML=sn;se.hidden=!sn;
   (se.querySelectorAll?se.querySelectorAll(".sub-in"):[]).forEach(si=>{const ss=si.querySelector('[aria-selected="true"]');if(ss&&si.scrollWidth>si.clientWidth){const r=ss.offsetLeft+ss.offsetWidth-si.clientWidth;si.scrollLeft=r>0?r+16:0}});
-  $("#bar").innerHTML=navHTML()+`<div class="brand" data-a="brandHome" role="link" tabindex="0" title="Úvodná stránka"><svg viewBox="0 0 24 24" aria-hidden="true" class="cone"><path d="M10.4 2.6h3.2l5.2 16.4H5.2z" fill="#e8792f"/><path d="M8.64 8h6.72l.78 2.5H7.86zM6.92 13.5h10.16l.78 2.5H6.14z" fill="#fff"/><rect x="2.5" y="18.6" width="19" height="3" rx="1.2" fill="currentColor"/></svg><span class="bname">Stavebná firma</span>${themeBtn()}</div>`+(me?`<div class="acct"><button type="button" class="who" data-a="profile" title="Môj profil">${F.logo?`<span class="blogo"><img src="${F.logo.data}" alt=""></span>`:""}<span class="wtext"><b>${esc(me.name)}</b><span class="wmail">${esc(F.name||S.company||me.email)}</span></span></button>${isPlatformAdmin()?`<button class="padmin${view.screen==="platform"?" on":""}" data-a="platform" title="Prehľad všetkých firiem na platforme">${icon("lock")}<span>Admin</span></button>`:""}<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");
+  $("#bar").innerHTML=navHTML()+`<div class="brand" data-a="brandHome" role="link" tabindex="0" title="Úvodná stránka"><svg viewBox="0 0 24 24" aria-hidden="true" class="cone"><path d="M10.4 2.6h3.2l5.2 16.4H5.2z" fill="#e8792f"/><path d="M8.64 8h6.72l.78 2.5H7.86zM6.92 13.5h10.16l.78 2.5H6.14z" fill="#fff"/><rect x="2.5" y="18.6" width="19" height="3" rx="1.2" fill="currentColor"/></svg><span class="bname">Stavebná firma</span>${themeBtn()}</div>`+(me?`<div class="acct"><button type="button" class="who" data-a="profile" title="Môj profil">${F.logo?`<span class="blogo"><img src="${safeSrc(F.logo.data)}" alt=""></span>`:""}<span class="wtext"><b>${esc(me.name)}</b><span class="wmail">${esc(F.name||S.company||me.email)}</span></span></button>${isPlatformAdmin()?`<button class="padmin${view.screen==="platform"?" on":""}" data-a="platform" title="Prehľad všetkých firiem na platforme">${icon("lock")}<span>Admin</span></button>`:""}<button class="logout" data-a="logout">Odhlásiť</button></div>`:"");
 }
 /* prepínač svetlej a tmavej verzie: voľba sa pamätá v prehliadači, bez voľby sa riadi nastavením zariadenia */
 const THEME_KEY="sf-theme";
@@ -5138,7 +5140,7 @@ function refreshPhotoEdit(){const g=$("#phEdit");if(g)g.innerHTML=view.draftPhot
 async function addPhotos(files){readCaptions();let bad=0;const info=$("#phInfo");if(info)info.textContent="Spracúvam fotografie…";
   for(const f of files){if(!/^image\//.test(f.type)){bad++;continue}try{view.draftPhotos.push({id:uid("ph"),data:await compressImage(f),caption:"",by:me.id,at:nowIso()})}catch(e){bad++}}
   refreshPhotoEdit();if(bad)toast(`${bad} ${pl(bad,"súbor sa nepodarilo","súbory sa nepodarilo","súborov sa nepodarilo")} načítať ako fotografiu`)}
-function photoEditHTML(ph,i){return `<figure class="phedit" data-pi="${i}"><img src="${ph.data}" alt="${esc(ph.caption||"Fotografia "+(i+1))}">
+function photoEditHTML(ph,i){return `<figure class="phedit" data-pi="${i}"><img src="${safeSrc(ph.data)}" alt="${esc(ph.caption||"Fotografia "+(i+1))}">
   <input data-cap="${i}" value="${esc(ph.caption)}" placeholder="Popis (nepovinné)" aria-label="Popis fotografie ${i+1}">
   <button type="button" class="phdel" data-a="phDel" data-i="${i}" aria-label="Odstrániť fotografiu">×</button></figure>`}
 function photoFormBlock(){const ph=view.draftPhotos||[];
@@ -5147,9 +5149,9 @@ function photoFormBlock(){const ph=view.draftPhotos||[];
     <div class="row"><label class="btn small filebtn">+ Pridať fotografie<input type="file" id="phFile" accept="image/*" multiple></label>
     <span class="muted" style="font-size:13px" id="phInfo">${ph.length?`${ph.length} ${pl(ph.length,"fotografia","fotografie","fotografií")}`:"Na mobile môžeš odfotiť priamo z fotoaparátu."}</span></div></div>`}
 function photosViewHTML(e){const ph=e.photos||[];if(!ph.length)return "";
-  return `<div class="phgrid">${ph.map((x,i)=>`<button type="button" class="phthumb" data-a="phOpen" data-e="${e.id}" data-i="${i}"><img src="${x.data}" alt="${esc(x.caption||"Fotografia "+(i+1))}" loading="lazy">${x.caption?`<span>${esc(x.caption)}</span>`:""}</button>`).join("")}</div>`}
+  return `<div class="phgrid">${ph.map((x,i)=>`<button type="button" class="phthumb" data-a="phOpen" data-e="${e.id}" data-i="${i}"><img src="${safeSrc(x.data)}" alt="${esc(x.caption||"Fotografia "+(i+1))}" loading="lazy">${x.caption?`<span>${esc(x.caption)}</span>`:""}</button>`).join("")}</div>`}
 function lightboxHTML(){const lb=view.lightbox;if(!lb)return "";const e=S.diary.find(d=>d.id===lb.e);const ph=e&&e.photos&&e.photos[lb.i];if(!ph)return "";const n=e.photos.length;
-  return `<div class="lb" data-a="phClose"><figure class="lbin"><img src="${ph.data}" alt="${esc(ph.caption||"Fotografia")}">
+  return `<div class="lb" data-a="phClose"><figure class="lbin"><img src="${safeSrc(ph.data)}" alt="${esc(ph.caption||"Fotografia")}">
     <figcaption><span>${esc(ph.caption||"")}</span><span class="muted">${fmtDate(e.date)} · ${lb.i+1} / ${n}</span></figcaption>
     <div class="row lbnav">${n>1?`<button class="btn small" data-a="phNav" data-d="-1">← Predošlá</button><button class="btn small" data-a="phNav" data-d="1">Ďalšia →</button>`:""}<button class="btn small" data-a="phClose" style="margin-left:auto">Zavrieť</button></div></figure></div>`}
 
