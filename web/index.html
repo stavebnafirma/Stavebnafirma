@@ -5210,46 +5210,67 @@ function pdfDiaryEntries(doc,es,y){const W=doc.internal.pageSize.getWidth(),L=14
   return y}
 function pdfDiaryFooter(doc,p,label){const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(plain(`${p.name} · ${label}`),14,290);doc.text(`Strana ${k} / ${n}`,196,290,{align:"right"});doc.setTextColor(0)}}
 const diaryFile=(p,s)=>(`Stavebny_dennik_${p.name}_${s}`).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_").slice(0,90);
-function diaryFullPDF(p){const es=S.diary.filter(d=>d.projectId===p.id).sort((a,b)=>(a.date+(a.createdAt||"")).localeCompare(b.date+(b.createdAt||"")));
+/* export celého stavebného denníka:
+   1. titulná strana · 2. identifikačné údaje stavby · 3. kontrolné dni (podpisy dozoru) · 4. skúšky a atesty (zoznam príloh)
+   5+ denné záznamy · na konci pripojené prílohy z „Dokumentácia v stavebnom denníku“ (PDF a obrázky) */
+const DN_DOC="Dokumentácia v stavebnom denníku";
+const dnDocs=p=>(p.docs||[]).filter(d=>d.group===DN_DOC).sort((a,b)=>a.name.localeCompare(b.name,"sk",{numeric:true}));
+const docTitle=n=>String(n).replace(/\.[a-z0-9]{1,5}$/i,"").replace(/[_]+/g," ").trim();
+const canAttach=d=>/^(pdf|jpe?g|png)$/.test(docExt(d.name));
+function loadPdfLib(){if(window.PDFLib)return Promise.resolve(true);
+  return new Promise(res=>{const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js";s.onload=()=>res(!!window.PDFLib);s.onerror=()=>res(false);document.head.appendChild(s)})}
+async function diaryFullPDF(p){const es=S.diary.filter(d=>d.projectId===p.id).sort((a,b)=>(a.date+(a.createdAt||"")).localeCompare(b.date+(b.createdAt||"")));
   const doc=newPdf("portrait");if(!doc)return;const F=S.firm||{},W=210,L=20;
+  const tbl={theme:"grid",styles:{font:"DVC",fontSize:9.5,cellPadding:1.8,minCellHeight:7,valign:"middle",lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255}};
   /* 1. strana – titulná */
-  let y=24;if(F.logo){const lh=18,lw=Math.min(60,lh*F.logo.w/F.logo.h);try{doc.addImage(F.logo.data,"PNG",W/2-lw/2,y,lw,lw*F.logo.h/F.logo.w)}catch(e){}y+=lw*F.logo.h/F.logo.w+10}else y+=10;
-  doc.setFont("DVC","bold");doc.setFontSize(26);doc.text("STAVEBNÝ DENNÍK",W/2,y+10,{align:"center"});y+=22;
-  doc.setFontSize(15);const nt=doc.splitTextToSize(plain(p.name),W-2*L);doc.text(nt,W/2,y,{align:"center"});y+=nt.length*7+10;
-  const sv=p.members.filter(m=>m.role==="stavbyveduci").map(m=>user(m.userId)?.name).filter(Boolean).join(", "),dz=dozorsOf(p).map(u=>u.name).join(", ");
-  const rows=[["Stavba",p.name],["Miesto stavby",placeText(p)],["Investor",p.investor||""],["Objednávateľ",p.client||""],["Zhotoviteľ",[F.name||S.company,firmAddress(F),F.ico?`IČO ${F.ico}`:""].filter(Boolean).join(", ")],
-    ["Stavbyvedúci",sv],["Stavebný dozor",dz],["Denník vedený od",es.length?d2(es[0].date):""],["Posledný záznam",es.length?d2(es[es.length-1].date):""],["Počet denných záznamov",String(es.length)],["Vytlačené",dt(nowIso())]];
-  doc.autoTable({body:rows.map(r=>[r[0],plain(r[1]||"–")]),startY:y,margin:{left:L,right:L},theme:"grid",styles:{font:"DVC",fontSize:10,cellPadding:2.2,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},columnStyles:{0:{cellWidth:52,fontStyle:"bold",fillColor:[245,246,247]}}});
-  y=Math.max(doc.lastAutoTable.finalY+34,236);const cw=(W-2*L-20)/3;
-  [["Zhotoviteľ",firmStamp()],["Stavebný dozor",dozorsOf(p)[0]&&dozorsOf(p)[0].stamp],["Investor",null]].forEach(([l,st],i)=>{const x=L+i*(cw+10);pdfStamp(doc,st,x-4,y,cw,20);doc.line(x,y,x+cw,y);doc.setFontSize(9);doc.setFont("DVC","normal");doc.text(l,x,y+5)});
-  /* 2. strana – identifikačné údaje stavby (z nastavení stavby) a účastníci */
+  doc.setFont("DVC","normal");doc.setFontSize(9);doc.setTextColor(110);doc.text("Objednávateľ",L,22);doc.text("Zhotoviteľ",W-L,22,{align:"right"});doc.setTextColor(31,35,40);
+  doc.setFont("DVC","bold");doc.setFontSize(12);doc.text(doc.splitTextToSize(plain(p.client||p.investor||"–"),80),L,28);
+  let ry=26;if(F.logo){const lh=16,lw=Math.min(55,lh*F.logo.w/F.logo.h),h=lw*F.logo.h/F.logo.w;try{doc.addImage(F.logo.data,"PNG",W-L-lw,ry,lw,h)}catch(e){}ry+=h+5}else ry+=2;
+  doc.text(doc.splitTextToSize(plain(F.name||S.company||""),80),W-L,ry,{align:"right"});
+  doc.setFont("DVC","bold");doc.setFontSize(34);doc.text("STAVEBNÝ DENNÍK",W/2,132,{align:"center"});
+  doc.setDrawColor(239,125,45);doc.setLineWidth(1);doc.line(W/2-30,140,W/2+30,140);doc.setLineWidth(0.2);doc.setDrawColor(0);
+  doc.setFontSize(17);const nt=doc.splitTextToSize(plain(p.name),W-2*L-10);doc.text(nt,W/2,154,{align:"center"});
+  doc.setFont("DVC","normal");doc.setFontSize(11);doc.setTextColor(90);const pl0=placeText(p);if(pl0)doc.text(doc.splitTextToSize(plain(pl0),W-2*L),W/2,158+nt.length*7.5,{align:"center"});doc.setTextColor(0);
+  /* 2. strana – identifikačné údaje stavby (z nastavení stavby) */
   doc.addPage();pdfFirmHeader(doc,"Identifikačné údaje stavby",plain(p.name));
   const D=p.dn||{},sec=(t,list)=>[[{content:t,colSpan:2,styles:{fontStyle:"bold",fillColor:[43,47,51],textColor:255}}],...list.map(([k,l])=>[l,plain(D[k]||"")])];
-  doc.autoTable({body:[[ "Stavba",plain(p.name)],...sec("Miesto stavby",DN_PLACE),...sec("Účastníci výstavby",[...DN_PEOPLE.slice(0,3),["__zh","Zhotoviteľ"],...DN_PEOPLE.slice(3)]).map(r=>r[0]==="Zhotoviteľ"?["Zhotoviteľ",plain([F.name||S.company,firmAddress(F),F.ico?`IČO ${F.ico}`:""].filter(Boolean).join(", "))]:r),...sec("Stavebné povolenie a termíny",DN_PERMIT)],
-    startY:28,margin:{left:14,right:14},theme:"grid",styles:{font:"DVC",fontSize:9.5,cellPadding:1.8,minCellHeight:7,valign:"middle",lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},columnStyles:{0:{cellWidth:62,fontStyle:"bold",fillColor:[245,246,247]}}});
-  doc.addPage();pdfFirmHeader(doc,"Účastníci stavby – kontakty",plain(p.name));
-  const ppl=[];p.members.forEach(m=>{const u=user(m.userId);if(u)ppl.push([u.name||"",memberRoleLabel(m.role),u.phone||"",u.email||""])});
-  (p.contacts||[]).forEach(c=>ppl.push([c.name||"",c.role||"",c.phone||"",c.email||""]));
-  if(p.investor&&!ppl.some(x=>/investor/i.test(x[1])))ppl.unshift([p.investor,"Investor","",""]);
-  doc.autoTable({head:[["Meno","Funkcia","Telefón","E-mail"]],body:ppl.map(r=>r.map(plain)),startY:28,margin:{left:14,right:14},theme:"grid",styles:{font:"DVC",fontSize:9,cellPadding:1.6,lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255}});
-  /* 3. strana – kontrolné dni */
-  doc.addPage();pdfFirmHeader(doc,"Kontrolné dni",plain(p.name));y=28;
-  const kds=(p.inspections||[]).slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  if(!kds.length){doc.setFontSize(10);doc.text("Na stavbe zatiaľ nebol zvolaný žiadny kontrolný deň.",14,y+4)}
-  kds.forEach(k=>{if(y>230){doc.addPage();y=18}const [st]=kdStatus(k);
-    doc.setFillColor(243,244,245);doc.rect(14,y,182,8,"F");doc.setFont("DVC","bold");doc.setFontSize(10.5);doc.text(plain(`Kontrolný deň č. ${k.no} · ${fmtDate(k.date)} o ${k.time}`),16,y+5.5);doc.setFont("DVC","normal");doc.setFontSize(8.5);doc.text(st,194,y+5.5,{align:"right"});y+=12;
-    doc.setFontSize(9);doc.text(plain(`Miesto: ${k.place||""} · zvolal ${user(k.by)?.name||""}`),14,y);y+=5;
-    const ag=doc.splitTextToSize(plain("Program: "+(k.agenda||"").replace(/\n/g,"; ")),182);doc.text(ag,14,y);y+=ag.length*4.3+2;
-    if(k.minutes){doc.setFont("DVC","bold");doc.text(plain(`Zápis – ${user(k.minutes.by)?.name||""}, ${dt(k.minutes.at)}`),14,y);y+=4.5;doc.setFont("DVC","normal");
-      const mt=doc.splitTextToSize(plain(k.minutes.text),182);mt.forEach(l=>{if(y>280){doc.addPage();y=18}doc.text(l,14,y);y+=4.3});y+=2}
-    if(k.status==="cancelled"){doc.text(plain(`Zrušený${k.cancelNote?": "+k.cancelNote:""}`),14,y);y+=6}
-    else{const rs=k.rsvp||{};doc.autoTable({head:[["Prezenčná listina – meno","Funkcia","Účasť","Podpis"]],body:k.invitees.map(i=>{const u=i.key.startsWith("u:")?i.key.slice(2):null,r=u?rs[u]:null;return [plain(i.name),plain(i.role),r==="yes"?"potvrdil":r==="no"?"ospravedlnil":"",""]}),
-      startY:y,margin:{left:14,right:14},theme:"grid",styles:{font:"DVC",fontSize:8.8,cellPadding:1.5,minCellHeight:8,valign:"middle",lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255,minCellHeight:6},columnStyles:{2:{cellWidth:24},3:{cellWidth:50}}});
-      y=doc.lastAutoTable.finalY+8}});
-  /* denné záznamy */
+  const zh=["Zhotoviteľ",plain([F.name||S.company,firmAddress(F),F.ico?`IČO ${F.ico}`:""].filter(Boolean).join(", "))];
+  doc.autoTable({...tbl,body:[["Stavba",plain(p.name)],["Objednávateľ",plain(p.client||"")],...sec("Miesto stavby",DN_PLACE),...sec("Účastníci výstavby",DN_PEOPLE.slice(0,3)),zh,...DN_PEOPLE.slice(3).map(([k,l])=>[l,plain(D[k]||"")]),...sec("Stavebné povolenie a termíny",DN_PERMIT)],
+    startY:28,margin:{left:14,right:14},columnStyles:{0:{cellWidth:62,fontStyle:"bold",fillColor:[245,246,247]}}});
+  /* 3. strana – kontrolné dni: dátum a miesto na podpis stavebného dozoru */
+  doc.addPage();pdfFirmHeader(doc,"Kontrolné dni",plain(p.name));
+  const kds=(p.inspections||[]).filter(k=>k.status!=="cancelled").sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const kr=kds.map(k=>[String(k.no),plain(`${fmtDate(k.date)}${k.time?` o ${k.time}`:""}`),""]);while(kr.length<18)kr.push([String(kr.length+1),"",""]);
+  doc.autoTable({...tbl,head:[["Č.","Dátum kontrolného dňa","Podpis stavebného dozoru"]],body:kr,startY:28,margin:{left:14,right:14},styles:{...tbl.styles,minCellHeight:12.5},columnStyles:{0:{cellWidth:14,halign:"center"},1:{cellWidth:62}}});
+  /* 4. strana – vykonané skúšky a atesty (zoznam príloh) */
+  doc.addPage();pdfFirmHeader(doc,"Vykonané skúšky a atesty",plain(p.name));
+  const at=dnDocs(p);
+  if(at.length){doc.autoTable({...tbl,head:[["Príloha","Názov","Nahraté"]],body:at.map((d,i)=>[`č. ${i+1}`,plain(docTitle(d.name))+(canAttach(d)?"":" (súbor nie je pripojený – formát "+docExt(d.name)+")"),d.at?fmtDate(d.at.slice(0,10)):""]),
+      startY:28,margin:{left:14,right:14},columnStyles:{0:{cellWidth:22},2:{cellWidth:28}}});
+    doc.setFontSize(9);doc.setTextColor(110);doc.text("Prílohy sú pripojené na konci stavebného denníka v uvedenom poradí.",14,doc.lastAutoTable.finalY+7);doc.setTextColor(0)}
+  else{doc.setFontSize(10);doc.text("Zatiaľ bez príloh. Skúšky a atesty nahraj v karte Dokumentácia → Dokumentácia v stavebnom denníku.",14,34)}
+  /* 5+ – denné záznamy */
   doc.addPage();pdfFirmHeader(doc,"Denné záznamy",plain(p.name));
   if(!es.length){doc.setFontSize(10);doc.text("Zatiaľ bez denných záznamov.",14,32)}else pdfDiaryEntries(doc,es,28);
-  pdfDiaryFooter(doc,p,"stavebný denník");offerFile(diaryFile(p,todayIso())+".pdf",doc.output("arraybuffer"))}
+  /* úvodné strany príloh */
+  const att=at.filter(canAttach),sep=[];
+  att.forEach((d,i)=>{doc.addPage();sep.push(doc.internal.getNumberOfPages());pdfFirmHeader(doc,`Príloha č. ${at.indexOf(d)+1}`,plain(p.name));
+    doc.setFont("DVC","bold");doc.setFontSize(18);doc.text(doc.splitTextToSize(plain(docTitle(d.name)),W-2*L),W/2,120,{align:"center"});doc.setFont("DVC","normal")});
+  pdfDiaryFooter(doc,p,"stavebný denník");
+  const fname=diaryFile(p,todayIso())+".pdf";
+  if(!att.length){offerFile(fname,doc.output("arraybuffer"));return}
+  toast("Pripájam prílohy k denníku…");
+  if(!(await loadPdfLib())){toast("Prílohy sa nepodarilo pripojiť (knižnica sa nenačítala). Denník sa stiahne bez nich.");offerFile(fname,doc.output("arraybuffer"));return}
+  try{const {PDFDocument}=window.PDFLib,out=await PDFDocument.load(doc.output("arraybuffer"));let fail=0;
+    for(let i=att.length-1;i>=0;i--){const d=att[i],ext=docExt(d.name);let at0=sep[i];   // strana za úvodnou stranou prílohy (index od 0 = číslo strany)
+      try{const buf=await (await fetch(await FILESTORE.url(d.path,d.name,false))).arrayBuffer();
+        if(ext==="pdf"){const src=await PDFDocument.load(buf,{ignoreEncryption:true});const pages=await out.copyPages(src,src.getPageIndices());pages.forEach(pg=>out.insertPage(at0++,pg))}
+        else{const img=ext==="png"?await out.embedPng(buf):await out.embedJpg(buf);const pw=595.28,ph=841.89,m=28,s=Math.min((pw-2*m)/img.width,(ph-2*m)/img.height,1.5);
+          const pg=out.insertPage(at0,[pw,ph]);pg.drawImage(img,{x:(pw-img.width*s)/2,y:(ph-img.height*s)/2,width:img.width*s,height:img.height*s})}}
+      catch(e){console.error(e);fail++}}
+    const bytes=await out.save();offerFile(fname,bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));
+    if(fail)toast(`Denník je hotový, ${fail} ${pl(fail,"prílohu","prílohy","príloh")} sa nepodarilo pripojiť`)}
+  catch(e){console.error(e);toast("Prílohy sa nepodarilo pripojiť, denník sa stiahne bez nich.");offerFile(fname,doc.output("arraybuffer"))}}
 function diaryRangeEntries(p){const X=view.dex||{};return S.diary.filter(d=>d.projectId===p.id&&(!X.from||d.date>=X.from)&&(!X.to||d.date<=X.to)).sort((a,b)=>(a.date+(a.createdAt||"")).localeCompare(b.date+(b.createdAt||"")))}
 function diaryRangePDF(p){const es=diaryRangeEntries(p),X=view.dex||{};if(!es.length){toast("V zvolenom období nie sú žiadne denné záznamy");return}
   const doc=newPdf("portrait");if(!doc)return;pdfFirmHeader(doc,"Denné záznamy stavebného denníka",plain(`${p.name} · ${X.from?d2(X.from):"od začiatku"} – ${X.to?d2(X.to):"dnes"}`));
@@ -5921,7 +5942,7 @@ const docTenant=()=>(typeof TID!=="undefined"&&TID)?TID:"demo";
 const safeKey=n=>String(n).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_").replace(/_+/g,"_").slice(-120);
 /* zložky dokumentácie: zakladá ich ten, kto nahráva (administrátor, stavbyvedúci); ostatní členovia stavby, dozor aj investor čítajú */
 const DOC_FOLDER_IDEAS=["Projektová dokumentácia","Skúšky a revízie","Atesty zabudovaných materiálov","Geodetické zameranie","Stavebné povolenie a rozhodnutia","Fotodokumentácia"];
-function docFolders(p){const F=(p.docFolders||[]).slice();(p.docs||[]).forEach(d=>{const g=d.group||"Iné";if(!F.includes(g))F.push(g)});return F}
+function docFolders(p){const F=(p.docFolders||[]).filter(g=>g!==DN_DOC);(p.docs||[]).forEach(d=>{const g=d.group||"Iné";if(g!==DN_DOC&&!F.includes(g))F.push(g)});return F}
 function docsHTML(p){const up=can(p,"docs.upload"),list=p.docs||[],F=docFolders(p),q=normText(view.dq||""),cur=view.docFolder&&F.includes(view.docFolder)?view.docFolder:null;
   const cnt=f=>list.filter(d=>(d.group||"Iné")===f).length,busy=view.docBusy;
   const item=d=>`<li><span class="docext">${esc(docExt(d.name)||"súbor")}</span>
@@ -5941,7 +5962,13 @@ function docsHTML(p){const up=can(p,"docs.upload"),list=p.docs||[],F=docFolders(
       ${up?`<form class="stack" id="docForm"><label class="docdrop"><input type="file" id="docFiles" multiple><span>${busy?esc(busy):`Nahrať do zložky „${esc(cur)}“ – vyber súbory alebo ich sem pretiahni`}</span></label>
         <div class="row"><input id="docNote" placeholder="Poznámka k súborom (nepovinné), napr. revízia B" style="flex:1 1 260px"><button class="btn primary small" type="submit" ${busy?"disabled":""}>Nahrať</button></div><span class="hint">PDF, obrázky, DWG a iné · najviac 50 MB na súbor</span></form>`:""}
       ${L.length?`<ul class="doclist">${L.map(item).join("")}</ul>`:`<div class="muted">Zložka je prázdna.</div>`}</div>`}
-  return `<div class="stack">${folders}
+  const dnL=dnDocs(p);
+  const dnCard=`<div class="card stack"><h3>Dokumentácia v stavebnom denníku</h3>
+    <div class="muted">Nahraté súbory budú použité pri exporte stavebného denníka, preto pomenuj súbory správnym názvom. Z názvov príloh sa vytvorí zoznam v stavebnom denníku a samotné súbory sa pripoja na koniec stavebného denníka.</div>
+    ${up?`<form class="stack" id="dnDocForm"><label class="docdrop"><input type="file" id="dnFiles" multiple accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"><span>${busy&&view.docBusyDn?esc(busy):"Nahrať skúšky a atesty – vyber súbory alebo ich sem pretiahni"}</span></label>
+      <div class="row"><button class="btn primary small" type="submit" ${busy?"disabled":""}>Nahrať</button><span class="hint">Napr. „Skúška zhutnenia pláne – úsek A1.pdf“. PDF a obrázky (JPG, PNG) sa pripoja do denníka · najviac 50 MB na súbor</span></div></form>`:""}
+    ${dnL.length?`<ul class="doclist">${dnL.map(item).join("")}</ul>`:`<div class="muted" style="font-size:13px">Zatiaľ bez príloh.</div>`}</div>`;
+  return `<div class="stack">${dnCard}${folders}
     ${list.length>6?`<label>Hľadať v dokumentácii<input id="docSearch" type="search" value="${esc(view.dq||"")}" placeholder="názov súboru, zložka alebo poznámka"></label>`:""}
     ${body}
     <div class="muted" style="font-size:13px">Dokumenty môžu otvoriť a stiahnuť všetci členovia stavby vrátane stavebného dozoru a investora. ${up?"Zložky zakladáš a súbory nahrávaš ty – ostatní ich nemôžu meniť, dopĺňať ani mazať.":"Meniť, dopĺňať ani mazať ich nemôžeš."}</div></div>`}
@@ -5956,7 +5983,7 @@ document.addEventListener("submit",ev=>{const f=ev.target.id;if(!me||(f!=="dfFor
   if(f==="dfForm"){const n=$("#dfName").value.trim();if(!n)return;if(docFolders(p).some(x=>normText(x)===normText(n))){toast("Taká zložka už existuje");return}(p.docFolders=p.docFolders||[]).push(n);view.dfNew=false;view.docFolder=n;save();toast("Zložka vytvorená");render()}
   else{const old=ev.target.dataset.f,n=$("#dfRenName").value.trim();if(!n||n===old){view.dfRen=null;render();return}if(docFolders(p).some(x=>x!==old&&normText(x)===normText(n))){toast("Taká zložka už existuje");return}
     p.docFolders=docFolders(p).map(x=>x===old?n:x);(p.docs||[]).forEach(d=>{if((d.group||"Iné")===old)d.group=n});view.docFolder=n;view.dfRen=null;save();toast("Zložka premenovaná");render()}});
-async function docUpload(p,files){const group=view.docFolder||($("#docGroup")?.value||"").trim()||"Iné",note=($("#docNote")?.value||"").trim();
+async function docUpload(p,files,grp){const group=grp||view.docFolder||($("#docGroup")?.value||"").trim()||"Iné",note=grp?"":($("#docNote")?.value||"").trim();view.docBusyDn=!!grp;
   files=[...files];const big=files.filter(f=>f.size>DOC_MAX);if(big.length){toast(`Súbor ${big[0].name} má viac ako 50 MB`);return}
   if(!files.length){toast("Vyber súbory na nahratie");return}
   p.docs=p.docs||[];let ok=0;
@@ -5964,7 +5991,7 @@ async function docUpload(p,files){const group=view.docFolder||($("#docGroup")?.v
     const id=uid("dk"),path=`${docTenant()}/${p.id}/${id}-${safeKey(f.name)}`;
     try{await FILESTORE.put(path,f);p.docs.push({id,name:f.name,size:f.size,type:f.type||"",group,note,path,by:me.id,at:new Date().toISOString()});ok++}
     catch(e){console.error(e);toast(`${f.name} sa nepodarilo nahrať: ${e.message||e}`)}}
-  view.docBusy=null;view.docGroup=group;if(!(p.docFolders||[]).includes(group))(p.docFolders=p.docFolders||[]).push(group);if(ok){save();toast(ok===1?"Súbor nahraný":`Nahraných ${ok} súborov`)}render()}
+  view.docBusy=null;view.docBusyDn=false;if(!grp){view.docGroup=group;if(!(p.docFolders||[]).includes(group))(p.docFolders=p.docFolders||[]).push(group)}if(ok){save();toast(ok===1?"Súbor nahraný":`Nahraných ${ok} súborov`)}render()}
 async function docOpen(d,download){const w=download?null:window.open("","_blank");
   try{const url=await FILESTORE.url(d.path,d.name,download);
     if(w&&!w.closed){w.location.href=url;return}
@@ -5975,12 +6002,13 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
   if(a==="docOpen"&&d)docOpen(d,false);else if(a==="docGet"&&d)docOpen(d,true);
   else if(a==="docDel"){view.docDel=b.dataset.id;render()}else if(a==="docDelNo"){view.docDel=null;render()}
   else if(a==="docDelYes"&&d&&can(p,"docs.upload")){(async()=>{try{await FILESTORE.del(d.path)}catch(e){console.warn(e)}p.docs=p.docs.filter(x=>x.id!==d.id);view.docDel=null;save();toast("Súbor odstránený");render()})()}});
-document.addEventListener("submit",ev=>{if(ev.target.id!=="docForm"||!me)return;ev.preventDefault();const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"docs.upload")||view.docBusy)return;docUpload(p,$("#docFiles").files)});
+document.addEventListener("submit",ev=>{if(!["docForm","dnDocForm"].includes(ev.target.id)||!me)return;ev.preventDefault();const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"docs.upload")||view.docBusy)return;
+  if(ev.target.id==="dnDocForm")docUpload(p,$("#dnFiles").files,DN_DOC);else docUpload(p,$("#docFiles").files)});
 document.addEventListener("input",ev=>{if(ev.target.id==="docSearch"){view.dq=ev.target.value;const pos=ev.target.selectionStart;render();const el=$("#docSearch");if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}}}});
 document.addEventListener("dragover",ev=>{if(ev.target.closest&&ev.target.closest(".docdrop")){ev.preventDefault();ev.target.closest(".docdrop").classList.add("over")}});
 document.addEventListener("dragleave",ev=>{const z=ev.target.closest&&ev.target.closest(".docdrop");if(z)z.classList.remove("over")});
-document.addEventListener("drop",ev=>{const z=ev.target.closest&&ev.target.closest(".docdrop");if(!z)return;ev.preventDefault();z.classList.remove("over");const inp=$("#docFiles");if(inp&&ev.dataTransfer.files.length){inp.files=ev.dataTransfer.files;z.querySelector("span").textContent=[...inp.files].map(f=>f.name).join(", ")}});
-document.addEventListener("change",ev=>{if(ev.target.id==="docFiles"){const z=ev.target.closest(".docdrop");if(z)z.querySelector("span").textContent=[...ev.target.files].map(f=>f.name).join(", ")||"Vyber súbory alebo ich sem pretiahni"}});
+document.addEventListener("drop",ev=>{const z=ev.target.closest&&ev.target.closest(".docdrop");if(!z)return;ev.preventDefault();z.classList.remove("over");const inp=z.querySelector("input[type=file]");if(inp&&ev.dataTransfer.files.length){inp.files=ev.dataTransfer.files;z.querySelector("span").textContent=[...inp.files].map(f=>f.name).join(", ")}});
+document.addEventListener("change",ev=>{if(ev.target.id==="docFiles"||ev.target.id==="dnFiles"){const z=ev.target.closest(".docdrop");if(z)z.querySelector("span").textContent=[...ev.target.files].map(f=>f.name).join(", ")||"Vyber súbory alebo ich sem pretiahni"}});
 
 /* ---------- fakturácia / súpisy prác ---------- */
 const PRESETS={week:"Týždeň",two:"2 týždne",month:"Mesiac",custom:"Vlastné obdobie"};
