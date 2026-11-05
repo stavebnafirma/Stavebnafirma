@@ -265,6 +265,8 @@ table.oopsum td,table.oopsum th{padding:5px 8px}table.oopsum tr.grp td{border-to
 .costbox{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
 .dnote{border-left:4px solid var(--ink);background:color-mix(in srgb,var(--ink) 7%,var(--surface));padding:8px 12px;border-radius:0 8px 8px 0;display:flex;flex-direction:column;gap:2px}
 .dnote .eyebrow{color:var(--ink)}
+.dnote.gz{border-color:var(--xsv);background:color-mix(in srgb,var(--xsv) 8%,var(--surface))}.dnote.gz .eyebrow{color:var(--xsv)}
+.areapill{background:var(--surface-2,#eee);border:1px solid var(--line);font-size:12px;font-weight:600;vertical-align:middle}.areabar{gap:10px}
 .card.extsv{border-left:5px solid var(--xsv);background:color-mix(in srgb,var(--xsv) 6%,var(--surface))}.eyebrow.xsv{color:var(--xsv)}
 :root{--xsv:#2f6fb5}@media (prefers-color-scheme:dark){:root{--xsv:#7fb0ea}}
 .dnote-form{border-top:1px dashed var(--line);padding-top:10px}
@@ -1181,6 +1183,9 @@ function docRows(){const out=new Map();
   for(const [k,v] of Object.entries(S)){
     if(SKIP_KEYS.has(k)||k[0]==="_"||/^mig\d*$/.test(k)||v===undefined)continue;
     if(MAP_KINDS.includes(k)&&v&&typeof v==="object"&&!Array.isArray(v)){for(const [id,d] of Object.entries(v))if(d!==undefined)out.set(k+"|"+id,{kind:k,id,project_id:null,data:d});continue}
+    /* stavba: rozpočet a súpisy generálneho zhotoviteľa v samostatnom riadku „projfin“ – subdodávateľ s pridelenou časťou ho v databáze nevidí */
+    if(k==="projects"&&Array.isArray(v)){v.forEach(x=>{if(!x||typeof x.id!=="string")return;const {budget,invoices,...rest}=x;out.set("projects|"+x.id,{kind:"projects",id:x.id,project_id:x.id,data:rest});
+      if(budget||(invoices&&invoices.length))out.set("projfin|"+x.id,{kind:"projfin",id:x.id,project_id:x.id,data:{budget:budget||null,invoices:invoices||[]}})});continue}
     if(Array.isArray(v)&&v.every(x=>x&&typeof x==="object"&&typeof x.id==="string"&&x.id)){
       v.forEach((x,i)=>out.set(k+"|"+x.id,{kind:k,id:x.id,project_id:k==="projects"?x.id:(typeof x.projectId==="string"?x.projectId:null),data:x}));continue}
     out.set("meta|"+k,{kind:"meta",id:k,project_id:null,data:{v}})}
@@ -1188,10 +1193,15 @@ function docRows(){const out=new Map();
 const rowSig=r=>JSON.stringify(r.data)+"\u0001"+(r.project_id||"");
 function applyRow(T,kind,id,data){
   if(kind==="meta"){T[id]=data?data.v:undefined;return}
+  if(kind==="projfin"){const p=(Array.isArray(T.projects)?T.projects:[]).find(x=>x&&x.id===id);if(p){p.budget=data&&data.budget||undefined;p.invoices=data&&data.invoices||undefined;if(p.budget===undefined)delete p.budget;if(p.invoices===undefined)delete p.invoices}else(T._pf=T._pf||{})[id]=data;return}
+  if(kind==="projects"&&data&&!("budget" in data)&&!("invoices" in data)){const a=Array.isArray(T.projects)?T.projects:(T.projects=[]);const i=a.findIndex(x=>x&&x.id===id),old=i>=0?a[i]:null,pf=T._pf&&T._pf[id];
+    const nd={...data};if(pf){if(pf.budget)nd.budget=pf.budget;if(pf.invoices)nd.invoices=pf.invoices;delete T._pf[id]}else if(old){if(old.budget)nd.budget=old.budget;if(old.invoices)nd.invoices=old.invoices}
+    if(i>=0)a[i]=nd;else a.push(nd);return}
   if(MAP_KINDS.includes(kind)){(T[kind]=T[kind]&&!Array.isArray(T[kind])?T[kind]:{})[id]=data;return}
   const a=Array.isArray(T[kind])?T[kind]:(T[kind]=[]);const i=a.findIndex(x=>x&&x.id===id);if(i>=0)a[i]=data;else a.push(data)}
 function removeRow(T,kind,id){
   if(kind==="meta"){delete T[id];return}
+  if(kind==="projfin"){const p=(T.projects||[]).find(x=>x&&x.id===id);if(p){delete p.budget;delete p.invoices}return}
   if(MAP_KINDS.includes(kind)){if(T[kind])delete T[kind][id];return}
   if(Array.isArray(T[kind]))T[kind]=T[kind].filter(x=>x.id!==id)}
 
@@ -1210,7 +1220,7 @@ function cacheNow(){if(!TID)return;clearTimeout(cacheT);cacheT=setTimeout(()=>{i
 async function listVersions(tid){const out=[];for(let from=0;;from+=1000){const {data,error}=await SB.from("docs").select("kind,id,updated_at").eq("tenant_id",tid).order("kind").order("id").range(from,from+999);
   if(error)throw error;out.push(...data);if(data.length<1000)break}return out}
 async function loadTenant(tid){
-  const C=await OFF.get(cacheKey(tid));let T;
+  const C=await OFF.get(cacheKey(tid));let T,LEG=[];
   if(C&&C.S&&C.ver&&C.ver.length){
     /* zmeny urobené offline najprv odoslať */
     S=C.S;TID=tid;SNAP=new Map(C.snap||[]);VER=new Map(C.ver);USNAP=new Map(C.usnap||[]);PSNAP=C.psnap||"";
@@ -1224,9 +1234,11 @@ async function loadTenant(tid){
     VER=now}
   else{const rows=[];for(let from=0;;from+=1000){const {data,error}=await SB.from("docs").select("kind,id,project_id,data,updated_at").eq("tenant_id",tid).order("kind").order("id").range(from,from+999);
       if(error)throw error;rows.push(...data);if(data.length<1000)break}
-    T=blankState();rows.forEach(r=>applyRow(T,r.kind,r.id,r.data));VER=new Map(rows.map(r=>[r.kind+"|"+r.id,r.updated_at]))}
+    T=blankState();rows.forEach(r=>applyRow(T,r.kind,r.id,r.data));
+    LEG=rows.filter(r=>r.kind==="projects"&&r.data&&("budget" in r.data||"invoices" in r.data)).map(r=>r.id);   /* staršie stavby: rozpočet ešte v riadku stavby */VER=new Map(rows.map(r=>[r.kind+"|"+r.id,r.updated_at]))}
   const full=!(C&&C.S&&C.ver&&C.ver.length);S=T;TID=tid;lsSet("sf-tenant",tid);FROM_CACHE=false;
-  if(full){SNAP=new Map();docRows().forEach((r,k)=>SNAP.set(k,rowSig(r)))}
+  if(full){SNAP=new Map();docRows().forEach((r,k)=>SNAP.set(k,rowSig(r)));LEG.forEach(id=>{SNAP.delete("projects|"+id);SNAP.delete("projfin|"+id)})}
+  if(LEG.length)setTimeout(()=>{try{save()}catch(e){}},1500);   /* presunúť rozpočet a súpisy do samostatného riadku */
   await loadPeople();remapInvites();await loadBilling();
   if(!S.firm||typeof S.firm!=="object")S.firm={setupDone:false};
   S.company=S.firm.name||S.company||((myTenants.find(t=>t.tenant_id===tid)||{}).tenants||{}).name||"";
@@ -1263,7 +1275,9 @@ function remapInvites(){const acc=(S._inv||[]).filter(i=>i.accepted_by);if(!acc.
 function userState(u){const projects=S.projects.filter(p=>(p.members||[]).some(m=>m.userId===u.id)).map(p=>p.id).sort();
   let role=u.companyRole==="admin"?"admin":(u.dbRole==="spravca"&&RIGHT_MODS.every(([k])=>(u.rights||{})[k]==="edit"))?"spravca":
     (!RIGHT_MODS.some(([k])=>(u.rights||{})[k])&&projects.length&&S.projects.filter(p=>projects.includes(p.id)).every(p=>["dozor","extsv"].includes(p.members.find(m=>m.userId===u.id).role)))?"dozor":"clen";   /* externí (dozor, externý stavbyvedúci) – v databáze rola „dozor“: len svoje stavby */
-  return {role,rights:role==="admin"?{}:(u.rights||{}),projects}}
+  let rights=role==="admin"?{}:{...(u.rights||{})};delete rights.areas;
+  if(role==="dozor"){const A={};S.projects.forEach(p=>{const m=(p.members||[]).find(x=>x.userId===u.id&&x.role==="extsv");if(m&&m.areaIds&&m.areaIds.length)A[p.id]=m.areaIds.slice().sort()});if(Object.keys(A).length)rights.areas=A}
+  return {role,rights,projects}}
 function profState(){return me?{first_name:me.firstName||null,last_name:me.lastName||null,phone:me.phone||null,stamp:me.stamp||null,prefs:me.dash?{dash:me.dash}:null}:{}}
 
 /* --- ukladanie: rozdiel oproti poslednému stavu z databázy --- */
@@ -1281,8 +1295,9 @@ async function syncOffers(){if(!TID||typeof offerFromMachine!=="function")return
 async function loadOffers(force){if(!SB||(!force&&Date.now()-offersAt<120000))return;offersAt=Date.now();
   try{const {data,error}=await SB.from("offers").select("tenant_id,id,data").limit(1000);if(error)throw error;OFFERS=(data||[]).map(r=>({...r.data,id:r.tenant_id+"|"+r.id,tenant:r.tenant_id,own:false}));render()}catch(e){console.warn("ponuka strojov",e)}}
 async function doDocs(){const rows=docRows(),ups=[],dels=[];
-  rows.forEach((r,k)=>{const s=rowSig(r);if(SNAP.get(k)!==s)ups.push({k,s,row:{tenant_id:TID,kind:r.kind,id:r.id,project_id:r.project_id,data:r.data}})});
-  SNAP.forEach((s,k)=>{if(!rows.has(k))dels.push(k)});
+  const ro=r=>(r.kind==="projects"||r.kind==="projfin")&&typeof isSubOf==="function"&&isSubOf((S.projects||[]).find(x=>x.id===r.id));
+  rows.forEach((r,k)=>{const s=rowSig(r);if(SNAP.get(k)!==s&&!ro(r))ups.push({k,s,row:{tenant_id:TID,kind:r.kind,id:r.id,project_id:r.project_id,data:r.data}})});
+  SNAP.forEach((s,k)=>{if(rows.has(k))return;const i=k.indexOf("|");if(!ro({kind:k.slice(0,i),id:k.slice(i+1)}))dels.push(k)});
   let batch=[],size=0;const flush=async()=>{if(!batch.length)return;const b=batch;batch=[];size=0;
     const {data,error}=await SB.from("docs").upsert(b.map(x=>x.row),{onConflict:"tenant_id,kind,id"}).select("kind,id,updated_at");if(error)throw error;b.forEach(x=>SNAP.set(x.k,x.s));(data||[]).forEach(r=>VER.set(r.kind+"|"+r.id,r.updated_at))};
   for(const x of ups){const n=x.s.length;if(size+n>2e6)await flush();batch.push(x);size+=n}await flush();
@@ -1618,17 +1633,23 @@ function can(p,act,entry){
   const r0=roleIn(p),r=r0==="spravca"?"admin":r0;
   /* ukončená stavba je natrvalo uzamknutá – dá sa len otvoriť, prezerať a exportovať */
   if(p&&p.closed&&!["econ.view","inv.view"].includes(act))return false;
+  /* rozpočet, súpisy a priečinok časti stavby subdodávateľa */
+  if(p&&p.__sub&&/^(inv|budget|docs)\./.test(act)){const sub=isSubOf(p.__base),gz=!sub&&["admin","stavbyveduci"].includes(r);
+    switch(act){case"inv.view":return gz||sub;case"inv.edit":return sub;case"inv.approve":case"inv.unlock":return gz;
+      case"budget.import":case"budget.upload":return sub||gz;case"docs.upload":case"docs.folders":return sub||gz;
+      case"docs.delete":return gz||(sub&&!!entry&&entry.by===me.id);}return false}
   switch(act){
     case"close":return r==="admin";
     case"diary.create":return["admin","stavbyveduci","majster","extsv"].includes(r);
-    case"diary.edit":return entry&&!entry.locked&&(r==="admin"||r==="stavbyveduci"||(["majster","extsv"].includes(r)&&entry.authorId===me.id));
-    case"diary.lock":return entry&&!entry.locked&&(["admin","stavbyveduci"].includes(r)||(r==="extsv"&&entry.authorId===me.id));
+    case"diary.edit":return entry&&!entry.locked&&((["admin","stavbyveduci"].includes(r)&&!isExtSvEntry(p,entry))||(["majster","extsv"].includes(r)&&entry.authorId===me.id));
+    case"diary.lock":return entry&&!entry.locked&&((["admin","stavbyveduci"].includes(r)&&!isExtSvEntry(p,entry))||(r==="extsv"&&entry.authorId===me.id));
+    case"diary.gznote":return !!entry&&["admin","stavbyveduci"].includes(r)&&isExtSvEntry(p,entry);   /* vyjadrenie generálneho zhotoviteľa k záznamu subdodávateľa */
     case"team.invite":return["admin","stavbyveduci"].includes(r);
     case"team.remove":return r==="admin";
     case"econ.view":return r==="admin"||r==="sledovanie";
     case"econ.edit":return r==="admin";
     case"budget.import":return["admin","stavbyveduci"].includes(r);
-    case"docs.upload":return["admin","stavbyveduci","extsv"].includes(r);
+    case"docs.upload":return["admin","stavbyveduci"].includes(r)||(r==="extsv"&&!isSubOf(p));   /* subdodávateľ nahráva do svojho priečinka */
     case"docs.delete":return ["admin","stavbyveduci"].includes(r)||(r==="extsv"&&!!entry&&entry.by===me.id);   /* externý stavbyvedúci maže len to, čo sám nahral */
     case"docs.folders":return["admin","stavbyveduci"].includes(r);
     case"team.view":return !["dozor","extsv"].includes(r);
@@ -5174,6 +5195,8 @@ function homeHTML(){
     ${canCreateProject()?(view.newProj?`<form class="card stack" id="newProject"><h3>Nová stavba</h3>
       ${projectFields("np",{})}
       ${modeFields("np","count","off")}
+      <label class="chk"><input type="checkbox" id="npAreasOn"> Stavba rozdelená na časti (úseky) – každú môže viesť iný subdodávateľ</label>
+      <label id="npAreasBox" hidden>Názvy častí – každá na nový riadok<textarea id="npAreas" rows="3" placeholder="Úsek 1 – ulica Lipová&#10;Úsek 2 – ulica Brezová&#10;Úsek 3 – ulica Jaseňová"></textarea></label>
       <div class="muted" style="font-size:13px">Všetky údaje aj podrobnosť evidencie môžeš neskôr zmeniť v nastaveniach stavby.</div>
       <div class="row"><button class="btn primary" type="submit">Založiť stavbu</button><button type="button" class="btn ghost" data-a="cancelNewProj">Zrušiť</button></div></form>`
       :`<button class="btn primary" data-a="newProj" style="align-self:flex-start">+ Nová stavba</button>`):""}
@@ -5199,23 +5222,24 @@ function subnavRows(){
     const m=view.vehId&&(S.machines||[]).find(x=>x.id===view.vehId);if(m){r[0][0].sel=true;r[0][1].sel=false;r.push([{a:"vehOpen",id:m.id,l:m.name,sel:true}])}return r}
   if(sc==="pozicovna"){const t=rTabCur();return [R_TABS.map(([k,l])=>({a:"rTab",tab:k,l,sel:t===k}))]}
   if(sc==="home")return null;
-  if(sc==="project"){const p=S.projects.find(x=>x.id===view.projectId);if(!p)return null;
+  if(sc==="project"){const p=projCtx();if(!p)return null;
     return [[{a:"home",l:isExternal(me)?"Moje stavby":"Všetky stavby"},{a:"tab",tab:"dennik",l:p.name,sel:true}],projectTabs(p).map(([k,l,n,soon])=>({a:"tab",tab:k,l,n,soon,sel:view.tab===k}))]}
   return null}
 function subnavHTML(){const rows=subnavRows();if(!rows)return "";
   return rows.map((it,ri)=>`<div class="subrow l${ri+2}"><div class="sub-in" role="tablist" aria-label="${ri?"Časti":"Podkarty"}">${it.map(x=>`<button class="stab" role="tab" aria-selected="${!!x.sel}" data-a="${x.a}"${x.tab?` data-tab="${x.tab}"`:""}${x.sec?` data-sec="${x.sec}"`:""}${x.id?` data-id="${x.id}"`:""} title="${esc(x.l)}"><span class="tname">${esc(x.l)}</span>${x.soon?`<span class="soon">${x.soon}</span>`:""}${x.n?`<span class="badge">${x.n}</span>`:""}</button>`).join("")}</div></div>`).join("")}
 function projectHTML(){
-  const p=S.projects.find(x=>x.id===view.projectId);const r=roleIn(p);
-  const tabs=projectTabs(p);if(!tabs.some(t=>t[0]===view.tab))view.tab="dennik";
+  const p0=S.projects.find(x=>x.id===view.projectId);
+  if(!projectTabs(p0).some(t=>t[0]===view.tab))view.tab="dennik";
+  const p=projCtx();const r=roleIn(p);
   let body="";
   if(view.tab==="dennik")body=diaryHTML(p);
   else if(view.tab==="tim")body=teamHTML(p);
   else if(view.tab==="ekonomika")body=econHTML(p);
-  else if(view.tab==="rozpocet")body=budgetHTML(p);
+  else if(view.tab==="rozpocet")body=areaBarHTML(p)+budgetHTML(p);
   else if(view.tab==="nastavenia")body=settingsHTML(p);
-  else if(view.tab==="dokumentacia")body=docsHTML(p);
+  else if(view.tab==="dokumentacia")body=areaBarHTML(p)+docsHTML(p);
   else if(view.tab==="kd")body=kdHTML(p);
-  else body=invoicesHTML(p);
+  else body=areaBarHTML(p)+invoicesHTML(p);
   return `<div class="stack">
     <div><div class="eyebrow">${esc([p.client,placeText(p)].filter(Boolean).join(" · "))}</div><h1>${esc(p.name)}</h1><div style="margin-top:6px">Tvoja rola: ${rolePill(r)}${p.closed?` <span class="pill s-lock">${icon("lock")}Ukončená</span>`:""}</div></div>
     ${p.closed?`<div class="closedbar">${icon("lock")}<div><b>Stavba je ukončená a natrvalo uzamknutá.</b> ${closedText(p)}. Môžeš ju prezerať a exportovať, úpravy už nie sú možné.</div></div>`:""}
@@ -5227,7 +5251,7 @@ const CREW_MODES={names:"Menný zoznam pracovníkov",count:"Iba počet pracovní
 const MACH_MODES={list:"Zoznam strojov",count:"Iba počet strojov",off:"Stroje nesledovať"};
 const machine=id=>(S.machines||[]).find(m=>m.id===id);
 /* stroj v dennom zázname: z vlastného parku (machineId) alebo cudzí, dopísaný ručne (ext) – cudzie sa pamätajú pri stavbe (p.extMach) */
-const curProj=()=>S.projects.find(x=>x.id===view.projectId);
+const curProj=()=>projCtx();
 const machName=c=>c.ext||machine(c.machineId)?.name||"?";
 const machType=c=>c.ext?"cudzí stroj":machine(c.machineId)?.type||"";
 const GROUPS={
@@ -5263,13 +5287,14 @@ function pdfDiaryEntries(doc,es,y){const W=doc.internal.pageSize.getWidth(),L=14
   const dozBlk=(title,text)=>{doc.setFontSize(8.8);const ls=doc.splitTextToSize(plain(text||""),R-L-6),hh=6+ls.length*4+2.5;need(hh+1);
     doc.setFillColor(232,245,236);doc.setDrawColor(190,225,200);doc.roundedRect(L,y-1,R-L,hh,1.2,1.2,"FD");doc.setDrawColor(0);
     doc.setFont("DVC","bold");doc.setTextColor(29,100,62);doc.text(plain(title),L+3,y+3.6);doc.setTextColor(0);doc.setFont("DVC","normal");doc.text(ls,L+3,y+8);y+=hh+2};
-  es.forEach(e=>{need(30);const dz=isDoz(e),xs=isExtSvEntry(S.projects.find(x=>x.id===e.projectId),e);if(dz)doc.setFillColor(222,241,228);else if(xs)doc.setFillColor(221,233,248);else doc.setFillColor(243,244,245);doc.rect(L,y,R-L,8,"F");doc.setFont("DVC","bold");doc.setFontSize(10.5);doc.text(plain(fmtDate(e.date)),L+2,y+5.5);
+  es.forEach(e=>{need(30);const dz=isDoz(e),xs=isExtSvEntry(S.projects.find(x=>x.id===e.projectId),e);if(dz)doc.setFillColor(222,241,228);else if(xs)doc.setFillColor(221,233,248);else doc.setFillColor(243,244,245);doc.rect(L,y,R-L,8,"F");doc.setFont("DVC","bold");doc.setFontSize(10.5);doc.text(plain(fmtDate(e.date)+(e.areaId?` · ${areaName(S.projects.find(x=>x.id===e.projectId),e.areaId)}`:"")),L+2,y+5.5);
     doc.setFont("DVC","normal");doc.setFontSize(8.5);doc.text(plain([e.weather,e.temp!==""&&e.temp!=null?`${e.temp} °C`:""].filter(Boolean).join(", ")),R-2,y+5.5,{align:"right"});y+=11;
     doc.setFontSize(8.5);doc.setTextColor(90);doc.text(plain(`Zapísal: ${user(e.authorId)?.name||""}${xs?" (externý stavbyvedúci)":""}${e.createdAt?` · ${dt(e.createdAt)}`:""}${e.updatedAt&&e.updatedAt!==e.createdAt?` · upravené ${dt(e.updatedAt)}`:""}${e.locked?` · podpísal a uzamkol ${user(e.lockedBy)?.name||""}${e.lockedAt?` ${dt(e.lockedAt)}`:""}`:""}`),L,y);doc.setTextColor(0);y+=5;
     doc.setFontSize(9.5);const wt=doc.splitTextToSize(plain(e.work||""),R-L);need(wt.length*4.6);doc.text(wt,L,y);y+=wt.length*4.6+2;
     const blk=(title,lines)=>{if(!lines.length)return;doc.setFont("DVC","bold");doc.setFontSize(8.8);need(8);doc.text(title,L,y);y+=4.3;doc.setFont("DVC","normal");
       lines.forEach(t=>{const ls=doc.splitTextToSize(plain("• "+t),R-L-4);need(ls.length*4);doc.text(ls,L+3,y);y+=ls.length*4});y+=1.5};
     blk("Pracovníci",entryPeopleText(e));blk("Stroje a mechanizmy",entryMachText(e));
+    (e.gzNotes||[]).forEach(n=>dozBlk(`Vyjadrenie generálneho zhotoviteľa – ${user(n.by)?.name||""}, ${dt(n.at)}`,n.text));
     (e.dozorNotes||[]).forEach(n=>dozBlk(`Zápis stavebného dozoru – ${user(n.by)?.name||""}, ${dt(n.at)}`,n.text));
     (e.requests||[]).forEach(r=>{blk(`Výzva dozoru na vyjadrenie – ${user(r.by)?.name||""}, ${dt(r.at)}`,[r.text]);if(r.answer)dozBlk(`Vyjadrenie stavebného dozoru – ${user(r.answer.by)?.name||""}, ${dt(r.answer.at)}`,r.answer.text)});
     const seen=diarySeenText(e);if(seen.length){doc.setFont("DVC","bold");doc.setFontSize(8.8);seen.forEach(t=>{need(5);doc.setTextColor(29,122,74);doc.text(plain(t),L,y);doc.setTextColor(0);y+=4.6})}
@@ -5286,7 +5311,7 @@ const docTitle=n=>String(n).replace(/\.[a-z0-9]{1,5}$/i,"").replace(/[_]+/g," ")
 const canAttach=d=>/^(pdf|jpe?g|png)$/.test(docExt(d.name));
 function loadPdfLib(){if(window.PDFLib)return Promise.resolve(true);
   return new Promise(res=>{const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js";s.onload=()=>res(!!window.PDFLib);s.onerror=()=>res(false);document.head.appendChild(s)})}
-async function diaryFullPDF(p){const es=S.diary.filter(d=>d.projectId===p.id).sort((a,b)=>(a.date+(a.createdAt||"")).localeCompare(b.date+(b.createdAt||"")));
+async function diaryFullPDF(p){const es=diaryOf(p).sort((a,b)=>(a.date+(a.createdAt||"")).localeCompare(b.date+(b.createdAt||"")));
   const doc=newPdf("portrait");if(!doc)return;const F=S.firm||{},W=210,L=20;
   const tbl={theme:"grid",styles:{font:"DVC",fontSize:9.5,cellPadding:1.8,minCellHeight:7,valign:"middle",lineColor:[205,209,214],lineWidth:0.1,textColor:[31,35,40]},headStyles:{font:"DVC",fontStyle:"bold",fillColor:[43,47,51],textColor:255}};
   /* 1. strana – titulná */
@@ -5342,7 +5367,7 @@ async function diaryFullPDF(p){const es=S.diary.filter(d=>d.projectId===p.id).so
     const bytes=await out.save();offerFile(fname,bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength));
     if(fail)toast(`Denník je hotový, ${fail} ${pl(fail,"prílohu","prílohy","príloh")} sa nepodarilo pripojiť`)}
   catch(e){console.error(e);toast("Prílohy sa nepodarilo pripojiť, denník sa stiahne bez nich.");offerFile(fname,doc.output("arraybuffer"))}}
-function diaryRangeEntries(p){const X=view.dex||{};return S.diary.filter(d=>d.projectId===p.id&&(!X.from||d.date>=X.from)&&(!X.to||d.date<=X.to)).sort((a,b)=>(a.date+(a.createdAt||"")).localeCompare(b.date+(b.createdAt||"")))}
+function diaryRangeEntries(p){const X=view.dex||{};return diaryOf(p).filter(d=>(!X.from||d.date>=X.from)&&(!X.to||d.date<=X.to)).sort((a,b)=>(a.date+(a.createdAt||"")).localeCompare(b.date+(b.createdAt||"")))}
 function diaryRangePDF(p){const es=diaryRangeEntries(p),X=view.dex||{};if(!es.length){toast("V zvolenom období nie sú žiadne denné záznamy");return}
   const doc=newPdf("portrait");if(!doc)return;pdfFirmHeader(doc,"Denné záznamy stavebného denníka",plain(`${p.name} · ${X.from?d2(X.from):"od začiatku"} – ${X.to?d2(X.to):"dnes"}`));
   pdfDiaryEntries(doc,es,28);pdfDiaryFooter(doc,p,`denné záznamy ${X.from||""} – ${X.to||""}`);offerFile(diaryFile(p,`${X.from||"zaciatok"}_${X.to||todayIso()}`)+".pdf",doc.output("arraybuffer"))}
@@ -5360,18 +5385,75 @@ function diaryExportHTML(p,n){const X=view.dex||(view.dex={from:"",to:todayIso()
         <div class="grid2"><label>Od<input type="date" id="dexFrom" value="${esc(X.from)}"></label><label>Do<input type="date" id="dexTo" value="${esc(X.to)}"></label></div>
         <div class="row"><button class="btn small" data-a="dexPdf">PDF</button><button class="btn small" data-a="dexXls">Excel</button><span class="muted" style="font-size:13px">S dátumom a časom zápisu, autorom, zápismi dozoru a potvrdením „Videné“.</span></div></form></div></details>`}
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me||view.screen!=="project")return;const a=b.dataset.a;if(!/^dex|^seen/.test(a))return;
-  const p=S.projects.find(x=>x.id===view.projectId);if(!p)return;
+  const p=projCtx();if(!p)return;
   if(a==="dexFull")diaryFullPDF(p);else if(a==="dexPdf")diaryRangePDF(p);else if(a==="dexXls")diaryRangeXLSX(p);
   else if(a==="seenMark"){const e=S.diary.find(d=>d.id===b.dataset.id);if(e&&can(p,"diary.seen")&&!(e.seen||[]).some(s=>s.by===me.id)){(e.seen=e.seen||[]).push({by:me.id,name:me.name,at:nowIso()});save();toast("Záznam označený ako videný");render()}}});
-document.addEventListener("change",ev=>{if(!me)return;const t=ev.target;if(t.id==="dexFrom"||t.id==="dexTo"){view.dex=view.dex||{};view.dex[t.id==="dexFrom"?"from":"to"]=t.value}});
+document.addEventListener("change",ev=>{if(!me)return;const t=ev.target;
+  if(t.id==="dAreaF"){view.dArea=t.value||null;render();return}
+  if(t.id==="npAreasOn"){const bx=$("#npAreasBox");if(bx){bx.hidden=!t.checked;if(t.checked)$("#npAreas").focus()}return}
+  if(t.dataset&&t.dataset.marea){const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"team.invite"))return;const m=p.members.find(x=>x.userId===t.dataset.marea);if(!m)return;
+    m.areaIds=t.value?[t.value]:[];save();toast(t.value?`Pridelená časť: ${areaName(p,t.value)}`:"Bez obmedzenia na časť stavby");render();return}
+  if(t.id==="dexFrom"||t.id==="dexTo"){view.dex=view.dex||{};view.dex[t.id==="dexFrom"?"from":"to"]=t.value}});
+/* ---------- Stavba rozdelená na časti (úseky): každú časť môže viesť subdodávateľ = externý stavbyvedúci s pridelenou časťou ----------
+   Subdodávateľ vidí len záznamy svojej časti, má vlastný rozpočet a súpisy (odsúhlasuje ich generálny zhotoviteľ – množstvá sa prenesú
+   do súpisu generálneho zhotoviteľa) a vlastný priečinok dokumentov. Údaje časti sú v S.subs (1 riadok = 1 časť stavby). */
+const areasOf=p=>(p&&p.areas)||[];
+function areaName(p,id){const a=areasOf(p).find(x=>x.id===id);return a?a.name:""}
+function myAreas(p){if(!p||!me||!areasOf(p).length)return null;const m=(p.members||[]).find(x=>x.userId===me.id&&x.role==="extsv");
+  const ids=m&&m.areaIds?m.areaIds.filter(id=>areasOf(p).some(a=>a.id===id)):[];return ids.length?ids:null}
+const isSubOf=p=>!!myAreas(p);
+function memberAreas(p,uid){const m=(p.members||[]).find(x=>x.userId===uid&&x.role==="extsv");return m&&m.areaIds&&m.areaIds.length?m.areaIds:null}
+const seesSubs=p=>!isSubOf(p)&&!["dozor","extsv"].includes(roleIn(p));   /* priečinky a súpisy subdodávateľov vidí len generálny zhotoviteľ */
+function subOf(p,aid,create){if(!Array.isArray(S.subs))S.subs=[];let x=S.subs.find(y=>y.projectId===p.id&&y.areaId===aid);
+  if(!x&&create){x={id:p.id+"__"+aid,projectId:p.id,areaId:aid,budget:null,invoices:[],docs:[],docFolders:[]};S.subs.push(x)}return x}
+const SUB_KEYS=["budget","invoices","docs","docFolders"];
+function wrapArea(p,aid){const sp=subOf(p,aid,true);return new Proxy(p,{get(t,k){if(SUB_KEYS.includes(k))return sp[k];if(k==="__sub")return sp;if(k==="__area")return aid;if(k==="__base")return t;return t[k]},
+  set(t,k,v){if(SUB_KEYS.includes(k)){sp[k]=v;return true}t[k]=v;return true}})}
+function areaCtx(p){if(!p||!areasOf(p).length)return null;const mine=myAreas(p),ok=id=>areasOf(p).some(a=>a.id===id);
+  if(view.tab==="rozpocet"||view.tab==="faktury"){if(mine)return mine.includes(view.area)?view.area:mine[0];return seesSubs(p)&&ok(view.area)?view.area:null}
+  if(view.tab==="dokumentacia"){if(!view.docArea||!ok(view.docArea))return null;if(mine?!mine.includes(view.docArea):!seesSubs(p))return null;return view.docArea}
+  return null}
+function projCtx(){const p=S.projects.find(x=>x.id===view.projectId);if(!p)return p;const a=areaCtx(p);return a?wrapArea(p,a):p}
+/* denné záznamy, ktoré používateľ vidí: subdodávateľ len svoje časti; generálny zhotoviteľ si môže filtrovať */
+function diaryOf(p){const b=p&&p.__base||p,mine=myAreas(b),f=view.dArea;
+  return S.diary.filter(d=>d.projectId===b.id&&(mine?mine.includes(d.areaId):(!f||(f==="__none"?!d.areaId:d.areaId===f))))}
+function areaBarHTML(p){const b=p.__base||p;if(!areasOf(b).length)return "";const mine=myAreas(b);
+  if(mine){const nm=(p.__area?areaName(b,p.__area):areasOf(b).filter(a=>mine.includes(a.id)).map(a=>a.name).join(", "));
+    const docs=view.tab==="dokumentacia",btns=docs?[["","Spoločná dokumentácia"],...mine.map(id=>[id,"Môj priečinok – "+areaName(b,id)])]:mine.length>1&&view.tab!=="dennik"?mine.map(id=>[id,areaName(b,id)]):[];
+    return `<div class="card areabar stack"><div class="muted" style="font-size:13px">Časť stavby: <b>${esc(nm)}</b> · vidíš len svoju časť stavby${docs?" · spoločnú dokumentáciu si môžeš prezerať, do svojho priečinka nahrávaš":""}</div>${btns.length?`<div class="row">${btns.map(([id,l])=>`<button class="btn small${(p.__area||"")===id?" primary":""}" data-a="areaSel" data-area="${id}">${esc(l)}</button>`).join("")}</div>`:""}</div>`}
+  if(!seesSubs(b))return "";
+  const lab=view.tab==="rozpocet"?"Rozpočet":view.tab==="faktury"?"Súpisy prác":"Dokumentácia";
+  const cur=p.__area||"";
+  const waiting=a=>{const x=subOf(b,a.id);return x?(x.invoices||[]).filter(i=>i.status==="submitted").length:0};
+  return `<div class="card areabar stack"><div class="eyebrow">${lab}: generálny zhotoviteľ alebo subdodávateľ časti</div><div class="row">
+    <button class="btn small${!cur?" primary":""}" data-a="areaSel" data-area="">${view.tab==="dokumentacia"?"Spoločná dokumentácia":"Generálny zhotoviteľ"}</button>
+    ${areasOf(b).map(a=>{const u=b.members.filter(m=>m.role==="extsv"&&(m.areaIds||[]).includes(a.id)).map(m=>user(m.userId)?.name).filter(Boolean).join(", ");const w=view.tab==="faktury"?waiting(a):0;
+      return `<button class="btn small${cur===a.id?" primary":""}" data-a="areaSel" data-area="${a.id}" title="${esc(u?"Subdodávateľ: "+u:"Zatiaľ bez subdodávateľa")}">${esc(a.name)}${w?` <span class="pill s-wait">${w}</span>`:""}</button>`}).join("")}</div>
+    ${cur?`<div class="muted" style="font-size:13px">Subdodávateľ: ${esc(b.members.filter(m=>m.role==="extsv"&&(m.areaIds||[]).includes(cur)).map(m=>user(m.userId)?.name).filter(Boolean).join(", ")||"zatiaľ nepridelený – pridelíš ho v karte Tím")}${view.tab==="faktury"?" · súpisy subdodávateľa odsúhlasuješ ty, množstvá sa prenesú do tvojho súpisu":""}</div>`:""}</div>`}
+/* odsúhlasený súpis subdodávateľa: množstvá do rovnakých položiek v rozpracovanom súpise generálneho zhotoviteľa */
+function subTransfer(px,inv){const p=px.__base,sp=px.__sub;if(!p||!sp||!sp.budget)return null;
+  if(!p.budget)return {n:0,miss:sp.budget.items.filter(i=>+inv.qty[i.id]),no:null,noBudget:true};
+  p.invoices=p.invoices||[];let g=invList(p).filter(x=>!frozen(x)).pop();
+  if(!g){const L=invList(p);g={id:uid("f"),no:(L.length?L[L.length-1].no:0)+1,from:inv.from,to:inv.to,status:"open",qty:{}};p.invoices.push(g)}
+  const area=areasOf(p).find(a=>a.id===sp.areaId),part=area&&area.partId,K=v=>String(v||"").replace(/\s+/g,"").toLowerCase();
+  const find=pool=>si=>pool.find(i=>K(i.code)&&K(i.code)===K(si.code)&&K(i.mj)===K(si.mj))||pool.find(i=>K(i.code)&&K(i.code)===K(si.code))||pool.find(i=>K(i.desc)===K(si.desc)&&K(i.mj)===K(si.mj));
+  const inPart=p.budget.items.filter(i=>part!=null&&part!==""?(i.partId||"")===part:true);
+  let n=0;const miss=[];
+  sp.budget.items.forEach(si=>{const q=+inv.qty[si.id]||0;if(!q)return;const t=find(inPart)(si)||find(p.budget.items)(si);
+    if(!t){miss.push(si);return}g.qty[t.id]=Math.round(((+g.qty[t.id]||0)+q)*1000)/1000;n++});
+  (g.fromSubs=g.fromSubs||[]).push({areaId:sp.areaId,subNo:inv.no,at:nowIso(),by:me.id,items:n});
+  inv.transfer={gzNo:g.no,items:n,miss:miss.map(i=>`${i.code||""} ${i.desc}`.trim()),at:nowIso()};
+  return {n,miss,no:g.no}}
+function gzOf(p){const b=p.__base||p;return [...S.users.filter(u=>isAdmin(u)),...b.members.filter(m=>m.role==="stavbyveduci").map(m=>user(m.userId))].filter((u,i,a)=>u&&a.indexOf(u)===i)}
 function isExtSvEntry(p,e){return !!p&&p.members.some(m=>m.role==="extsv"&&m.userId===e.authorId)}
 function diaryHTML(p){
-  const entries=S.diary.filter(d=>d.projectId===p.id).sort((a,b)=>b.date.localeCompare(a.date));
+  const entries=diaryOf(p).sort((a,b)=>b.date.localeCompare(a.date));
   const editing=view.editId?S.diary.find(d=>d.id===view.editId)||{new:true}:null;
   let out="";
   if(editing) out+=diaryForm(p,editing.new?null:editing);
   else if(can(p,"diary.create")) out+=`<button class="btn primary" data-a="newEntry" style="align-self:flex-start">+ Nový denný záznam</button>`;
   else if(!p.closed) out+=`<div class="note">Máš prístup iba na čítanie. Záznamy zapisuje majster alebo stavbyvedúci.</div>`;
+  if(areasOf(p).length&&!editing)out+=myAreas(p)?areaBarHTML(p):`<div class="card row areabar"><label style="flex:1 1 260px">Zobraziť záznamy<select id="dAreaF"><option value="">Všetky časti stavby</option><option value="__none" ${view.dArea==="__none"?"selected":""}>Celá stavba (bez časti)</option>${areasOf(p).map(a=>`<option value="${a.id}" ${view.dArea===a.id?"selected":""}>${esc(a.name)}</option>`).join("")}</select></label><span class="muted" style="font-size:13px">Filter platí aj pre export denníka.</span></div>`;
   if(entries.length&&!editing)out+=diaryExportHTML(p,entries.length);
   out+=entries.map(e=>{
     const status=e.locked?`<span class="pill s-lock">Uzamknuté · ${esc(user(e.lockedBy)?.name||"")}</span>`:`<span class="pill s-open">Rozpracované</span>`;
@@ -5380,8 +5462,13 @@ function diaryHTML(p){
     const tables=entryGroups(e).map(g=>entryTable(g,e[g])).join("");
     const xs=isExtSvEntry(p,e);
     return `<article class="card stack${xs?" extsv":""}" id="e_${e.id}">${xs?`<div class="eyebrow xsv">Záznam externého stavbyvedúceho · ${esc(user(e.authorId)?.name||"")}</div>`:""}
-      <div class="entry-head"><div><div class="date">${fmtDate(e.date)}</div><div class="muted" style="font-size:13px">${esc(e.weather)}${e.temp!==""?`, ${esc(e.temp)} °C`:""}${e.wxCheckedBy?` (počasie overil ${esc(user(e.wxCheckedBy)?.name||"")})`:""} · zapísal ${esc(user(e.authorId)?.name||"")}${e.createdAt?` · ${esc(dt(e.createdAt))}`:""}</div></div>${status}</div>
+      <div class="entry-head"><div><div class="date">${fmtDate(e.date)}${e.areaId?` <span class="pill areapill">${esc(areaName(p,e.areaId))}</span>`:""}</div><div class="muted" style="font-size:13px">${esc(e.weather)}${e.temp!==""?`, ${esc(e.temp)} °C`:""}${e.wxCheckedBy?` (počasie overil ${esc(user(e.wxCheckedBy)?.name||"")})`:""} · zapísal ${esc(user(e.authorId)?.name||"")}${e.createdAt?` · ${esc(dt(e.createdAt))}`:""}</div></div>${status}</div>
       <div>${esc(e.work)}</div>${tables}${photosViewHTML(e)}
+      ${(e.gzNotes||[]).map(n=>`<div class="dnote gz"><div class="eyebrow">Vyjadrenie generálneho zhotoviteľa · ${esc(user(n.by)?.name||"")} · ${dt(n.at)}</div><div>${esc(n.text)}</div></div>`).join("")}
+      ${can(p,"diary.gznote",e)?(view.gnoteFor===e.id?`<form class="stack dnote-form" id="gnoteForm" data-id="${e.id}"><label>Vyjadrenie generálneho zhotoviteľa<textarea id="gnoteText" required placeholder="Pripomienky, doplnenie, pokyny pre subdodávateľa"></textarea></label>
+        <div class="muted" style="font-size:13px">Vyjadrenie sa pridá pod záznam subdodávateľa a po uložení sa už nedá meniť. Samotný záznam subdodávateľa upraviť nemôžeš.</div>
+        <div class="row"><button class="btn primary small" type="submit">Uložiť vyjadrenie</button><button type="button" class="btn ghost small" data-a="gnoteNo">Zrušiť</button></div></form>`
+        :`<div class="row"><button class="btn small" data-a="gnoteAdd" data-id="${e.id}">+ Dopísať vyjadrenie</button></div>`):""}
       ${(e.dozorNotes||[]).map(n=>`<div class="dnote"><div class="eyebrow">Zápis stavebného dozoru · ${esc(user(n.by)?.name||"")} · ${dt(n.at)}</div><div>${esc(n.text)}</div></div>`).join("")}
       ${can(p,"diary.note")?(view.noteFor===e.id?`<form class="stack dnote-form" id="dnoteForm" data-id="${e.id}"><label>Zápis stavebného dozoru<textarea id="dnoteText" required placeholder="Pripomienky, zistenia, pokyny pre zhotoviteľa"></textarea></label>
         <div class="muted" style="font-size:13px">Zápis sa pridá samostatne pod záznam zhotoviteľa a po uložení sa už nedá meniť.</div>
@@ -5442,6 +5529,8 @@ function diaryForm(p,e){
       ${view.wxMsg?`<label class="chk wxchk"><input type="checkbox" id="wxOk"> Počasie som skontroloval a zodpovedá skutočnosti na stavbe</label>`:""}
       <div class="hint">Počasie sa načíta z modelových údajov meteorologickej služby Open-Meteo pre polohu stavby. Od skutočného počasia na stavbe sa môže líšiť, preto ho treba skontrolovať.</div></div>
     ${!e&&!S.diary.some(d=>d.projectId===p.id)?`<div class="note">Prvý záznam stavby – text o prevzatí staveniska je predvyplnený. Doplň údaje za dvojbodkami a uprav, čo treba.</div>`:""}
+    ${areasOf(p).length?(()=>{const mine=myAreas(p),cur=e?e.areaId||"":mine?mine[0]:view.dArea&&view.dArea!=="__none"?view.dArea:"";
+      return `<label>Časť stavby<select id="dArea" ${mine&&mine.length===1?"disabled":""}>${mine?"":`<option value="">Celá stavba</option>`}${areasOf(p).filter(a=>!mine||mine.includes(a.id)).map(a=>`<option value="${a.id}" ${cur===a.id?"selected":""}>${esc(a.name)}</option>`).join("")}</select></label>`})():""}
     <label>Vykonané práce<textarea id="dWork" required placeholder="Čo sa dnes na stavbe robilo" ${!e&&!S.diary.some(d=>d.projectId===p.id)?'rows="11"':""}>${e?esc(e.work):!S.diary.some(d=>d.projectId===p.id)?esc(FIRST_ENTRY):""}</textarea></label>
     ${blocks}
     ${photoFormBlock()}
@@ -5827,8 +5916,20 @@ function settingsHTML(p){
     ${dnFields("st",p)}
     ${modeFields("st",p.crewMode,p.machMode)}
     <div class="muted" style="font-size:13px">Zmena platí pre nové denné záznamy. Staré záznamy si ponechajú svoj formát.</div>
-    <button class="btn primary" type="submit" style="align-self:flex-start">Uložiť nastavenia</button></form>${projCloseHTML(p)}${projDelHTML(p)}`;
+    <button class="btn primary" type="submit" style="align-self:flex-start">Uložiť nastavenia</button></form>${areasHTML(p)}${projCloseHTML(p)}${projDelHTML(p)}`;
 }
+function areasHTML(p){if(!can(p,"settings"))return "";const A=areasOf(p),parts=bParts(p).filter(x=>x.id);
+  return `<form class="card stack" id="areasForm"><h3>Stavba rozdelená na časti</h3>
+    <div class="muted" style="font-size:13px">Rozdeľ stavbu na časti (úseky, ulice, objekty) a každú prideľ subdodávateľovi – v karte Tím ho pozveš ako externého stavbyvedúceho a vyberieš mu časť. Subdodávateľ píše denné záznamy len za svoju časť, má vlastný rozpočet a súpisy prác, ktoré odsúhlasuješ ty (množstvá sa prenesú do tvojho súpisu), a vlastný priečinok dokumentov. Stavebný denník ostáva jeden a vedieš ho ty.</div>
+    ${A.map(a=>`<div class="row"><input data-aname="${a.id}" value="${esc(a.name)}" style="flex:1 1 220px" required aria-label="Názov časti">
+      ${parts.length?`<select data-apart="${a.id}" style="width:auto" aria-label="Objekt v rozpočte"><option value="">Objekt v rozpočte: hľadať v celom rozpočte</option>${parts.map(x=>`<option value="${x.id}" ${a.partId===x.id?"selected":""}>Objekt v rozpočte: ${esc(x.name||"Časť stavby")}</option>`).join("")}</select>`:""}
+      <button type="button" class="btn small ghost" data-a="areaDel" data-id="${a.id}">Odstrániť</button></div>`).join("")}
+    <div class="row"><input id="areaNew" placeholder="${A.length?"Ďalšia časť, napr. Úsek 3 – ulica Jaseňová":"napr. Úsek 1 – ulica Lipová"}" style="flex:1 1 260px"><button class="btn primary" type="submit">${A.length?"Uložiť časti":"Rozdeliť stavbu na časti"}</button></div>
+    ${parts.length?`<div class="hint">Objekt v rozpočte: pri odsúhlasení súpisu subdodávateľa sa zhodné položky (podľa kódu a mernej jednotky) hľadajú najprv v tomto objekte.</div>`:""}</form>`}
+document.addEventListener("submit",ev=>{if(ev.target.id!=="areasForm"||!me)return;ev.preventDefault();const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"settings"))return;
+  const A=areasOf(p).map(a=>({...a,name:(document.querySelector(`[data-aname="${a.id}"]`)?.value||a.name).trim()||a.name,partId:document.querySelector(`[data-apart="${a.id}"]`)?document.querySelector(`[data-apart="${a.id}"]`).value||undefined:a.partId}));
+  const nw=($("#areaNew")?.value||"").trim();if(nw){if(A.some(a=>normText(a.name)===normText(nw))){toast("Taká časť už existuje");return}A.push({id:uid("a"),name:nw})}
+  p.areas=A;save();toast(nw?`Časť „${nw}“ pridaná`:"Časti stavby uložené");render()});
 const closedText=p=>`Ukončená ${d2((p.closed.at||"").slice(0,10))}${user(p.closed.by)?` · uzamkol ${user(p.closed.by).name}`:""}`;
 /* ukončenie stavby: natrvalo ju uzamkne, prestane sa rátať medzi aktívne stavby predplatného */
 function projCloseHTML(p){if(!can(p,"close"))return"";
@@ -5846,7 +5947,7 @@ function projCloseHTML(p){if(!can(p,"close"))return"";
     <label>Na potvrdenie napíš <b>UKONČIŤ</b><input id="projCloseTxt" autocomplete="off" style="max-width:220px"></label>
     <div class="row"><button type="button" class="btn primary" data-a="projCloseYes">Ukončiť a uzamknúť</button><button type="button" class="btn ghost" data-a="projCloseNo">Späť</button></div></div>`}
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
-  if(!["projCloseAsk","projCloseNo","projCloseYes"].includes(a))return;const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"close"))return;
+  if(!["projCloseAsk","projCloseNo","projCloseYes"].includes(a))return;const p=projCtx();if(!p||!can(p,"close"))return;
   if(a==="projCloseNo"){view.projClose=null;render();return}
   if(a==="projCloseAsk"){view.projClose=p.id;render();const el=$("#projCloseTxt");if(el){el.scrollIntoView({block:"center",behavior:"smooth"});el.focus()}return}
   if(normText(($("#projCloseTxt")||{}).value||"")!=="ukoncit"){toast("Na potvrdenie napíš slovo UKONČIŤ");const el=$("#projCloseTxt");if(el)el.focus();return}
@@ -5865,13 +5966,13 @@ function projDelHTML(p){if(!canDelProj())return"";
     <label>Na potvrdenie napíš <b>ODSTRÁNIŤ</b><input id="projDelTxt" autocomplete="off" style="max-width:220px"></label>
     <div class="row"><button type="button" class="btn" data-a="projDelYes" style="color:var(--bad)">Odstrániť stavbu</button><button type="button" class="btn ghost" data-a="projDelNo">Späť</button></div></div>`}
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
-  if(!["projDelAsk","projDelNo","projDelYes"].includes(a))return;const p=S.projects.find(x=>x.id===view.projectId);if(!p||!canDelProj())return;
+  if(!["projDelAsk","projDelNo","projDelYes"].includes(a))return;const p=projCtx();if(!p||!canDelProj())return;
   if(a==="projDelNo"){view.projDel=null;render();return}
   if(a==="projDelAsk"){view.projDel=p.id;render();const el=$("#projDelTxt");if(el){el.scrollIntoView({block:"center",behavior:"smooth"});el.focus()}return}
   if(normText(($("#projDelTxt")||{}).value||"").trim()!=="odstranit"){toast("Na potvrdenie napíš slovo ODSTRÁNIŤ");const el=$("#projDelTxt");if(el)el.focus();return}
-  const files=[...(p.docs||[]).map(d=>d.path),...costsOf(p).map(c=>c.file&&c.file.path)].filter(Boolean);
+  const files=[...(p.docs||[]).map(d=>d.path),...(S.subs||[]).filter(x=>x.projectId===p.id).flatMap(x=>(x.docs||[]).map(d=>d.path)),...costsOf(p).map(c=>c.file&&c.file.path)].filter(Boolean);
   files.forEach(f=>FILESTORE.del(f).catch(()=>{}));
-  S.projects=S.projects.filter(x=>x.id!==p.id);S.diary=S.diary.filter(e=>e.projectId!==p.id);S.costs=(S.costs||[]).filter(c=>c.projectId!==p.id);
+  S.projects=S.projects.filter(x=>x.id!==p.id);S.diary=S.diary.filter(e=>e.projectId!==p.id);S.subs=(S.subs||[]).filter(x=>x.projectId!==p.id);S.costs=(S.costs||[]).filter(c=>c.projectId!==p.id);
   S.tasks=(S.tasks||[]).filter(t=>!((t.src&&t.src.p===p.id)||String(t.key||"").split(":")[1]===p.id));
   view={screen:"home"};save();toast(`Stavba ${p.name} odstránená`);render();window.scrollTo(0,0)});
 
@@ -5879,12 +5980,15 @@ function teamHTML(p){
   const rows=p.members.map(m=>{const u=user(m.userId)||{id:m.userId,name:"(odstránený používateľ)",email:""};
     return `<div class="card entry-head"><div style="min-width:0"><b>${esc(u.name)}</b><div class="muted" style="font-size:13px;overflow-wrap:anywhere">${esc(u.email)}${u.phone?` · ${esc(u.phone)}`:""}${u.pending?" · ešte sa nezaregistroval":""}</div></div>
       <div class="row">${u.pending?`<span class="pill s-pozvany">Pozvaný</span>`:""}${rolePill(m.role)}
+      ${m.role==="extsv"&&areasOf(p).length?(can(p,"team.invite")?`<select data-marea="${u.id}" aria-label="Časť stavby pre ${esc(u.name)}" style="width:auto"><option value="">Celá stavba (bez obmedzenia)</option>${areasOf(p).map(a=>`<option value="${a.id}" ${(m.areaIds||[]).includes(a.id)?"selected":""}>Subdodávateľ: ${esc(a.name)}</option>`).join("")}</select>`:`<span class="pill areapill">${esc((m.areaIds||[]).map(id=>areaName(p,id)).join(", ")||"Celá stavba")}</span>`):""}
       ${can(p,"team.remove")?`<button class="btn small ghost" data-a="removeMember" data-id="${u.id}">Odobrať</button>`:""}</div></div>`}).join("");
   const admins=S.users.filter(u=>isAdmin(u)||rightOf(u,"stavba")).map(u=>`<div class="card entry-head"><div><b>${esc(u.name)}</b><div class="muted" style="font-size:13px">${esc(u.email)} · vidí všetky stavby</div></div>${rolePill(isAdmin(u)?"admin":rightOf(u,"stavba")==="edit"?"spravca":"sledovanie")}</div>`).join("");
   const inv=can(p,"team.invite")?`<form class="card stack" id="inviteForm"><h3>Pozvať na stavbu</h3>
     <div class="grid2"><label>E-mail<input type="email" id="invEmail" required placeholder="kolega@firma.sk"></label>
     <label>Rola<select id="invRole">${inviteRoles(p).map(r=>`<option value="${r}">${ROLES[r]}</option>`).join("")}</select></label></div>
     <label>Meno (nepovinné)<input id="invName"></label>
+    ${areasOf(p).length?`<label>Časť stavby (pre externého stavbyvedúceho – subdodávateľa)<select id="invArea"><option value="">Celá stavba (bez obmedzenia)</option>${areasOf(p).map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("")}</select></label>
+    <div class="hint">Subdodávateľ s pridelenou časťou vidí len denné záznamy svojej časti, má vlastný rozpočet a súpisy prác (odsúhlasuješ ich ty) a vlastný priečinok dokumentov.</div>`:""}
     <button class="btn primary" type="submit">Poslať pozvánku</button>
     <div class="muted" style="font-size:13px">Pozvaný dostane pozvánku e-mailom, nastaví si heslo a uvidí iba túto stavbu s pridelenými právami. <b>Stavebný dozor</b> a <b>externý stavbyvedúci</b> (napr. stavbyvedúci objednávateľa) uvidia len túto stavbu – denník, kontrolné dni, rozpočet, fakturáciu a dokumentáciu. Externý stavbyvedúci môže písať vlastné denné záznamy (v denníku sú označené modrou) a nahrávať dokumenty. Pri prvom prihlásení si doplnia meno, telefón a môžu nahrať pečiatku s podpisom.</div></form>`:"";
   return `<div class="stack">${inv}<div class="eyebrow">Tím stavby</div>${rows||`<div class="card muted">Na stavbe zatiaľ nie je nikto pridelený.</div>`}<div class="eyebrow">Prístup cez modul Stavba</div>${admins}</div>`;
@@ -5964,7 +6068,7 @@ async function readBudgetFile(file,target){if(typeof loadLibs==="function")await
     const d=detectWorkbook(sheets);
     const tg0=target==null?"__new":target,cands=tg0==="__new"?budgetSheets(sheets):[];
     if(cands.length>1){view.impMulti={fileName:file.name,sheets,cands,recap:recapTotals(sheets)};view.imp=null;render();return}
-    const sh0=d?d.sheet:0,tg=tg0,cur=tg!=="__new"&&view.projectId?partOf(S.projects.find(x=>x.id===view.projectId),tg).name:"";
+    const sh0=d?d.sheet:0,tg=tg0,cur=tg!=="__new"&&view.projectId?partOf(projCtx(),tg).name:"";
     view.imp={fileName:file.name,sheets,sheet:sh0,header:d?d.header:0,map:d?{...d.map}:{},target:tg,name:cur||(sheets.length>1?sheets[sh0].name:""),autoName:!cur&&sheets.length>1};
     if(!d)toast("Hlavičku som nenašiel automaticky. Nastav riadok hlavičky a stĺpce ručne.");
     render();
@@ -6005,7 +6109,7 @@ function budgetAddPart(p,name,meta,exItems){const pid=uid("bp"),stamp=Date.now()
   p.budget.sum=+p.budget.items.reduce((s,i)=>s+i.total,0).toFixed(2);p.budget.declaredTotal=null}
 document.addEventListener("change",ev=>{const t=ev.target,M=view.impMulti;if(!M||!t.dataset)return;
   if(t.dataset.imk!==undefined){M.cands[+t.dataset.imk].on=t.checked;render()}else if(t.dataset.imn!==undefined)M.cands[+t.dataset.imn].name=t.value});
-document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me||!view.impMulti)return;const a=b.dataset.a,M=view.impMulti,p=S.projects.find(x=>x.id===view.projectId);if(!p)return;
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me||!view.impMulti)return;const a=b.dataset.a,M=view.impMulti,p=projCtx();if(!p)return;
   document.querySelectorAll("[data-imn]").forEach(el=>M.cands[+el.dataset.imn].name=el.value);
   if(a==="impCancel"){if(view.imp)return;view.impMulti=null;render()}
   else if(a==="impOne"){const c=M.cands[+b.dataset.k];view.imp={fileName:M.fileName,sheets:M.sheets,sheet:c.i,header:c.header,map:{...c.map},target:"__new",name:c.name,autoName:false,fromMulti:true};render()}
@@ -6053,18 +6157,18 @@ function docsHTML(p){const up=can(p,"docs.upload"),list=p.docs||[],F=docFolders(
     ${up?`<form class="stack" id="dnDocForm"><label class="docdrop"><input type="file" id="dnFiles" multiple accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"><span>${busy&&view.docBusyDn?esc(busy):"Nahrať skúšky a atesty – vyber súbory alebo ich sem pretiahni"}</span></label>
       <div class="row"><button class="btn primary small" type="submit" ${busy?"disabled":""}>Nahrať</button><span class="hint">Napr. „Skúška zhutnenia pláne – úsek A1.pdf“. PDF a obrázky (JPG, PNG) sa pripoja do denníka · najviac 50 MB na súbor</span></div></form>`:""}
     ${dnL.length?`<ul class="doclist">${dnL.map(item).join("")}</ul>`:`<div class="muted" style="font-size:13px">Zatiaľ bez príloh.</div>`}</div>`;
-  return `<div class="stack">${dnCard}${folders}
+  return `<div class="stack">${p.__sub?"":dnCard}${folders}
     ${list.length>6?`<label>Hľadať v dokumentácii<input id="docSearch" type="search" value="${esc(view.dq||"")}" placeholder="názov súboru, zložka alebo poznámka"></label>`:""}
     ${body}
-    <div class="muted" style="font-size:13px">Dokumenty môžu otvoriť a stiahnuť všetci členovia stavby vrátane stavebného dozoru a investora. ${up?"Zložky zakladáš a súbory nahrávaš ty – ostatní ich nemôžu meniť, dopĺňať ani mazať.":"Meniť, dopĺňať ani mazať ich nemôžeš."}</div></div>`}
+    <div class="muted" style="font-size:13px">${p.__sub?`Priečinok subdodávateľa časti „${esc(areaName(p,p.__area))}“ – vidí ho generálny zhotoviteľ a subdodávateľ tejto časti. Subdodávateľ maže len súbory, ktoré sám nahral.`:`Dokumenty môžu otvoriť a stiahnuť všetci členovia stavby vrátane stavebného dozoru a investora. ${up?"Zložky zakladáš a súbory nahrávaš ty – ostatní ich nemôžu meniť, dopĺňať ani mazať.":"Meniť, dopĺňať ani mazať ich nemôžeš."}`}</div></div>`}
 document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-a]");if(!b||!me||view.screen!=="project")return;const a=b.dataset.a;if(!/^df/.test(a))return;
-  const p=S.projects.find(x=>x.id===view.projectId);if(!p)return;const up=can(p,"docs.upload");
+  const p=projCtx();if(!p)return;const up=can(p,"docs.upload");
   if(a==="dfOpen"){view.docFolder=view.docFolder===b.dataset.f?null:b.dataset.f;view.dfRen=null;view.dq="";render()}
   else if(a==="dfClose"){view.docFolder=null;render()}
   else if(a==="dfNew"&&up){view.dfNew=true;render();const e=$("#dfName");if(e)e.focus()}else if(a==="dfNo"){view.dfNew=false;render()}
   else if(a==="dfRen"&&up){view.dfRen=view.docFolder;render()}else if(a==="dfRenNo"){view.dfRen=null;render()}
   else if(a==="dfDel"&&can(p,"docs.folders")){const f=view.docFolder;if((p.docs||[]).some(d=>(d.group||"Iné")===f)){toast("Zložka nie je prázdna");return}p.docFolders=(p.docFolders||[]).filter(x=>x!==f);view.docFolder=null;save();toast("Zložka odstránená");render()}});
-document.addEventListener("submit",ev=>{const f=ev.target.id;if(!me||(f!=="dfForm"&&f!=="dfRenForm"))return;ev.preventDefault();const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"docs.upload"))return;
+document.addEventListener("submit",ev=>{const f=ev.target.id;if(!me||(f!=="dfForm"&&f!=="dfRenForm"))return;ev.preventDefault();const p=projCtx();if(!p||!can(p,"docs.upload"))return;
   if(f==="dfForm"){const n=$("#dfName").value.trim();if(!n)return;if(docFolders(p).some(x=>normText(x)===normText(n))){toast("Taká zložka už existuje");return}(p.docFolders=p.docFolders||[]).push(n);view.dfNew=false;view.docFolder=n;save();toast("Zložka vytvorená");render()}
   else{const old=ev.target.dataset.f,n=$("#dfRenName").value.trim();if(!n||n===old){view.dfRen=null;render();return}if(docFolders(p).some(x=>x!==old&&normText(x)===normText(n))){toast("Taká zložka už existuje");return}
     p.docFolders=docFolders(p).map(x=>x===old?n:x);(p.docs||[]).forEach(d=>{if((d.group||"Iné")===old)d.group=n});view.docFolder=n;view.dfRen=null;save();toast("Zložka premenovaná");render()}});
@@ -6083,11 +6187,11 @@ async function docOpen(d,download){const w=download?null:window.open("","_blank"
     const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";if(download)a.download=d.name;document.body.appendChild(a);a.click();a.remove()}
   catch(e){if(w)w.close();toast("Súbor sa nepodarilo otvoriť: "+(e.message||e))}}
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me||view.screen!=="project")return;const a=b.dataset.a;if(!/^doc/.test(a))return;
-  const p=S.projects.find(x=>x.id===view.projectId);if(!p)return;const d=(p.docs||[]).find(x=>x.id===b.dataset.id);
+  const p=projCtx();if(!p)return;const d=(p.docs||[]).find(x=>x.id===b.dataset.id);
   if(a==="docOpen"&&d)docOpen(d,false);else if(a==="docGet"&&d)docOpen(d,true);
   else if(a==="docDel"){view.docDel=b.dataset.id;render()}else if(a==="docDelNo"){view.docDel=null;render()}
   else if(a==="docDelYes"&&d&&can(p,"docs.delete",d)){(async()=>{try{await FILESTORE.del(d.path)}catch(e){console.warn(e)}p.docs=p.docs.filter(x=>x.id!==d.id);view.docDel=null;save();toast("Súbor odstránený");render()})()}});
-document.addEventListener("submit",ev=>{if(!["docForm","dnDocForm"].includes(ev.target.id)||!me)return;ev.preventDefault();const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"docs.upload")||view.docBusy)return;
+document.addEventListener("submit",ev=>{if(!["docForm","dnDocForm"].includes(ev.target.id)||!me)return;ev.preventDefault();const p=projCtx();if(!p||!can(p,"docs.upload")||view.docBusy)return;
   if(ev.target.id==="dnDocForm")docUpload(p,$("#dnFiles").files,DN_DOC);else docUpload(p,$("#docFiles").files)});
 document.addEventListener("input",ev=>{if(ev.target.id==="docSearch"){view.dq=ev.target.value;const pos=ev.target.selectionStart;render();const el=$("#docSearch");if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}}}});
 document.addEventListener("dragover",ev=>{if(ev.target.closest&&ev.target.closest(".docdrop")){ev.preventDefault();ev.target.closest(".docdrop").classList.add("over")}});
@@ -6119,7 +6223,7 @@ function invModel(p,inv){
 }
 const pct=(a,b)=>b?Math.round(a/b*1000)/10:0;
 document.addEventListener("input",ev=>{if(ev.target.id==="impPartName"&&view.imp){view.imp.name=ev.target.value;view.imp.autoName=false}});
-document.addEventListener("submit",ev=>{if(ev.target.id!=="bpRenameForm"||!me)return;ev.preventDefault();const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"budget.import"))return;
+document.addEventListener("submit",ev=>{if(ev.target.id!=="bpRenameForm"||!me)return;ev.preventDefault();const p=projCtx();if(!p||!can(p,"budget.import"))return;
   const id=ev.target.dataset.id,nm=$("#bpName").value.trim();if(!nm)return;const B=p.budget;
   if(!B.parts||!B.parts.length)B.parts=[{id:"",name:nm,fileName:B.fileName,sheetName:B.sheetName,importedAt:B.importedAt,importedBy:B.importedBy}];else{const P=B.parts.find(x=>x.id===id);if(P)P.name=nm}
   view.bpEdit=null;save();toast("Názov časti uložený");render()});
@@ -6130,14 +6234,14 @@ function invTotals(p){let lock=0,open=0;invList(p).forEach(inv=>{const s=p.budge
 
 const INV_ST={open:["Rozpracované","s-open"],returned:["Vrátené na prepracovanie","s-ret"],submitted:["Čaká na odsúhlasenie dozorom","s-wait"],approved:["Odsúhlasené","s-ok"]};
 const frozen=inv=>inv.status==="submitted"||inv.status==="approved";
-const needsApproval=p=>p.members.some(m=>m.role==="dozor");
-function invPill(inv){const [l,c]=INV_ST[inv.status]||INV_ST.open;return `<span class="pill ${c}">${l}${inv.status==="approved"&&inv.invoiceNo?` · faktúra ${esc(inv.invoiceNo)}`:""}</span>`}
+const needsApproval=p=>!!(p&&p.__sub)||p.members.some(m=>m.role==="dozor");
+function invPill(inv,p){let [l,c]=INV_ST[inv.status]||INV_ST.open;if(p&&p.__sub&&inv.status==="submitted")l="Čaká na odsúhlasenie generálnym zhotoviteľom";return `<span class="pill ${c}">${l}${inv.status==="approved"&&inv.invoiceNo?` · faktúra ${esc(inv.invoiceNo)}`:""}</span>`}
 const ACT={submitted:"Vystavil súpis a poslal na odsúhlasenie",approved:"Odsúhlasil súpis",approvedDirect:"Vystavil súpis (stavba nemá stavebný dozor)",returned:"Vrátil na prepracovanie",unlocked:"Odomkol súpis",invoiceNo:"Doplnil číslo faktúry"};
 function dt(iso){if(!iso)return "";const [d,t]=iso.split("T");return d2(d)+(t?" "+t.slice(0,5):"")}
 const nowIso=()=>{const d=new Date(),z=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`};
 const invSumX=(p,inv)=>p.budget.items.reduce((a,i)=>a+(+inv.qty[i.id]||0)*i.price,0);
 function mailInvBack(p,inv,ok,note){const h=(inv.history||[]).slice().reverse().find(x=>x.action==="submitted");if(!h)return;
-  mail("supis",{...mailTo([h.by]),subject:`Súpis prác č. ${inv.no} ${ok?"odsúhlasený":"vrátený na prepracovanie"} – ${p.name}`,title:ok?`Stavebný dozor odsúhlasil súpis č. ${inv.no}`:`Stavebný dozor vrátil súpis č. ${inv.no}`,
+  mail("supis",{...mailTo([h.by]),subject:`Súpis prác č. ${inv.no} ${ok?"odsúhlasený":"vrátený na prepracovanie"} – ${p.name}`,title:ok?`${p.__sub?"Generálny zhotoviteľ":"Stavebný dozor"} odsúhlasil súpis č. ${inv.no}`:`${p.__sub?"Generálny zhotoviteľ":"Stavebný dozor"} vrátil súpis č. ${inv.no}`,
     intro:`${me.name||me.email} ${ok?"odsúhlasil":"vrátil na prepracovanie"} súpis vykonaných prác na stavbe ${p.name}.`,rows:[["Stavba",p.name],["Obdobie",periodLabel(inv)],["Suma bez DPH",eur(invSumX(p,inv))],["Dôvod",ok?"":note||""]]})}
 function mailTask(t){if(!t||t.assignee===me.id)return;
   mail("task",{...mailTo([t.assignee]),subject:`Nová úloha: ${t.title}`,title:"Máš novú úlohu",intro:`${me.name||me.email} ti priradil úlohu v aplikácii Stavebná firma.`,
@@ -6147,8 +6251,13 @@ function approvalOf(inv){return (inv.history||[]).slice().reverse().find(h=>h.ac
 /* upozornenia pre prihláseného používateľa */
 function myNotices(){const out=[];visibleProjects().filter(p=>!p.closed).forEach(p=>(p.invoices||[]).forEach(inv=>{
   if(inv.status==="submitted"&&can(p,"inv.approve"))out.push({p,inv,kind:"wait",text:`Súpis prác č. ${inv.no} (${periodLabel(inv)}) čaká na tvoje odsúhlasenie`});
-  if(inv.status==="returned"&&can(p,"inv.edit")){const h=(inv.history||[]).slice().reverse().find(x=>x.action==="returned");out.push({p,inv,kind:"ret",text:`Stavebný dozor vrátil súpis č. ${inv.no} na prepracovanie${h&&h.note?`: „${h.note}“`:""}`})}}));return out}
-function noticesHTML(list){return list.map(n=>`<button class="card proj notice n-${n.kind}" data-a="goInv" data-p="${n.p.id}" data-id="${n.inv.id}"><div class="eyebrow">${esc(n.p.name)}</div><div>${esc(n.text)}</div></button>`).join("")}
+  if(inv.status==="returned"&&can(p,"inv.edit")){const h=(inv.history||[]).slice().reverse().find(x=>x.action==="returned");out.push({p,inv,kind:"ret",text:`Stavebný dozor vrátil súpis č. ${inv.no} na prepracovanie${h&&h.note?`: „${h.note}“`:""}`})}}));
+  visibleProjects().filter(p=>!p.closed&&areasOf(p).length).forEach(p=>(S.subs||[]).filter(x=>x.projectId===p.id).forEach(x=>{const mine=myAreas(p);
+    if(mine?!mine.includes(x.areaId):!seesSubs(p))return;const px=wrapArea(p,x.areaId),an=areaName(p,x.areaId);
+    (x.invoices||[]).forEach(inv=>{if(inv.status==="submitted"&&can(px,"inv.approve"))out.push({p,inv,area:x.areaId,kind:"wait",text:`${an}: súpis subdodávateľa č. ${inv.no} (${periodLabel(inv)}) čaká na tvoje odsúhlasenie`});
+      if(inv.status==="returned"&&can(px,"inv.edit")){const h=(inv.history||[]).slice().reverse().find(y=>y.action==="returned");out.push({p,inv,area:x.areaId,kind:"ret",text:`Generálny zhotoviteľ vrátil súpis č. ${inv.no} na prepracovanie${h&&h.note?`: „${h.note}“`:""}`})}})}));
+  return out}
+function noticesHTML(list){return list.map(n=>`<button class="card proj notice n-${n.kind}" data-a="goInv" data-p="${n.p.id}" data-id="${n.inv.id}"${n.area?` data-area="${n.area}"`:""}><div class="eyebrow">${esc(n.p.name)}</div><div>${esc(n.text)}</div></button>`).join("")}
 /* prečerpané položky: súčet množstiev zo všetkých súpisov nad rozpočtované množstvo */
 function overItems(p){if(!p.budget)return [];const L=invList(p);return p.budget.items.map(i=>{const used=L.reduce((s,x)=>s+(+x.qty[i.id]||0),0),oq=used-i.qty;if(oq<=1e-9)return null;
   const nos=L.filter(x=>+x.qty[i.id]>0).map(x=>x.no);return {i,used,oq,oe:oq*i.price,pc:i.qty?oq/i.qty*100:null,nos}}).filter(Boolean)}
@@ -6172,8 +6281,8 @@ function overPDF(p){const R=overItems(p);if(!R.length){toast("Žiadne prečerpan
   y+=14+stampGap();if(y>190){doc.addPage();y=40}doc.setFontSize(8.5);pdfStamp(doc,firmStamp(),10,y);doc.line(10,y,80,y);doc.text("Zhotoviteľ – stavbyvedúci",10,y+4);doc.line(207,y,287,y);doc.text("Stavebný dozor",207,y+4);
   const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);doc.setFontSize(7);doc.setTextColor(110);doc.text(plain(`${p.name} · prečerpané položky`),10,205);doc.text(`Strana ${k} / ${n}`,287,205,{align:"right"});doc.setTextColor(0)}
   offerFile(diaryFile(p,"precerpanie").replace("Stavebny_dennik_","Precerpane_polozky_")+".pdf",doc.output("arraybuffer"))}
-document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest('[data-a="overPdf"]');if(!b||!me)return;const p=S.projects.find(x=>x.id===view.projectId);if(p)overPDF(p)});
-document.addEventListener("change",ev=>{if(ev.target.id!=="overNote"||!me)return;const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"inv.edit"))return;p.overNote=ev.target.value;save();toast("Poznámka k prečerpaniu uložená")});
+document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest('[data-a="overPdf"]');if(!b||!me)return;const p=projCtx();if(p)overPDF(p)});
+document.addEventListener("change",ev=>{if(ev.target.id!=="overNote"||!me)return;const p=projCtx();if(!p||!can(p,"inv.edit"))return;p.overNote=ev.target.value;save();toast("Poznámka k prečerpaniu uložená")});
 function invoicesHTML(p){
   if(!p.budget)return `<div class="card stack"><h3>Fakturácia</h3><div class="note">Najprv nahraj rozpočet stavby v záložke Rozpočet. Z jeho položiek sa potom čerpá do súpisov prác.</div></div>`;
   if(!p.invoices)p.invoices=[];
@@ -6183,7 +6292,7 @@ function invoicesHTML(p){
   const pl=pct(lock,B),po=pct(open,B);
   const cards=list.slice().reverse().map(inv=>{const s=p.budget.items.reduce((a,i)=>a+(+inv.qty[i.id]||0)*i.price,0);
     return `<button class="card proj" data-a="openInv" data-id="${inv.id}"><div class="entry-head"><div><div class="eyebrow">Súpis prác č. ${inv.no}</div><div class="date">${periodLabel(inv)}</div></div>
-      ${invPill(inv)}</div>
+      ${invPill(inv,p)}</div>
       <div class="entry-head"><span class="muted" style="font-size:13px">${d2(inv.from)} – ${d2(inv.to)}</span><b class="num">${eur(s)}</b></div></button>`}).join("");
   const last=list[list.length-1];
   const defFrom=last?addDays(last.to,1):new Date().toISOString().slice(0,10);
@@ -6208,6 +6317,10 @@ function invoicesHTML(p){
   </div>`;
 }
 
+function transferHTML(p,inv){const out=[];
+  if(p.__sub&&inv.transfer){const t=inv.transfer;out.push(`<div class="card stack"><div class="eyebrow">Prenesené generálnemu zhotoviteľovi</div><div>${t.items} ${pl(t.items,"položka prenesená","položky prenesené","položiek prenesených")} do súpisu generálneho zhotoviteľa č. ${t.gzNo} (${dt(t.at)}).</div>${t.miss&&t.miss.length&&seesSubs(p.__base)?`<div class="note">Bez zhody v rozpočte generálneho zhotoviteľa (doplň ručne): ${t.miss.map(esc).join("; ")}</div>`:""}</div>`)}
+  if(!p.__sub&&(inv.fromSubs||[]).length)out.push(`<div class="card stack"><div class="eyebrow">Prenesené zo súpisov subdodávateľov</div>${inv.fromSubs.map(f=>`<div class="muted" style="font-size:13px">${esc(areaName(p,f.areaId))} – súpis č. ${f.subNo} · ${f.items} ${pl(f.items,"položka","položky","položiek")} · ${dt(f.at)}</div>`).join("")}</div>`);
+  return out.join("")}
 function invDetailHTML(p,inv){
   const M=invModel(p,inv),list=invList(p),locked=frozen(inv);
   const ed=!locked&&can(p,"inv.edit");
@@ -6230,10 +6343,10 @@ function invDetailHTML(p,inv){
       <td class="num r" data-zq="${i.id}">${qf(r.zq)}</td><td class="num r" data-zs="${i.id}">${eur(r.zs)}</td></tr>`});
   const T=M.T;
   const lockBox=view.lockAsk?`<form class="card stack" id="lockForm"><h3>Vystaviť súpis č. ${inv.no}?</h3>
-      <div class="muted">${appr?"Súpis sa uzamkne a pošle stavebnému dozoru na odsúhlasenie. Ak ho dozor vráti, budeš ho môcť znova upraviť.":"Stavba nemá stavebný dozor, súpis sa uzamkne ako odsúhlasený. Odomknúť ho môže iba administrátor."}</div>
-      <div class="row"><button class="btn primary" type="submit">${appr?"Vystaviť a poslať dozoru":"Vystaviť a uzamknúť"}</button><button type="button" class="btn ghost" data-a="lockNo">Späť</button></div></form>`:"";
+      <div class="muted">${appr?(p.__sub?"Súpis sa uzamkne a pošle generálnemu zhotoviteľovi na odsúhlasenie. Ak ho vráti, budeš ho môcť znova upraviť.":"Súpis sa uzamkne a pošle stavebnému dozoru na odsúhlasenie. Ak ho dozor vráti, budeš ho môcť znova upraviť."):"Stavba nemá stavebný dozor, súpis sa uzamkne ako odsúhlasený. Odomknúť ho môže iba administrátor."}</div>
+      <div class="row"><button class="btn primary" type="submit">${appr?(p.__sub?"Vystaviť a poslať generálnemu zhotoviteľovi":"Vystaviť a poslať dozoru"):"Vystaviť a uzamknúť"}</button><button type="button" class="btn ghost" data-a="lockNo">Späť</button></div></form>`:"";
   const lastRet=inv.status==="returned"?(inv.history||[]).slice().reverse().find(h=>h.action==="returned"):null;
-  const retNote=lastRet?`<div class="card retnote stack"><div class="eyebrow">Vrátil stavebný dozor · ${esc(user(lastRet.by)?.name||"")} · ${dt(lastRet.at)}</div><div>${esc(lastRet.note)}</div><div class="muted" style="font-size:13px">Uprav súpis a vystav ho znova.</div></div>`:"";
+  const retNote=lastRet?`<div class="card retnote stack"><div class="eyebrow">Vrátil ${p.__sub?"generálny zhotoviteľ":"stavebný dozor"} · ${esc(user(lastRet.by)?.name||"")} · ${dt(lastRet.at)}</div><div>${esc(lastRet.note)}</div><div class="muted" style="font-size:13px">Uprav súpis a vystav ho znova.</div></div>`:"";
   const apprBox=inv.status==="submitted"&&can(p,"inv.approve")?`<div class="card stack apprbox"><h3>Odsúhlasenie súpisu č. ${inv.no}</h3>
       <div class="muted">Skontroluj čerpanie položiek. Súpis môžeš odsúhlasiť, alebo ho vrátiť zhotoviteľovi s poznámkou.</div>
       ${view.retAsk?`<form class="stack" id="returnForm"><label>Poznámka pre zhotoviteľa (povinná)<textarea id="retNote" required placeholder="napr. Položka 25 – množstvo nezodpovedá skutočnosti, prosím opraviť na 410 m."></textarea></label>
@@ -6246,8 +6359,8 @@ function invDetailHTML(p,inv){
     <button class="btn ghost small" data-a="invBack" style="align-self:flex-start">← Všetky súpisy</button>
     <div class="entry-head"><div><div class="eyebrow">Súpis vykonaných prác č. ${inv.no}</div><h2>${periodLabel(inv)}</h2>
       <div class="muted" style="font-size:13px">${d2(inv.from)} – ${d2(inv.to)}</div></div>
-      ${invPill(inv)}</div>
-    ${retNote}${apprBox}
+      ${invPill(inv,p)}</div>
+    ${retNote}${apprBox}${transferHTML(p,inv)}
     ${ed?`<details class="card"><summary>Zmeniť obdobie</summary><div class="grid2" style="margin-top:10px"><label>Od<input type="date" id="edFrom" value="${inv.from}"></label><label>Do<input type="date" id="edTo" value="${inv.to}"></label></div></details>`:""}
     ${M.earlierOpen?`<div class="note">Predchádzajúci súpis ešte nie je vystavený. Stĺpec Predošlé obdobie sa zmení, ak ho upravíš.</div>`:""}
     <div class="kpis card">
@@ -6268,7 +6381,7 @@ function invDetailHTML(p,inv){
     </table></div>
     ${lockBox}${delBox}${invNoBox}
     <div class="row">
-      ${ed&&!view.lockAsk?`<button class="btn primary" data-a="lockAsk" ${prevLocked?"":"disabled"}>${appr?"Vystaviť súpis a poslať dozoru":"Vystaviť súpis a uzamknúť"}</button>`:""}
+      ${ed&&!view.lockAsk?`<button class="btn primary" data-a="lockAsk" ${prevLocked?"":"disabled"}>${appr?(p.__sub?"Vystaviť súpis a poslať generálnemu zhotoviteľovi":"Vystaviť súpis a poslať dozoru"):"Vystaviť súpis a uzamknúť"}</button>`:""}
       ${ed&&!prevLocked?`<span class="muted" style="font-size:13px">Najprv vystav predchádzajúci súpis.</span>`:""}
       ${locked&&can(p,"inv.unlock")&&!laterLocked?`<button class="btn" data-a="unlockInv">Odomknúť súpis</button>`:""}
       ${ed&&isLast&&!view.delAsk?`<button class="btn ghost" data-a="delInv">Zmazať súpis</button>`:""}
@@ -6301,7 +6414,7 @@ function exportPDF(p,inv){
   const W=297,mL=8;
   const FL=S.firm&&S.firm.logo;let tx=mL;
   if(FL){const lh=11,lw=Math.min(45,lh*FL.w/FL.h);try{doc.addImage(FL.data,"PNG",mL,3,lw,lw*FL.h/FL.w);tx=mL+lw+4}catch(e){}}
-  doc.setFont("DVC","bold");doc.setFontSize(13);doc.text(`Súpis vykonaných prác č. ${inv.no}`,tx,12);
+  doc.setFont("DVC","bold");doc.setFontSize(13);doc.text(plain(`Súpis vykonaných prác č. ${inv.no}${p.__sub?` – ${areaName(p,p.__area)}`:""}`),tx,12);
   doc.setFontSize(10);doc.text(`Obdobie: ${plain(periodLabel(inv))}`,W-mL,12,{align:"right"});
   doc.setFont("DVC","normal");doc.setFontSize(8);
   const L=[["Stavba:",p.name],["Investor:",p.investor||""],["Objednávateľ:",p.client],["Miesto:",placeText(p)]],R=[["Zhotoviteľ:",S.company],["IČO / DIČ:",[S.firm.ico,S.firm.dic].filter(Boolean).join(" / ")],["Obdobie od – do:",`${d2(inv.from)} – ${d2(inv.to)}`],["Stav:",(INV_ST[inv.status]||INV_ST.open)[0]+(inv.invoiceNo?` · faktúra ${inv.invoiceNo}`:"")]];
@@ -6435,7 +6548,7 @@ function ecXLSX(p){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.")
   const ws=XLSX.utils.aoa_to_sheet([[`Náklady stavby – ${p.name}`],[],["Dátum","Kategória","Dodávateľ","Doklad","Popis","Suma bez DPH €"],...rows]);ws["!cols"]=[10,14,26,16,40,14].map(w=>({wch:w}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Náklady");offerFile(diaryFile(p,"naklady").replace("Stavebny_dennik_","Naklady_")+".xlsx",XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me||view.screen!=="project")return;const a=b.dataset.a;if(!/^ec[A-Z]/.test(a))return;
-  const p=S.projects.find(x=>x.id===view.projectId);if(!p)return;const c=(S.costs||[]).find(x=>x.id===(b.dataset.id||view.ecEdit));
+  const p=projCtx();if(!p)return;const c=(S.costs||[]).find(x=>x.id===(b.dataset.id||view.ecEdit));
   if(a==="ecRateEdit"){view.cntRateEdit=true;render();$("#cntRate")?.focus();return}
   if(a==="ecRateNo"){view.cntRateEdit=false;render();return}
   if(a==="ecRateSave"){if(!can(p,"econ.edit"))return;const v=numIn($("#cntRate")?.value);if(v<0||v>500){toast("Zadaj sadzbu v eurách za hodinu, napr. 15,00");return}
@@ -6446,7 +6559,7 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
   else if(a==="ecOpen"&&c&&c.file)docOpen(c.file,false);else if(a==="ecXls")ecXLSX(p)});
 document.addEventListener("change",ev=>{if(!me)return;const t=ev.target;if(t.id==="ecFlt"){view.ec={...(view.ec||{}),cat:t.value};render()}
   else if(t.id==="ecFile"){const z=t.closest(".docdrop");if(z)z.querySelector("span").textContent=t.files[0]?t.files[0].name:"Odfotiť alebo priložiť doklad (fotka, PDF)"}});
-document.addEventListener("submit",async ev=>{if(ev.target.id!=="ecForm"||!me)return;ev.preventDefault();const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"econ.edit")||view.ecBusy)return;
+document.addEventListener("submit",async ev=>{if(ev.target.id!=="ecForm"||!me)return;ev.preventDefault();const p=projCtx();if(!p||!can(p,"econ.edit")||view.ecBusy)return;
   const amt=numIn($("#ecAmt").value);if(!amt){toast("Zadaj sumu bez DPH");return}
   const isNew=view.ecEdit==="__new",c=isNew?{id:uid("nk"),projectId:p.id,by:me.id,at:nowIso()}:(S.costs||[]).find(x=>x.id===view.ecEdit);if(!c)return;
   Object.assign(c,{cat:(document.querySelector('input[name="ecCat"]:checked')||{}).value||"ine",date:$("#ecDate").value,amount:r2(amt),supplier:$("#ecSup").value.trim(),docNo:$("#ecNo").value.trim(),desc:$("#ecDesc").value.trim(),part:$("#ecPart")?$("#ecPart").value:c.part||""});
@@ -6484,7 +6597,7 @@ function rolesHTML(){
 
 
 document.addEventListener("click",ev=>{
-  const b=ev.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;const p=S.projects.find(x=>x.id===view.projectId);
+  const b=ev.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;const p=projCtx();
   if(a==="authGo"){view={screen:"home",auth:b.dataset.to,loginErr:""};render();window.scrollTo(0,0)}
   else if(a==="secLocked"){const k=SEC_MOD[b.dataset.sec];view={screen:"firma",firmTab:"moduly"};render();toast(`Modul ${modName(k)} nie je predplatený. Predplatiť ho môžeš tu.`)}
   else if(a==="sec"){view={screen:b.dataset.sec,tab:"dennik",newProj:false};if(b.dataset.dtab)view.dTab=b.dataset.dtab;
@@ -6553,7 +6666,10 @@ document.addEventListener("click",ev=>{
   else if(a==="lockAsk"){view.lockAsk=true;render()}
   else if(a==="lockNo"){view.lockAsk=false;render()}
   else if(a==="unlockInv"){const inv=p.invoices.find(x=>x.id===view.invId);if(can(p,"inv.unlock")){inv.status="open";logInv(inv,"unlocked");save();toast("Súpis odomknutý");render()}}
-  else if(a==="approveInv"){const inv=p.invoices.find(x=>x.id===view.invId);if(inv.status==="submitted"&&can(p,"inv.approve")){inv.status="approved";logInv(inv,"approved");save();toast(`Súpis č. ${inv.no} odsúhlasený`);render();mailInvBack(p,inv,true)}}
+  else if(a==="approveInv"){const inv=p.invoices.find(x=>x.id===view.invId);if(inv.status==="submitted"&&can(p,"inv.approve")){inv.status="approved";logInv(inv,"approved");
+    const tr=p.__sub?subTransfer(p,inv):null;save();
+    toast(tr?(tr.noBudget?`Súpis č. ${inv.no} odsúhlasený. Množstvá sa nepreniesli – stavba zatiaľ nemá tvoj rozpočet.`:`Súpis č. ${inv.no} odsúhlasený · ${tr.n} ${pl(tr.n,"položka prenesená","položky prenesené","položiek prenesených")} do tvojho súpisu č. ${tr.no}${tr.miss.length?` · ${tr.miss.length} bez zhody v tvojom rozpočte`:""}`):`Súpis č. ${inv.no} odsúhlasený`);
+    render();mailInvBack(p,inv,true)}}
   else if(a==="retAsk"){view.retAsk=true;render();const t=$("#retNote");if(t)t.focus()}
   else if(a==="phDel"){const i=+b.dataset.i;readCaptions();view.draftPhotos.splice(i,1);refreshPhotoEdit()}
   else if(a==="phOpen"){view.lightbox={e:b.dataset.e,i:+b.dataset.i};render()}
@@ -6577,8 +6693,15 @@ document.addEventListener("click",ev=>{
   else if(a==="goEntry"){view={screen:"project",projectId:b.dataset.p,tab:"dennik",focusEntry:b.dataset.id};render()}
   else if(a==="noteAdd"){view.noteFor=b.dataset.id;render();const t=$("#dnoteText");if(t)t.focus()}
   else if(a==="noteNo"){view.noteFor=null;render()}
+  else if(a==="gnoteAdd"){view.gnoteFor=b.dataset.id;render();const t=$("#gnoteText");if(t)t.focus()}
+  else if(a==="gnoteNo"){view.gnoteFor=null;render()}
+  else if(a==="areaSel"){const v=b.dataset.area||null;if(view.tab==="dokumentacia"){view.docArea=v;view.docFolder=null;view.dq=""}else{view.area=v;view.invId=null;view.newInv=null;view.imp=null;view.impMulti=null}render()}
+  else if(a==="areaDel"){const b0=S.projects.find(x=>x.id===view.projectId),id=b.dataset.id;if(!b0||!can(b0,"settings"))return;
+    const used=S.diary.some(e=>e.projectId===b0.id&&e.areaId===id)||b0.members.some(m=>(m.areaIds||[]).includes(id))||(S.subs||[]).some(x=>x.projectId===b0.id&&x.areaId===id&&((x.invoices||[]).length||(x.docs||[]).length||x.budget));
+    if(used){toast("Časť sa už používa (záznamy, subdodávateľ alebo jeho údaje) – môžeš ju len premenovať");return}
+    b0.areas=areasOf(b0).filter(a=>a.id!==id);S.subs=(S.subs||[]).filter(x=>!(x.projectId===b0.id&&x.areaId===id));save();toast("Časť odstránená");render()}
   else if(a==="retNo"){view.retAsk=false;render()}
-  else if(a==="goInv"){view={screen:"project",projectId:b.dataset.p,tab:"faktury",invId:b.dataset.id};render();window.scrollTo(0,0)}
+  else if(a==="goInv"){view={screen:"project",projectId:b.dataset.p,tab:"faktury",invId:b.dataset.id,area:b.dataset.area||null};render();window.scrollTo(0,0)}
   else if(a==="delInv"){view.delAsk=true;render()}
   else if(a==="delInvNo"){view.delAsk=false;render()}
   else if(a==="delInvYes"){p.invoices=p.invoices.filter(x=>x.id!==view.invId);view.invId=null;view.delAsk=false;save();toast("Súpis zmazaný");render()}
@@ -6626,18 +6749,18 @@ document.addEventListener("change",ev=>{
   else if(t.id==="niPreset"||t.id==="niFrom"){const n=view.newInv;if(t.id==="niPreset")n.preset=t.value;else n.from=t.value;if(n.preset!=="custom"||t.id==="niFrom"&&n.to<n.from)n.to=presetTo(n.from,n.preset==="custom"?"week":n.preset);render()}
   else if(t.id==="niTo"){view.newInv.to=t.value;view.newInv.preset="custom";render()}
   else if(t.id==="invOnly"){view.invOnly=t.checked;render()}
-  else if(t.id==="edFrom"||t.id==="edTo"){const p=S.projects.find(x=>x.id===view.projectId),inv=p.invoices.find(x=>x.id===view.invId);if(!t.value||frozen(inv))return;
+  else if(t.id==="edFrom"||t.id==="edTo"){const p=projCtx(),inv=p.invoices.find(x=>x.id===view.invId);if(!t.value||frozen(inv))return;
     const nf=t.id==="edFrom"?t.value:inv.from,nt=t.id==="edTo"?t.value:inv.to;if(nt<nf){toast("Dátum Do musí byť po dátume Od");render();return}inv.from=nf;inv.to=nt;save();render()}
   else if(t.dataset.map){view.imp.map[t.dataset.map]=t.value===""?null:+t.value;render()}
 });
 document.addEventListener("input",ev=>{
-  if(ev.target.dataset&&ev.target.dataset.q){const p=S.projects.find(x=>x.id===view.projectId),inv=p.invoices.find(x=>x.id===view.invId);if(!inv||frozen(inv)||!can(p,"inv.edit"))return;
+  if(ev.target.dataset&&ev.target.dataset.q){const p=projCtx(),inv=p.invoices.find(x=>x.id===view.invId);if(!inv||frozen(inv)||!can(p,"inv.edit"))return;
     const v=parseQty(ev.target.value);ev.target.classList.toggle("err-in",v===null);if(v===null)return;if(v)inv.qty[ev.target.dataset.q]=v;else delete inv.qty[ev.target.dataset.q];save();refreshInvNumbers(p,inv);return}
   if(ev.target.id==="eWage"){updCost();return}
   if(ev.target.id==="empSearch"){view.empQ=ev.target.value;const pos=ev.target.selectionStart;render();const el=$("#empSearch");el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}return}
   if(ev.target.id==="budgetSearch"){view.bq=ev.target.value;const pos=ev.target.selectionStart;render();const el=$("#budgetSearch");el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}return}const gb=ev.target.closest("[data-grp]");if(gb&&view.draft){readDraft();const g=gb.dataset.grp,t=$("#tot_"+g);if(t)t.textContent=h(grpHours(g,view.draft[g]))}});
 document.addEventListener("submit",ev=>{
-  ev.preventDefault();const f=ev.target.id;const p=S.projects.find(x=>x.id===view.projectId);
+  ev.preventDefault();const f=ev.target.id;const p=projCtx();
   if(false){}
   else if(f==="modForm"){if(me.companyRole!=="admin")return;const m={},pl2={};
     MODULES.forEach(([k])=>{const r=document.querySelector(`input[name="mt_${k}"]:checked`),v=r?r.value:"off";m[k]=v!=="off";if(m[k]&&PLANS[k].tiers.length>1)pl2[k]=+v});
@@ -6650,7 +6773,8 @@ document.addEventListener("submit",ev=>{
     view=setup?{screen:startScreen(),tab:"dennik"}:{screen:"firma",firmTab:"udaje"};render();window.scrollTo(0,0)})()}
   else if(f==="newProject"){const d=readProjectFields("np");if(d.error){toast(d.error);return}
     if(!planGuard("stavba"))return;
-    S.projects.push({id:uid("p"),...d,members:[],crewMode:document.querySelector('input[name="npCrew"]:checked').value,machMode:document.querySelector('input[name="npMach"]:checked').value});
+    const an=$("#npAreasOn")?.checked?[...new Set(($("#npAreas")?.value||"").split(/\n/).map(x=>x.trim()).filter(Boolean))]:[];
+    S.projects.push({id:uid("p"),...d,...(an.length?{areas:an.map(n=>({id:uid("a"),name:n}))}:{}),members:[],crewMode:document.querySelector('input[name="npCrew"]:checked').value,machMode:document.querySelector('input[name="npMach"]:checked').value});
     view.newProj=false;save();toast("Stavba založená");render()}
   else if(f==="fzForm"){if(!(isAdmin(me)||canEdit("personal")))return;const v=id=>($("#"+id)?.value||"").trim();const d={persNo:v("fzNo"),firstName:v("fzFirst"),lastName:v("fzLast"),profession:v("fzPos")};
     if(!d.firstName||!d.lastName){toast("Meno a priezvisko sú povinné");return}
@@ -6680,26 +6804,28 @@ document.addEventListener("submit",ev=>{
     view.empEdit=null;save();render()}
   else if(f==="diaryForm"){readDraft();
     const data={date:$("#dDate").value,weather:$("#dWeather").value,temp:$("#dTemp").value,work:$("#dWork").value.trim()};
+    if(areasOf(p).length){const mine=myAreas(p),av=$("#dArea")?.value||"";if(mine&&!mine.includes(av)){toast("Vyber svoju časť stavby");return}data.areaId=av||undefined}
     if(view.wxMsg){const ok=$("#wxOk");if(!ok||!ok.checked){toast("Najprv skontroluj počasie a potvrď to zaškrtnutím políčka");return}data.wxCheckedBy=me.id}
     view.wxMsg=null;view.wxErr="";
     if(view.draft.mach){const bad=view.draft.mach.some(c=>c.machineId==="__new"&&!(c.ext||"").trim());if(bad){toast("Dopíš názov stroja, ktorý nie je z tvojho parku, alebo riadok odstráň");return}
       view.draft.mach=view.draft.mach.map(c=>c.machineId==="__new"||c.ext?{...c,machineId:"",ext:String(c.ext).trim().replace(/\s+/g," ")}:c).filter(c=>c.machineId||c.ext);
       const nx=view.draft.mach.map(c=>c.ext).filter(x=>x&&!(p.extMach||[]).some(y=>y.toLowerCase()===x.toLowerCase()));
-      if(nx.length)p.extMach=[...(p.extMach||[]),...new Set(nx)]}
+      if(nx.length&&!isSubOf(p))p.extMach=[...(p.extMach||[]),...new Set(nx)]}
     Object.keys(GROUPS).forEach(g=>{data[g]=view.draft[g]?view.draft[g].filter(c=>g.endsWith("C")?(+c.count>0):true):undefined});
     if(!(data.crew&&data.crew.length)&&!(data.crewC&&data.crewC.length)){toast("Zadaj aspoň jedného pracovníka alebo počet pracovníkov");return}
     readCaptions();data.photos=view.draftPhotos||[];
     if(view.editId==="__new")S.diary.push({id:uid("d"),projectId:p.id,authorId:me.id,locked:false,createdAt:nowIso(),...data});
     else{const en=S.diary.find(d=>d.id===view.editId);Object.keys(GROUPS).forEach(g=>delete en[g]);Object.assign(en,data,{updatedAt:nowIso()})}
     Object.values(S.diary).forEach(en=>Object.keys(GROUPS).forEach(g=>{if(en[g]===undefined)delete en[g]}));
+    if(data.areaId===undefined){const en=S.diary.find(d=>d.id===view.editId);if(en)delete en.areaId}
     view.editId=null;view.draft=null;view.draftPhotos=null;if(save())toast("Záznam uložený");render()}
   else if(f==="newInvForm"){const n=view.newInv;n.from=$("#niFrom").value;n.to=$("#niTo").value;if(!n.from||!n.to||n.to<n.from){toast("Skontroluj dátumy obdobia");return}
     const list=invList(p);const inv={id:uid("f"),no:(list.length?list[list.length-1].no:0)+1,from:n.from,to:n.to,status:"open",qty:{}};p.invoices.push(inv);
     view.newInv=null;view.invId=inv.id;save();toast(`Súpis č. ${inv.no} založený`);render();window.scrollTo(0,0)}
   else if(f==="lockForm"){const inv=p.invoices.find(x=>x.id===view.invId);if(!can(p,"inv.edit")||frozen(inv))return;
-    if(needsApproval(p)){inv.status="submitted";logInv(inv,"submitted");toast(`Súpis č. ${inv.no} odoslaný stavebnému dozoru na odsúhlasenie`);
-      setTimeout(()=>mail("supis",{...mailTo(dozorsOf(p)),subject:`Súpis prác č. ${inv.no} na odsúhlasenie – ${p.name}`,title:`Súpis prác č. ${inv.no} čaká na odsúhlasenie`,
-        intro:`${me.name||me.email} poslal súpis vykonaných prác na stavbe ${p.name} na odsúhlasenie stavebným dozorom.`,rows:[["Stavba",p.name],["Obdobie",periodLabel(inv)],["Suma bez DPH",eur(invSumX(p,inv))]],button:"Skontrolovať súpis v aplikácii"}),0)}
+    if(needsApproval(p)){inv.status="submitted";logInv(inv,"submitted");const sb=!!p.__sub;toast(`Súpis č. ${inv.no} odoslaný ${sb?"generálnemu zhotoviteľovi":"stavebnému dozoru"} na odsúhlasenie`);
+      setTimeout(()=>mail("supis",{...mailTo(sb?gzOf(p):dozorsOf(p)),subject:`Súpis prác č. ${inv.no}${sb?` (${areaName(p,p.__area)})`:""} na odsúhlasenie – ${p.name}`,title:`Súpis prác č. ${inv.no} čaká na odsúhlasenie`,
+        intro:`${me.name||me.email} poslal súpis vykonaných prác na stavbe ${p.name}${sb?`, časť ${areaName(p,p.__area)},`:""} na odsúhlasenie ${sb?"generálnym zhotoviteľom":"stavebným dozorom"}.`,rows:[["Stavba",p.name],["Obdobie",periodLabel(inv)],["Suma bez DPH",eur(invSumX(p,inv))]],button:"Skontrolovať súpis v aplikácii"}),0)}
     else{inv.status="approved";logInv(inv,"approvedDirect");toast(`Súpis č. ${inv.no} vystavený a uzamknutý`)}
     view.lockAsk=false;save();render()}
   else if(f==="kdForm"){if(!can(p,"kd.convene"))return;const c=kdCandidates(p);
@@ -6719,6 +6845,8 @@ document.addEventListener("submit",ev=>{
     r.answer={by:me.id,at:nowIso(),text:txt};view.answerFor=null;save();toast("Vyjadrenie odoslané");render();
     mail("req",{...mailTo([r.by]),subject:`Vyjadrenie stavebného dozoru – ${p.name}`,title:"Stavebný dozor sa vyjadril",intro:`${me.name||me.email} odpovedal na výzvu k dennému záznamu ${d2(e.date)} na stavbe ${p.name}.`,
       rows:[["Stavba",p.name],["Výzva",r.text]],text:txt})}
+  else if(f==="gnoteForm"){const e=S.diary.find(d=>d.id===ev.target.dataset.id),txt=$("#gnoteText").value.trim();if(!txt||!e||!can(p,"diary.gznote",e))return;
+    (e.gzNotes=e.gzNotes||[]).push({by:me.id,at:nowIso(),text:txt});view.gnoteFor=null;save();toast("Vyjadrenie uložené");render()}
   else if(f==="dnoteForm"){const e=S.diary.find(d=>d.id===ev.target.dataset.id),txt=$("#dnoteText").value.trim();if(!txt||!can(p,"diary.note"))return;
     (e.dozorNotes=e.dozorNotes||[]).push({by:me.id,at:nowIso(),text:txt});view.noteFor=null;save();toast("Zápis dozoru uložený");render()}
   else if(f==="returnForm"){const inv=p.invoices.find(x=>x.id===view.invId);const note=$("#retNote").value.trim();if(!note){toast("Napíš poznámku pre zhotoviteľa");return}
@@ -6730,7 +6858,8 @@ document.addEventListener("submit",ev=>{
     if(!u){u={id:newInvId(),email,name:$("#invName").value.trim()||email.split("@")[0],companyRole:"clen",pending:true};S.users.push(u)}
     if(isAdmin(u)||rightOf(u,"stavba")==="edit"){toast(`${u.name} už spravuje všetky stavby cez modul Stavba`);return}
     const m=p.members.find(m=>m.userId===u.id);
-    if(m){m.role=role;toast("Rola aktualizovaná")}else{p.members.push({userId:u.id,role,status:u.pending?"pozvaný":"aktívny"});toast(u.pending?`Pozvánka uložená. Pošli mu odkaz www.stavebnafirma.eu – zaregistruje sa e-mailom ${u.email}.`:`${u.name} pridaný na stavbu`)}
+    const ar=role==="extsv"&&$("#invArea")?.value?[$("#invArea").value]:undefined;
+    if(m){m.role=role;if(role==="extsv")m.areaIds=ar||[];else delete m.areaIds;toast("Rola aktualizovaná")}else{p.members.push({userId:u.id,role,status:u.pending?"pozvaný":"aktívny",...(ar?{areaIds:ar}:{})});toast(u.pending?`Pozvánka uložená. Pošli mu odkaz www.stavebnafirma.eu – zaregistruje sa e-mailom ${u.email}.`:`${u.name} pridaný na stavbu`)}
     save();render()}
 });
 boot();

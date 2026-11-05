@@ -58,8 +58,8 @@ rep('S.users.push({id:uid("u"),email,name,companyRole:"clen",rights});view.userN
 rep('${esc(u.email)}${u.pw||DEMO_IDS.includes(u.id)?"":" · ešte sa neprihlásil"}', '${esc(u.email)}${u.pending?` · pozvaný, ešte sa neprihlásil${admin?` <button type="button" class="btn small ghost" data-a="invResend" data-id="${u.id}" style="padding:1px 8px;font-size:12px;margin-left:4px">Poslať pozvánku znova</button>`:""}`:""}')
 rep('if(!u){u={id:uid("u"),email,name:$("#invName").value.trim()||email.split("@")[0],companyRole:"clen"};S.users.push(u)}',
     'if(!u){u={id:newInvId(),email,name:$("#invName").value.trim()||email.split("@")[0],companyRole:"clen",pending:true};S.users.push(u)}')
-rep('p.members.push({userId:u.id,role,status:"pozvaný"});toast("Pozvánka pripravená. Odhlás sa a prihlás jeho e-mailom.")',
-    'p.members.push({userId:u.id,role,status:u.pending?"pozvaný":"aktívny"});toast(u.pending?`Pozvánka uložená. Pošli mu odkaz www.stavebnafirma.eu – zaregistruje sa e-mailom ${u.email}.`:`${u.name} pridaný na stavbu`)')
+rep('p.members.push({userId:u.id,role,status:"pozvaný",...(ar?{areaIds:ar}:{})});toast("Pozvánka pripravená. Odhlás sa a prihlás jeho e-mailom.")',
+    'p.members.push({userId:u.id,role,status:u.pending?"pozvaný":"aktívny",...(ar?{areaIds:ar}:{})});toast(u.pending?`Pozvánka uložená. Pošli mu odkaz www.stavebnafirma.eu – zaregistruje sa e-mailom ${u.email}.`:`${u.name} pridaný na stavbu`)')
 rep('const rows=p.members.map(m=>{const u=user(m.userId);', 'const rows=p.members.map(m=>{const u=user(m.userId)||{id:m.userId,name:"(odstránený používateľ)",email:""};')
 rep('${m.role==="dozor"&&!u.pw&&m.status==="pozvaný"?" · ešte nepotvrdil pozvánku":""}', '${u.pending?" · ešte sa nezaregistroval":""}')
 rep('${m.status==="pozvaný"?`<span class="pill s-pozvany">Pozvaný</span>`:""}', '${u.pending?`<span class="pill s-pozvany">Pozvaný</span>`:""}')

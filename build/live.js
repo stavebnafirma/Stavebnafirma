@@ -25,6 +25,9 @@ function docRows(){const out=new Map();
   for(const [k,v] of Object.entries(S)){
     if(SKIP_KEYS.has(k)||k[0]==="_"||/^mig\d*$/.test(k)||v===undefined)continue;
     if(MAP_KINDS.includes(k)&&v&&typeof v==="object"&&!Array.isArray(v)){for(const [id,d] of Object.entries(v))if(d!==undefined)out.set(k+"|"+id,{kind:k,id,project_id:null,data:d});continue}
+    /* stavba: rozpočet a súpisy generálneho zhotoviteľa v samostatnom riadku „projfin“ – subdodávateľ s pridelenou časťou ho v databáze nevidí */
+    if(k==="projects"&&Array.isArray(v)){v.forEach(x=>{if(!x||typeof x.id!=="string")return;const {budget,invoices,...rest}=x;out.set("projects|"+x.id,{kind:"projects",id:x.id,project_id:x.id,data:rest});
+      if(budget||(invoices&&invoices.length))out.set("projfin|"+x.id,{kind:"projfin",id:x.id,project_id:x.id,data:{budget:budget||null,invoices:invoices||[]}})});continue}
     if(Array.isArray(v)&&v.every(x=>x&&typeof x==="object"&&typeof x.id==="string"&&x.id)){
       v.forEach((x,i)=>out.set(k+"|"+x.id,{kind:k,id:x.id,project_id:k==="projects"?x.id:(typeof x.projectId==="string"?x.projectId:null),data:x}));continue}
     out.set("meta|"+k,{kind:"meta",id:k,project_id:null,data:{v}})}
@@ -32,10 +35,15 @@ function docRows(){const out=new Map();
 const rowSig=r=>JSON.stringify(r.data)+"\u0001"+(r.project_id||"");
 function applyRow(T,kind,id,data){
   if(kind==="meta"){T[id]=data?data.v:undefined;return}
+  if(kind==="projfin"){const p=(Array.isArray(T.projects)?T.projects:[]).find(x=>x&&x.id===id);if(p){p.budget=data&&data.budget||undefined;p.invoices=data&&data.invoices||undefined;if(p.budget===undefined)delete p.budget;if(p.invoices===undefined)delete p.invoices}else(T._pf=T._pf||{})[id]=data;return}
+  if(kind==="projects"&&data&&!("budget" in data)&&!("invoices" in data)){const a=Array.isArray(T.projects)?T.projects:(T.projects=[]);const i=a.findIndex(x=>x&&x.id===id),old=i>=0?a[i]:null,pf=T._pf&&T._pf[id];
+    const nd={...data};if(pf){if(pf.budget)nd.budget=pf.budget;if(pf.invoices)nd.invoices=pf.invoices;delete T._pf[id]}else if(old){if(old.budget)nd.budget=old.budget;if(old.invoices)nd.invoices=old.invoices}
+    if(i>=0)a[i]=nd;else a.push(nd);return}
   if(MAP_KINDS.includes(kind)){(T[kind]=T[kind]&&!Array.isArray(T[kind])?T[kind]:{})[id]=data;return}
   const a=Array.isArray(T[kind])?T[kind]:(T[kind]=[]);const i=a.findIndex(x=>x&&x.id===id);if(i>=0)a[i]=data;else a.push(data)}
 function removeRow(T,kind,id){
   if(kind==="meta"){delete T[id];return}
+  if(kind==="projfin"){const p=(T.projects||[]).find(x=>x&&x.id===id);if(p){delete p.budget;delete p.invoices}return}
   if(MAP_KINDS.includes(kind)){if(T[kind])delete T[kind][id];return}
   if(Array.isArray(T[kind]))T[kind]=T[kind].filter(x=>x.id!==id)}
 
@@ -54,7 +62,7 @@ function cacheNow(){if(!TID)return;clearTimeout(cacheT);cacheT=setTimeout(()=>{i
 async function listVersions(tid){const out=[];for(let from=0;;from+=1000){const {data,error}=await SB.from("docs").select("kind,id,updated_at").eq("tenant_id",tid).order("kind").order("id").range(from,from+999);
   if(error)throw error;out.push(...data);if(data.length<1000)break}return out}
 async function loadTenant(tid){
-  const C=await OFF.get(cacheKey(tid));let T;
+  const C=await OFF.get(cacheKey(tid));let T,LEG=[];
   if(C&&C.S&&C.ver&&C.ver.length){
     /* zmeny urobené offline najprv odoslať */
     S=C.S;TID=tid;SNAP=new Map(C.snap||[]);VER=new Map(C.ver);USNAP=new Map(C.usnap||[]);PSNAP=C.psnap||"";
@@ -68,9 +76,11 @@ async function loadTenant(tid){
     VER=now}
   else{const rows=[];for(let from=0;;from+=1000){const {data,error}=await SB.from("docs").select("kind,id,project_id,data,updated_at").eq("tenant_id",tid).order("kind").order("id").range(from,from+999);
       if(error)throw error;rows.push(...data);if(data.length<1000)break}
-    T=blankState();rows.forEach(r=>applyRow(T,r.kind,r.id,r.data));VER=new Map(rows.map(r=>[r.kind+"|"+r.id,r.updated_at]))}
+    T=blankState();rows.forEach(r=>applyRow(T,r.kind,r.id,r.data));
+    LEG=rows.filter(r=>r.kind==="projects"&&r.data&&("budget" in r.data||"invoices" in r.data)).map(r=>r.id);   /* staršie stavby: rozpočet ešte v riadku stavby */VER=new Map(rows.map(r=>[r.kind+"|"+r.id,r.updated_at]))}
   const full=!(C&&C.S&&C.ver&&C.ver.length);S=T;TID=tid;lsSet("sf-tenant",tid);FROM_CACHE=false;
-  if(full){SNAP=new Map();docRows().forEach((r,k)=>SNAP.set(k,rowSig(r)))}
+  if(full){SNAP=new Map();docRows().forEach((r,k)=>SNAP.set(k,rowSig(r)));LEG.forEach(id=>{SNAP.delete("projects|"+id);SNAP.delete("projfin|"+id)})}
+  if(LEG.length)setTimeout(()=>{try{save()}catch(e){}},1500);   /* presunúť rozpočet a súpisy do samostatného riadku */
   await loadPeople();remapInvites();await loadBilling();
   if(!S.firm||typeof S.firm!=="object")S.firm={setupDone:false};
   S.company=S.firm.name||S.company||((myTenants.find(t=>t.tenant_id===tid)||{}).tenants||{}).name||"";
@@ -107,7 +117,9 @@ function remapInvites(){const acc=(S._inv||[]).filter(i=>i.accepted_by);if(!acc.
 function userState(u){const projects=S.projects.filter(p=>(p.members||[]).some(m=>m.userId===u.id)).map(p=>p.id).sort();
   let role=u.companyRole==="admin"?"admin":(u.dbRole==="spravca"&&RIGHT_MODS.every(([k])=>(u.rights||{})[k]==="edit"))?"spravca":
     (!RIGHT_MODS.some(([k])=>(u.rights||{})[k])&&projects.length&&S.projects.filter(p=>projects.includes(p.id)).every(p=>["dozor","extsv"].includes(p.members.find(m=>m.userId===u.id).role)))?"dozor":"clen";   /* externí (dozor, externý stavbyvedúci) – v databáze rola „dozor“: len svoje stavby */
-  return {role,rights:role==="admin"?{}:(u.rights||{}),projects}}
+  let rights=role==="admin"?{}:{...(u.rights||{})};delete rights.areas;
+  if(role==="dozor"){const A={};S.projects.forEach(p=>{const m=(p.members||[]).find(x=>x.userId===u.id&&x.role==="extsv");if(m&&m.areaIds&&m.areaIds.length)A[p.id]=m.areaIds.slice().sort()});if(Object.keys(A).length)rights.areas=A}
+  return {role,rights,projects}}
 function profState(){return me?{first_name:me.firstName||null,last_name:me.lastName||null,phone:me.phone||null,stamp:me.stamp||null,prefs:me.dash?{dash:me.dash}:null}:{}}
 
 /* --- ukladanie: rozdiel oproti poslednému stavu z databázy --- */
@@ -125,8 +137,9 @@ async function syncOffers(){if(!TID||typeof offerFromMachine!=="function")return
 async function loadOffers(force){if(!SB||(!force&&Date.now()-offersAt<120000))return;offersAt=Date.now();
   try{const {data,error}=await SB.from("offers").select("tenant_id,id,data").limit(1000);if(error)throw error;OFFERS=(data||[]).map(r=>({...r.data,id:r.tenant_id+"|"+r.id,tenant:r.tenant_id,own:false}));render()}catch(e){console.warn("ponuka strojov",e)}}
 async function doDocs(){const rows=docRows(),ups=[],dels=[];
-  rows.forEach((r,k)=>{const s=rowSig(r);if(SNAP.get(k)!==s)ups.push({k,s,row:{tenant_id:TID,kind:r.kind,id:r.id,project_id:r.project_id,data:r.data}})});
-  SNAP.forEach((s,k)=>{if(!rows.has(k))dels.push(k)});
+  const ro=r=>(r.kind==="projects"||r.kind==="projfin")&&typeof isSubOf==="function"&&isSubOf((S.projects||[]).find(x=>x.id===r.id));
+  rows.forEach((r,k)=>{const s=rowSig(r);if(SNAP.get(k)!==s&&!ro(r))ups.push({k,s,row:{tenant_id:TID,kind:r.kind,id:r.id,project_id:r.project_id,data:r.data}})});
+  SNAP.forEach((s,k)=>{if(rows.has(k))return;const i=k.indexOf("|");if(!ro({kind:k.slice(0,i),id:k.slice(i+1)}))dels.push(k)});
   let batch=[],size=0;const flush=async()=>{if(!batch.length)return;const b=batch;batch=[];size=0;
     const {data,error}=await SB.from("docs").upsert(b.map(x=>x.row),{onConflict:"tenant_id,kind,id"}).select("kind,id,updated_at");if(error)throw error;b.forEach(x=>SNAP.set(x.k,x.s));(data||[]).forEach(r=>VER.set(r.kind+"|"+r.id,r.updated_at))};
   for(const x of ups){const n=x.s.length;if(size+n>2e6)await flush();batch.push(x);size+=n}await flush();
