@@ -4937,17 +4937,23 @@ const entryWritten=e=>e.createdAt?dt(e.createdAt):"";
 function pdfDiaryEntries(doc,es,y){const W=doc.internal.pageSize.getWidth(),L=14,R=W-14,need=hh=>{if(y+hh>280){doc.addPage();y=16}};
   /* zápisy stavebného dozoru sú podfarbené jemnou zelenou */
   const isDoz=e=>{const pp=S.projects.find(x=>x.id===e.projectId);return !!pp&&pp.members.some(m=>m.role==="dozor"&&m.userId===e.authorId)};
-  const dozBlk=(title,text)=>{doc.setFontSize(8.8);const ls=doc.splitTextToSize(plain(text||""),R-L-6),hh=6+ls.length*4+2.5;need(hh+1);
-    doc.setFillColor(232,245,236);doc.setDrawColor(190,225,200);doc.roundedRect(L,y-1,R-L,hh,1.2,1.2,"FD");doc.setDrawColor(0);
-    doc.setFont("DVC","bold");doc.setTextColor(29,100,62);doc.text(plain(title),L+3,y+3.6);doc.setTextColor(0);doc.setFont("DVC","normal");doc.text(ls,L+3,y+8);y+=hh+2};
-  es.forEach(e=>{need(30);const dz=isDoz(e),xs=isExtSvEntry(S.projects.find(x=>x.id===e.projectId),e);if(dz)doc.setFillColor(222,241,228);else if(xs)doc.setFillColor(221,233,248);else doc.setFillColor(243,244,245);doc.rect(L,y,R-L,8,"F");doc.setFont("DVC","bold");doc.setFontSize(10.5);doc.text(plain(fmtDate(e.date)+(e.areaId?` · ${areaName(S.projects.find(x=>x.id===e.projectId),e.areaId)}`:"")),L+2,y+5.5);
+  const dozBlk=(title,text,gz)=>{doc.setFontSize(8.8);const ls=doc.splitTextToSize(plain(text||""),R-L-6),hh=6+ls.length*4+2.5;need(hh+1);
+    if(gz){doc.setFillColor(229,238,250);doc.setDrawColor(180,203,232)}else{doc.setFillColor(232,245,236);doc.setDrawColor(190,225,200)}doc.roundedRect(L,y-1,R-L,hh,1.2,1.2,"FD");doc.setDrawColor(0);
+    doc.setFont("DVC","bold");if(gz)doc.setTextColor(35,85,150);else doc.setTextColor(29,100,62);doc.text(plain(title),L+3,y+3.6);doc.setTextColor(0);doc.setFont("DVC","normal");doc.text(ls,L+3,y+8);y+=hh+2};
+  /* stavba rozdelená na časti: každý deň spoločný nadpis a pod ním záznamy za celú stavbu a potom po častiach v poradí z nastavení */
+  const P0=es.length?S.projects.find(x=>x.id===es[0].projectId):null,AR=areasOf(P0),ord=e=>e.areaId?AR.findIndex(a=>a.id===e.areaId)+1||99:0;
+  if(AR.length)es=es.slice().sort((a,b)=>a.date.localeCompare(b.date)||ord(a)-ord(b)||(a.createdAt||"").localeCompare(b.createdAt||""));
+  let lastDay="";
+  es.forEach(e=>{if(AR.length&&e.date!==lastDay){lastDay=e.date;need(44);doc.setFillColor(60,64,70);doc.rect(L,y,R-L,9,"F");doc.setTextColor(255);doc.setFont("DVC","bold");doc.setFontSize(11.5);doc.text(plain(fmtDate(e.date)),L+2.5,y+6.2);
+      const n=es.filter(x=>x.date===e.date).length;doc.setFont("DVC","normal");doc.setFontSize(8.5);doc.text(plain(`${n} ${pl(n,"záznam","záznamy","záznamov")}`),R-2.5,y+6.2,{align:"right"});doc.setTextColor(0);y+=12}
+    need(30);const dz=isDoz(e),xs=isExtSvEntry(S.projects.find(x=>x.id===e.projectId),e);if(dz)doc.setFillColor(222,241,228);else if(xs)doc.setFillColor(221,233,248);else doc.setFillColor(243,244,245);doc.rect(L,y,R-L,8,"F");doc.setFont("DVC","bold");doc.setFontSize(10.5);doc.text(plain(AR.length?(e.areaId?areaName(P0,e.areaId):"Celá stavba – generálny zhotoviteľ"):fmtDate(e.date)+(e.areaId?` · ${areaName(S.projects.find(x=>x.id===e.projectId),e.areaId)}`:"")),L+2,y+5.5);
     doc.setFont("DVC","normal");doc.setFontSize(8.5);doc.text(plain([e.weather,e.temp!==""&&e.temp!=null?`${e.temp} °C`:""].filter(Boolean).join(", ")),R-2,y+5.5,{align:"right"});y+=11;
     doc.setFontSize(8.5);doc.setTextColor(90);doc.text(plain(`Zapísal: ${user(e.authorId)?.name||""}${xs?" (externý stavbyvedúci)":""}${e.createdAt?` · ${dt(e.createdAt)}`:""}${e.updatedAt&&e.updatedAt!==e.createdAt?` · upravené ${dt(e.updatedAt)}`:""}${e.locked?` · podpísal a uzamkol ${user(e.lockedBy)?.name||""}${e.lockedAt?` ${dt(e.lockedAt)}`:""}`:""}`),L,y);doc.setTextColor(0);y+=5;
     doc.setFontSize(9.5);const wt=doc.splitTextToSize(plain(e.work||""),R-L);need(wt.length*4.6);doc.text(wt,L,y);y+=wt.length*4.6+2;
     const blk=(title,lines)=>{if(!lines.length)return;doc.setFont("DVC","bold");doc.setFontSize(8.8);need(8);doc.text(title,L,y);y+=4.3;doc.setFont("DVC","normal");
       lines.forEach(t=>{const ls=doc.splitTextToSize(plain("• "+t),R-L-4);need(ls.length*4);doc.text(ls,L+3,y);y+=ls.length*4});y+=1.5};
     blk("Pracovníci",entryPeopleText(e));blk("Stroje a mechanizmy",entryMachText(e));
-    (e.gzNotes||[]).forEach(n=>dozBlk(`Vyjadrenie generálneho zhotoviteľa – ${user(n.by)?.name||""}, ${dt(n.at)}`,n.text));
+    (e.gzNotes||[]).forEach(n=>dozBlk(`Vyjadrenie generálneho zhotoviteľa – ${user(n.by)?.name||""}, ${dt(n.at)}`,n.text,true));
     (e.dozorNotes||[]).forEach(n=>dozBlk(`Zápis stavebného dozoru – ${user(n.by)?.name||""}, ${dt(n.at)}`,n.text));
     (e.requests||[]).forEach(r=>{blk(`Výzva dozoru na vyjadrenie – ${user(r.by)?.name||""}, ${dt(r.at)}`,[r.text]);if(r.answer)dozBlk(`Vyjadrenie stavebného dozoru – ${user(r.answer.by)?.name||""}, ${dt(r.answer.at)}`,r.answer.text)});
     const seen=diarySeenText(e);if(seen.length){doc.setFont("DVC","bold");doc.setFontSize(8.8);seen.forEach(t=>{need(5);doc.setTextColor(29,122,74);doc.text(plain(t),L,y);doc.setTextColor(0);y+=4.6})}
