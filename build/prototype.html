@@ -66,6 +66,7 @@ textarea{min-height:80px;resize:vertical}
 .r-majster{background:var(--ok-bg);color:var(--ok)}
 .r-citanie{background:var(--lock-bg);color:var(--lock)}
 .r-dozor{background:color-mix(in srgb,var(--ink) 14%,var(--surface));color:var(--ink);border:1px solid var(--ink)}
+.r-extsv{background:color-mix(in srgb,var(--xsv) 14%,var(--surface));color:var(--xsv);border:1px solid var(--xsv)}
 .s-wait{background:color-mix(in srgb,var(--ink) 14%,var(--surface));color:var(--ink)}
 .s-ret{background:color-mix(in srgb,var(--bad) 14%,var(--surface));color:var(--bad)}
 .s-ok{background:var(--ok-bg);color:var(--ok)}
@@ -253,6 +254,8 @@ table.oopsum td,table.oopsum th{padding:5px 8px}table.oopsum tr.grp td{border-to
 .costbox{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
 .dnote{border-left:4px solid var(--ink);background:color-mix(in srgb,var(--ink) 7%,var(--surface));padding:8px 12px;border-radius:0 8px 8px 0;display:flex;flex-direction:column;gap:2px}
 .dnote .eyebrow{color:var(--ink)}
+.card.extsv{border-left:5px solid var(--xsv);background:color-mix(in srgb,var(--xsv) 6%,var(--surface))}.eyebrow.xsv{color:var(--xsv)}
+:root{--xsv:#2f6fb5}@media (prefers-color-scheme:dark){:root{--xsv:#7fb0ea}}
 .dnote-form{border-top:1px dashed var(--line);padding-top:10px}
 .retnote{border-color:var(--bad);border-left-width:4px}
 .apprbox{border-color:var(--ink);border-left-width:4px}
@@ -1083,7 +1086,7 @@ function detectWorkbook(sheets){ // sheets: [{name, rows}]
 }
 
 
-const ROLES={admin:"Administrátor",spravca:"Správca stavieb",sledovanie:"Sledovanie stavieb",ekonom:"Ekonóm",pripravar:"Prípravár stavieb",stavbyveduci:"Stavbyvedúci",majster:"Majster",dozor:"Stavebný dozor",citanie:"Iba čítanie"};
+const ROLES={admin:"Administrátor",spravca:"Správca stavieb",sledovanie:"Sledovanie stavieb",ekonom:"Ekonóm",pripravar:"Prípravár stavieb",stavbyveduci:"Stavbyvedúci",majster:"Majster",dozor:"Stavebný dozor",extsv:"Externý stavbyvedúci",citanie:"Iba čítanie"};
 const WEATHER=["Jasno","Polojasno","Zamračené","Dážď","Sneh","Mráz","Vietor"];
 const KEY="kalimis-stavby-proto-v2";
 
@@ -1200,17 +1203,20 @@ function can(p,act,entry){
   if(p&&p.closed&&!["econ.view","inv.view"].includes(act))return false;
   switch(act){
     case"close":return r==="admin";
-    case"diary.create":return["admin","stavbyveduci","majster"].includes(r);
-    case"diary.edit":return entry&&!entry.locked&&(r==="admin"||r==="stavbyveduci"||(r==="majster"&&entry.authorId===me.id));
-    case"diary.lock":return entry&&!entry.locked&&["admin","stavbyveduci"].includes(r);
+    case"diary.create":return["admin","stavbyveduci","majster","extsv"].includes(r);
+    case"diary.edit":return entry&&!entry.locked&&(r==="admin"||r==="stavbyveduci"||(["majster","extsv"].includes(r)&&entry.authorId===me.id));
+    case"diary.lock":return entry&&!entry.locked&&(["admin","stavbyveduci"].includes(r)||(r==="extsv"&&entry.authorId===me.id));
     case"team.invite":return["admin","stavbyveduci"].includes(r);
     case"team.remove":return r==="admin";
     case"econ.view":return r==="admin"||r==="sledovanie";
     case"econ.edit":return r==="admin";
     case"budget.import":return["admin","stavbyveduci"].includes(r);
-    case"docs.upload":return["admin","stavbyveduci"].includes(r);
+    case"docs.upload":return["admin","stavbyveduci","extsv"].includes(r);
+    case"docs.delete":return ["admin","stavbyveduci"].includes(r)||(r==="extsv"&&!!entry&&entry.by===me.id);   /* externý stavbyvedúci maže len to, čo sám nahral */
+    case"docs.folders":return["admin","stavbyveduci"].includes(r);
+    case"team.view":return !["dozor","extsv"].includes(r);
     case"budget.upload":return["admin","stavbyveduci"].includes(r);
-    case"inv.view":return["admin","sledovanie","stavbyveduci","dozor","citanie"].includes(r);
+    case"inv.view":return["admin","sledovanie","stavbyveduci","dozor","extsv","citanie"].includes(r);
     case"inv.edit":return["admin","stavbyveduci"].includes(r);
     case"inv.unlock":return r==="admin";
     case"inv.approve":return r==="dozor";
@@ -1220,7 +1226,7 @@ function can(p,act,entry){
     case"diary.request":return["admin","stavbyveduci","majster"].includes(r);
     case"settings":return["admin","stavbyveduci"].includes(r);
   }return false}
-function inviteRoles(p){return ["admin","spravca"].includes(roleIn(p))?["stavbyveduci","majster","dozor","citanie"]:["majster","dozor","citanie"]}
+function inviteRoles(p){return ["admin","spravca"].includes(roleIn(p))?["stavbyveduci","majster","dozor","extsv","citanie"]:["majster","dozor","extsv","citanie"]}
 function visibleProjects(){return canSee("stavba")?S.projects:S.projects.filter(p=>p.members.some(m=>m.userId===me.id))}
 
 /* ---------- účty, heslá a firmy (tenanti) ---------- */
@@ -2214,7 +2220,7 @@ function usersHTML(){
     ${list.map(card).join("")}
     ${ext.length?`<h3 style="margin-top:6px">Externí používatelia aplikácie</h3><div class="muted" style="font-size:13px">Zoznam používateľov pozvaných len pre konkrétnu stavbu. Spravidla to je napríklad investor alebo stavebný dozor. Ich práva a role upravuješ v nastavení stavby v záložke Tím. Používateľ pozvaný na konkrétnu stavbu nevidí žiadny iný modul ani údaje o firme.</div>
       ${ext.map(u=>`<div class="card entry-head"><div style="min-width:0"><b>${esc(u.name||u.email)}</b><div class="muted" style="font-size:13px;overflow-wrap:anywhere">${esc(u.email)}${u.phone?` · ${esc(u.phone)}`:""}</div>
-        <div class="muted" style="font-size:12px">${esc(dozorProjects(u).map(p=>p.name).join(", "))}</div></div>${rolePill("dozor")}</div>`).join("")}`:""}
+        <div class="muted" style="font-size:12px">${esc(dozorProjects(u).map(p=>p.name).join(", "))}</div></div>${rolePill(dozorProjects(u).some(p=>p.members.some(m=>m.userId===u.id&&m.role==="dozor"))?"dozor":"extsv")}</div>`).join("")}`:""}
   </div>`}
 document.addEventListener("change",ev=>{const t=ev.target;if(!me||!isAdmin(me))return;
   if(t.dataset&&t.dataset.ur){const u=user(t.dataset.ur);if(!u||isAdmin(u))return;u.rights=u.rights||{};if(t.checked)u.rights[t.dataset.umod]=u.rights[t.dataset.umod]||"view";else delete u.rights[t.dataset.umod];save();toast("Prístup uložený");render()}
@@ -4592,8 +4598,9 @@ function startChecklist(){
 /* ---------- externý stavebný dozor a profil používateľa ---------- */
 /* externý = pozvaný iba ako stavebný dozor, bez prístupu k modulom; vidí len svoje stavby */
 function isExternal(u){if(!u||isAdmin(u)||RIGHT_MODS.some(([k])=>(u.rights||{})[k]))return false;
-  const ms=S.projects.flatMap(p=>p.members.filter(m=>m.userId===u.id));return ms.length>0&&ms.every(m=>m.role==="dozor")}
-function dozorProjects(u){return S.projects.filter(p=>p.members.some(m=>m.userId===u.id&&m.role==="dozor"))}
+  const ms=S.projects.flatMap(p=>p.members.filter(m=>m.userId===u.id));return ms.length>0&&ms.every(m=>EXT_ROLES.includes(m.role))}
+const EXT_ROLES=["dozor","extsv"];   /* externé roly: vidia len stavby, na ktoré boli pozvaní */
+function dozorProjects(u){return S.projects.filter(p=>p.members.some(m=>m.userId===u.id&&EXT_ROLES.includes(m.role)))}
 function needsProfile(){return !!me&&isExternal(me)&&!(me.firstName&&me.lastName&&me.phone)}
 function externalStart(){const ps=dozorProjects(me);return ps.length===1?{screen:"project",projectId:ps[0].id,tab:"dennik"}:{screen:"home"}}
 function profileHTML(){
@@ -4841,7 +4848,9 @@ function homeHTML(){
 
 function projectTabs(p){
   const dn=diaryNotices().filter(x=>x.p===p).length,kn=kdNotices().filter(x=>x.p===p).length;
-  const tabs=[["dennik","Denný záznam",dn],["kd","Kontrolné dni",kn],["tim","Tím"],["rozpocet","Rozpočet"]];
+  const tabs=[["dennik","Denný záznam",dn],["kd","Kontrolné dni",kn]];
+  if(can(p,"team.view"))tabs.push(["tim","Tím"]);   /* externí (stavebný dozor, externý stavbyvedúci) tím stavby nevidia */
+  tabs.push(["rozpocet","Rozpočet"]);
   if(can(p,"inv.view"))tabs.push(["faktury","Fakturácia",myNotices().filter(x=>x.p===p).length]);
   if(can(p,"econ.view"))tabs.push(["ekonomika","Ekonomika"]);
   if(can(p,"settings")||(p.closed&&canDelProj()))tabs.push(["nastavenia","Nastavenia"]);
@@ -4899,12 +4908,13 @@ const GROUPS={
 };
 const grpHours=(g,rows)=>(rows||[]).reduce((s,c)=>s+GROUPS[g].hrs(c),0);
 const headCount=rows=>(rows||[]).reduce((s,c)=>s+(+c.count||0),0);
-function projGroups(p){const g=[p.crewMode==="count"?"crewC":"crew"];if(p.machMode==="list")g.push("mach");else if(p.machMode==="count")g.push("machC");return g}
+function projGroups(p){const g=[p.crewMode==="count"||(me&&isExternal(me))?"crewC":"crew"];   /* externý stavbyvedúci nemá zoznam pracovníkov firmy – zapisuje profesie a počty */
+  if(p.machMode==="list")g.push("mach");else if(p.machMode==="count")g.push("machC");return g}
 function entryGroups(e){return Object.keys(GROUPS).filter(g=>e[g]&&e[g].length)}
 function pl(n,one,few,many){return n===1?one:(n>=2&&n<=4?few:many)}
 
 /* ---------- Stavebný denník: export celého denníka a surový export záznamov ---------- */
-const memberRoleLabel=r=>({stavbyveduci:"Stavbyvedúci",majster:"Majster",dozor:"Stavebný dozor",citanie:"Iba čítanie",spravca:"Správca stavieb",admin:"Administrátor"}[r]||ROLES[r]||r||"");
+const memberRoleLabel=r=>({stavbyveduci:"Stavbyvedúci",majster:"Majster",dozor:"Stavebný dozor",extsv:"Externý stavbyvedúci",citanie:"Iba čítanie",spravca:"Správca stavieb",admin:"Administrátor"}[r]||ROLES[r]||r||"");
 function diarySeenText(e){return (e.seen||[]).map(s=>`Videné – Stavebný dozor ${s.name||user(s.by)?.name||""}${s.at?` · ${dt(s.at)}`:""}`)}
 function entryPeopleText(e){const out=[];
   (e.crew||[]).forEach(c=>{const w=worker(c.workerId);out.push(`${w?fullName(w):"?"}${w&&w.profession?` (${w.profession})`:""} ${c.from}–${c.to}, ${h(hours(c))} h`)});
@@ -4919,9 +4929,9 @@ function pdfDiaryEntries(doc,es,y){const W=doc.internal.pageSize.getWidth(),L=14
   const dozBlk=(title,text)=>{doc.setFontSize(8.8);const ls=doc.splitTextToSize(plain(text||""),R-L-6),hh=6+ls.length*4+2.5;need(hh+1);
     doc.setFillColor(232,245,236);doc.setDrawColor(190,225,200);doc.roundedRect(L,y-1,R-L,hh,1.2,1.2,"FD");doc.setDrawColor(0);
     doc.setFont("DVC","bold");doc.setTextColor(29,100,62);doc.text(plain(title),L+3,y+3.6);doc.setTextColor(0);doc.setFont("DVC","normal");doc.text(ls,L+3,y+8);y+=hh+2};
-  es.forEach(e=>{need(30);const dz=isDoz(e);if(dz)doc.setFillColor(222,241,228);else doc.setFillColor(243,244,245);doc.rect(L,y,R-L,8,"F");doc.setFont("DVC","bold");doc.setFontSize(10.5);doc.text(plain(fmtDate(e.date)),L+2,y+5.5);
+  es.forEach(e=>{need(30);const dz=isDoz(e),xs=isExtSvEntry(S.projects.find(x=>x.id===e.projectId),e);if(dz)doc.setFillColor(222,241,228);else if(xs)doc.setFillColor(221,233,248);else doc.setFillColor(243,244,245);doc.rect(L,y,R-L,8,"F");doc.setFont("DVC","bold");doc.setFontSize(10.5);doc.text(plain(fmtDate(e.date)),L+2,y+5.5);
     doc.setFont("DVC","normal");doc.setFontSize(8.5);doc.text(plain([e.weather,e.temp!==""&&e.temp!=null?`${e.temp} °C`:""].filter(Boolean).join(", ")),R-2,y+5.5,{align:"right"});y+=11;
-    doc.setFontSize(8.5);doc.setTextColor(90);doc.text(plain(`Zapísal: ${user(e.authorId)?.name||""}${e.createdAt?` · ${dt(e.createdAt)}`:""}${e.updatedAt&&e.updatedAt!==e.createdAt?` · upravené ${dt(e.updatedAt)}`:""}${e.locked?` · podpísal a uzamkol ${user(e.lockedBy)?.name||""}${e.lockedAt?` ${dt(e.lockedAt)}`:""}`:""}`),L,y);doc.setTextColor(0);y+=5;
+    doc.setFontSize(8.5);doc.setTextColor(90);doc.text(plain(`Zapísal: ${user(e.authorId)?.name||""}${xs?" (externý stavbyvedúci)":""}${e.createdAt?` · ${dt(e.createdAt)}`:""}${e.updatedAt&&e.updatedAt!==e.createdAt?` · upravené ${dt(e.updatedAt)}`:""}${e.locked?` · podpísal a uzamkol ${user(e.lockedBy)?.name||""}${e.lockedAt?` ${dt(e.lockedAt)}`:""}`:""}`),L,y);doc.setTextColor(0);y+=5;
     doc.setFontSize(9.5);const wt=doc.splitTextToSize(plain(e.work||""),R-L);need(wt.length*4.6);doc.text(wt,L,y);y+=wt.length*4.6+2;
     const blk=(title,lines)=>{if(!lines.length)return;doc.setFont("DVC","bold");doc.setFontSize(8.8);need(8);doc.text(title,L,y);y+=4.3;doc.setFont("DVC","normal");
       lines.forEach(t=>{const ls=doc.splitTextToSize(plain("• "+t),R-L-4);need(ls.length*4);doc.text(ls,L+3,y);y+=ls.length*4});y+=1.5};
@@ -5020,6 +5030,7 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
   if(a==="dexFull")diaryFullPDF(p);else if(a==="dexPdf")diaryRangePDF(p);else if(a==="dexXls")diaryRangeXLSX(p);
   else if(a==="seenMark"){const e=S.diary.find(d=>d.id===b.dataset.id);if(e&&can(p,"diary.seen")&&!(e.seen||[]).some(s=>s.by===me.id)){(e.seen=e.seen||[]).push({by:me.id,name:me.name,at:nowIso()});save();toast("Záznam označený ako videný");render()}}});
 document.addEventListener("change",ev=>{if(!me)return;const t=ev.target;if(t.id==="dexFrom"||t.id==="dexTo"){view.dex=view.dex||{};view.dex[t.id==="dexFrom"?"from":"to"]=t.value}});
+function isExtSvEntry(p,e){return !!p&&p.members.some(m=>m.role==="extsv"&&m.userId===e.authorId)}
 function diaryHTML(p){
   const entries=S.diary.filter(d=>d.projectId===p.id).sort((a,b)=>b.date.localeCompare(a.date));
   const editing=view.editId?S.diary.find(d=>d.id===view.editId)||{new:true}:null;
@@ -5033,7 +5044,8 @@ function diaryHTML(p){
     const acts=[can(p,"diary.edit",e)?`<button class="btn small" data-a="edit" data-id="${e.id}">Upraviť</button>`:"",
       can(p,"diary.lock",e)?`<button class="btn small" data-a="lock" data-id="${e.id}">Podpísať a uzamknúť</button>`:""].join("");
     const tables=entryGroups(e).map(g=>entryTable(g,e[g])).join("");
-    return `<article class="card stack" id="e_${e.id}">
+    const xs=isExtSvEntry(p,e);
+    return `<article class="card stack${xs?" extsv":""}" id="e_${e.id}">${xs?`<div class="eyebrow xsv">Záznam externého stavbyvedúceho · ${esc(user(e.authorId)?.name||"")}</div>`:""}
       <div class="entry-head"><div><div class="date">${fmtDate(e.date)}</div><div class="muted" style="font-size:13px">${esc(e.weather)}${e.temp!==""?`, ${esc(e.temp)} °C`:""}${e.wxCheckedBy?` (počasie overil ${esc(user(e.wxCheckedBy)?.name||"")})`:""} · zapísal ${esc(user(e.authorId)?.name||"")}${e.createdAt?` · ${esc(dt(e.createdAt))}`:""}</div></div>${status}</div>
       <div>${esc(e.work)}</div>${tables}${photosViewHTML(e)}
       ${(e.dozorNotes||[]).map(n=>`<div class="dnote"><div class="eyebrow">Zápis stavebného dozoru · ${esc(user(n.by)?.name||"")} · ${dt(n.at)}</div><div>${esc(n.text)}</div></div>`).join("")}
@@ -5197,7 +5209,7 @@ function kdCandidates(p){
   const add=(key,name,email,role,pre)=>{if(seen.has(key))return;seen.add(key);out.push({key,name,email,role,pre:pre&&key!=="u:"+me.id})};
   S.users.filter(u=>u.companyRole==="admin").forEach(u=>add("u:"+u.id,u.name,u.email,"Administrátor",true));
   (p.contacts||[]).filter(c=>c.role==="Investor").forEach((c,i)=>add("c:inv"+i,c.name||p.investor||"Investor",c.email,"Investor",true));
-  p.members.forEach(m=>{const u=user(m.userId);if(u)add("u:"+u.id,u.name,u.email,ROLES[m.role],["stavbyveduci","majster","dozor"].includes(m.role))});
+  p.members.forEach(m=>{const u=user(m.userId);if(u)add("u:"+u.id,u.name,u.email,ROLES[m.role],["stavbyveduci","majster","dozor","extsv"].includes(m.role))});
   S.users.filter(u=>!isAdmin(u)&&rightOf(u,"stavba")).forEach(u=>add("u:"+u.id,u.name,u.email,rightOf(u,"stavba")==="edit"?"Správca stavieb":"Sledovanie stavieb",false));
   (p.contacts||[]).filter(c=>c.role!=="Investor"&&c.email).forEach((c,i)=>add("c:o"+i,c.name||c.role,c.email,c.role,false));
   return out}
@@ -5540,7 +5552,7 @@ function teamHTML(p){
     <label>Rola<select id="invRole">${inviteRoles(p).map(r=>`<option value="${r}">${ROLES[r]}</option>`).join("")}</select></label></div>
     <label>Meno (nepovinné)<input id="invName"></label>
     <button class="btn primary" type="submit">Poslať pozvánku</button>
-    <div class="muted" style="font-size:13px">Pozvaný dostane pozvánku e-mailom, nastaví si heslo a uvidí iba túto stavbu s pridelenými právami. <b>Stavebný dozor</b> si pri prvom prihlásení doplní meno, telefón a môže nahrať pečiatku s podpisom. V prototype sa e-mail neodošle, prihlás sa jeho e-mailom.</div></form>`:"";
+    <div class="muted" style="font-size:13px">Pozvaný dostane pozvánku e-mailom, nastaví si heslo a uvidí iba túto stavbu s pridelenými právami. <b>Stavebný dozor</b> a <b>externý stavbyvedúci</b> (napr. stavbyvedúci objednávateľa) uvidia len túto stavbu – denník, kontrolné dni, rozpočet, fakturáciu a dokumentáciu. Externý stavbyvedúci môže písať vlastné denné záznamy (v denníku sú označené modrou) a nahrávať dokumenty. Pri prvom prihlásení si doplnia meno, telefón a môžu nahrať pečiatku s podpisom. V prototype sa e-mail neodošle, prihlás sa jeho e-mailom.</div></form>`:"";
   return `<div class="stack">${inv}<div class="eyebrow">Tím stavby</div>${rows||`<div class="card muted">Na stavbe zatiaľ nie je nikto pridelený.</div>`}<div class="eyebrow">Prístup cez modul Stavba</div>${admins}</div>`;
 }
 
@@ -5695,7 +5707,7 @@ function docsHTML(p){const up=can(p,"docs.upload"),list=p.docs||[],F=docFolders(
   const item=d=>`<li><span class="docext">${esc(docExt(d.name)||"súbor")}</span>
       <div class="docmain"><b>${esc(d.name)}</b><span class="muted">${fsize(d.size||0)} · ${esc(user(d.by)?.name||"")} ${d.at?fmtDate(d.at.slice(0,10)):""}${d.note?` · ${esc(d.note)}`:""}${!cur?` · ${esc(d.group||"Iné")}`:""}</span></div>
       <div class="docbtn"><button class="btn small" data-a="docOpen" data-id="${d.id}">Otvoriť</button><button class="btn small ghost" data-a="docGet" data-id="${d.id}">Stiahnuť</button>
-      ${up?(view.docDel===d.id?`<button class="btn small" data-a="docDelYes" data-id="${d.id}" style="color:var(--bad)">Naozaj odstrániť</button><button class="btn small ghost" data-a="docDelNo">Späť</button>`:`<button class="btn small ghost" data-a="docDel" data-id="${d.id}" aria-label="Odstrániť ${esc(d.name)}">Odstrániť</button>`):""}</div></li>`;
+      ${can(p,"docs.delete",d)?(view.docDel===d.id?`<button class="btn small" data-a="docDelYes" data-id="${d.id}" style="color:var(--bad)">Naozaj odstrániť</button><button class="btn small ghost" data-a="docDelNo">Späť</button>`:`<button class="btn small ghost" data-a="docDel" data-id="${d.id}" aria-label="Odstrániť ${esc(d.name)}">Odstrániť</button>`):""}</div></li>`;
   const folders=`<div class="card stack"><div class="entry-head"><h3>Zložky dokumentácie</h3>${up&&!view.dfNew?`<button class="btn small" data-a="dfNew">+ Nová zložka</button>`:""}</div>
     ${up&&view.dfNew?`<form class="row" id="dfForm"><input id="dfName" list="dfIdeas" placeholder="napr. Skúšky a revízie" style="flex:1 1 240px" required><datalist id="dfIdeas">${DOC_FOLDER_IDEAS.filter(x=>!F.includes(x)).map(x=>`<option value="${esc(x)}">`).join("")}</datalist><button class="btn small primary" type="submit">Vytvoriť</button><button type="button" class="btn small ghost" data-a="dfNo">Zrušiť</button></form>`:""}
     ${F.length?`<div class="dfgrid">${F.map(f=>`<button class="dfold${cur===f?" on":""}" data-a="dfOpen" data-f="${esc(f)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h8.5A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/></svg><b>${esc(f)}</b><span class="muted">${cnt(f)} ${pl(cnt(f),"súbor","súbory","súborov")}</span></button>`).join("")}</div>`
@@ -5705,7 +5717,7 @@ function docsHTML(p){const up=can(p,"docs.upload"),list=p.docs||[],F=docFolders(
     body=`<div class="card stack"><h3>Výsledky hľadania</h3>${shown.length?`<ul class="doclist">${shown.sort((a,b)=>a.name.localeCompare(b.name,"sk",{numeric:true})).map(item).join("")}</ul>`:`<div class="muted">Nič nezodpovedá hľadaniu.</div>`}</div>`}
   else if(cur){const L=list.filter(d=>(d.group||"Iné")===cur).sort((a,b)=>a.name.localeCompare(b.name,"sk",{numeric:true})),ren=view.dfRen===cur;
     body=`<div class="card stack docgrp"><div class="entry-head">${ren?`<form class="row" id="dfRenForm" data-f="${esc(cur)}" style="flex:1"><input id="dfRenName" value="${esc(cur)}" style="flex:1 1 220px" required><button class="btn small primary" type="submit">Uložiť</button><button type="button" class="btn small ghost" data-a="dfRenNo">Zrušiť</button></form>`
-        :`<h3>${esc(cur)}</h3><div class="row">${up?`<button class="btn small ghost" data-a="dfRen">Premenovať</button>${L.length?"":`<button class="btn small ghost" data-a="dfDel" style="color:var(--bad)">Odstrániť prázdnu zložku</button>`}`:""}<button class="btn small ghost" data-a="dfClose">Zavrieť</button></div>`}</div>
+        :`<h3>${esc(cur)}</h3><div class="row">${can(p,"docs.folders")?`<button class="btn small ghost" data-a="dfRen">Premenovať</button>${L.length?"":`<button class="btn small ghost" data-a="dfDel" style="color:var(--bad)">Odstrániť prázdnu zložku</button>`}`:""}<button class="btn small ghost" data-a="dfClose">Zavrieť</button></div>`}</div>
       ${up?`<form class="stack" id="docForm"><label class="docdrop"><input type="file" id="docFiles" multiple><span>${busy?esc(busy):`Nahrať do zložky „${esc(cur)}“ – vyber súbory alebo ich sem pretiahni`}</span></label>
         <div class="row"><input id="docNote" placeholder="Poznámka k súborom (nepovinné), napr. revízia B" style="flex:1 1 260px"><button class="btn primary small" type="submit" ${busy?"disabled":""}>Nahrať</button></div><span class="hint">PDF, obrázky, DWG a iné · najviac 50 MB na súbor</span></form>`:""}
       ${L.length?`<ul class="doclist">${L.map(item).join("")}</ul>`:`<div class="muted">Zložka je prázdna.</div>`}</div>`}
@@ -5725,7 +5737,7 @@ document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.clos
   else if(a==="dfClose"){view.docFolder=null;render()}
   else if(a==="dfNew"&&up){view.dfNew=true;render();const e=$("#dfName");if(e)e.focus()}else if(a==="dfNo"){view.dfNew=false;render()}
   else if(a==="dfRen"&&up){view.dfRen=view.docFolder;render()}else if(a==="dfRenNo"){view.dfRen=null;render()}
-  else if(a==="dfDel"&&up){const f=view.docFolder;if((p.docs||[]).some(d=>(d.group||"Iné")===f)){toast("Zložka nie je prázdna");return}p.docFolders=(p.docFolders||[]).filter(x=>x!==f);view.docFolder=null;save();toast("Zložka odstránená");render()}});
+  else if(a==="dfDel"&&can(p,"docs.folders")){const f=view.docFolder;if((p.docs||[]).some(d=>(d.group||"Iné")===f)){toast("Zložka nie je prázdna");return}p.docFolders=(p.docFolders||[]).filter(x=>x!==f);view.docFolder=null;save();toast("Zložka odstránená");render()}});
 document.addEventListener("submit",ev=>{const f=ev.target.id;if(!me||(f!=="dfForm"&&f!=="dfRenForm"))return;ev.preventDefault();const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"docs.upload"))return;
   if(f==="dfForm"){const n=$("#dfName").value.trim();if(!n)return;if(docFolders(p).some(x=>normText(x)===normText(n))){toast("Taká zložka už existuje");return}(p.docFolders=p.docFolders||[]).push(n);view.dfNew=false;view.docFolder=n;save();toast("Zložka vytvorená");render()}
   else{const old=ev.target.dataset.f,n=$("#dfRenName").value.trim();if(!n||n===old){view.dfRen=null;render();return}if(docFolders(p).some(x=>x!==old&&normText(x)===normText(n))){toast("Taká zložka už existuje");return}
@@ -5748,7 +5760,7 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
   const p=S.projects.find(x=>x.id===view.projectId);if(!p)return;const d=(p.docs||[]).find(x=>x.id===b.dataset.id);
   if(a==="docOpen"&&d)docOpen(d,false);else if(a==="docGet"&&d)docOpen(d,true);
   else if(a==="docDel"){view.docDel=b.dataset.id;render()}else if(a==="docDelNo"){view.docDel=null;render()}
-  else if(a==="docDelYes"&&d&&can(p,"docs.upload")){(async()=>{try{await FILESTORE.del(d.path)}catch(e){console.warn(e)}p.docs=p.docs.filter(x=>x.id!==d.id);view.docDel=null;save();toast("Súbor odstránený");render()})()}});
+  else if(a==="docDelYes"&&d&&can(p,"docs.delete",d)){(async()=>{try{await FILESTORE.del(d.path)}catch(e){console.warn(e)}p.docs=p.docs.filter(x=>x.id!==d.id);view.docDel=null;save();toast("Súbor odstránený");render()})()}});
 document.addEventListener("submit",ev=>{if(!["docForm","dnDocForm"].includes(ev.target.id)||!me)return;ev.preventDefault();const p=S.projects.find(x=>x.id===view.projectId);if(!p||!can(p,"docs.upload")||view.docBusy)return;
   if(ev.target.id==="dnDocForm")docUpload(p,$("#dnFiles").files,DN_DOC);else docUpload(p,$("#docFiles").files)});
 document.addEventListener("input",ev=>{if(ev.target.id==="docSearch"){view.dq=ev.target.value;const pos=ev.target.selectionStart;render();const el=$("#docSearch");if(el){el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}}}});
@@ -6198,7 +6210,7 @@ document.addEventListener("click",ev=>{
   else if(a==="newEntry"){view.wxMsg=null;view.wxErr="";view.editId="__new";view.draft=null;render()}
   else if(a==="edit"){view.wxMsg=null;view.wxErr="";view.editId=b.dataset.id;view.draft=null;render();window.scrollTo(0,0)}
   else if(a==="cancel"){view.wxMsg=null;view.wxErr="";view.editId=null;view.draft=null;render()}
-  else if(a==="copyPrev"){const d=$("#dDate")?.value||todayIso(),all=S.diary.filter(x=>x.projectId===p.id).sort((x,y)=>(y.date+(y.createdAt||"")).localeCompare(x.date+(x.createdAt||"")));
+  else if(a==="copyPrev"){const d=$("#dDate")?.value||todayIso(),all=S.diary.filter(x=>x.projectId===p.id&&(!isExternal(me)||x.authorId===me.id)).sort((x,y)=>(y.date+(y.createdAt||"")).localeCompare(x.date+(x.createdAt||"")));
     const src=all.find(x=>x.date<d)||all[0];if(!src){toast("Na stavbe zatiaľ nie je žiadny záznam");return}
     view.draft={};projGroups(p).forEach(g=>view.draft[g]=src[g]&&src[g].length?JSON.parse(JSON.stringify(src[g])):[GROUPS[g].blank()]);view.draftPhotos=[];view.wxMsg=null;view.wxErr="";
     render();$("#dDate").value=d;$("#dWeather").value=src.weather||WEATHER[0];$("#dTemp").value=src.temp??"";$("#dWork").value=src.work||"";

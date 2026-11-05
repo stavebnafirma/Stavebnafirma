@@ -127,7 +127,10 @@ async function doInvite(user: any, body: any) {
   if (inv.projects?.length) {
     const { data: pr } = await admin.from("docs").select("id,data").eq("tenant_id", tid).eq("kind", "projects").in("id", inv.projects);
     const names = (pr || []).map((r: any) => r.data?.name).filter(Boolean);
-    if (names.length) what = `${inv.role === "dozor" ? "ako stavebný dozor " : ""}na ${names.length > 1 ? "stavby" : "stavbu"} ${names.join(", ")}`;
+    // rola na stavbe podľa tímu stavby (pozvaný má v tíme id „inv:<id pozvánky>“)
+    const pRoles = (pr || []).map((r: any) => (r.data?.members || []).find((m: any) => m.userId === `inv:${inv.id}`)?.role).filter(Boolean);
+    const as = pRoles.includes("dozor") ? "ako stavebný dozor " : pRoles.includes("extsv") ? "ako externý stavbyvedúci " : inv.role === "dozor" ? "ako stavebný dozor " : "";
+    if (names.length) what = `${as}na ${names.length > 1 ? "stavby" : "stavbu"} ${names.join(", ")}`;
   }
   const email = String(inv.email).toLowerCase();
   const reg = `${APP}/?registracia=${encodeURIComponent(email)}`;

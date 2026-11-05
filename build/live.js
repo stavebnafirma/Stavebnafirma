@@ -106,7 +106,7 @@ function remapInvites(){const acc=(S._inv||[]).filter(i=>i.accepted_by);if(!acc.
   (S.tasks||[]).forEach(t=>["assignee","assignedTo","by","doneBy"].forEach(k=>{if(M[t[k]])t[k]=M[t[k]]}))}
 function userState(u){const projects=S.projects.filter(p=>(p.members||[]).some(m=>m.userId===u.id)).map(p=>p.id).sort();
   let role=u.companyRole==="admin"?"admin":(u.dbRole==="spravca"&&RIGHT_MODS.every(([k])=>(u.rights||{})[k]==="edit"))?"spravca":
-    (!RIGHT_MODS.some(([k])=>(u.rights||{})[k])&&projects.length&&S.projects.filter(p=>projects.includes(p.id)).every(p=>p.members.find(m=>m.userId===u.id).role==="dozor"))?"dozor":"clen";
+    (!RIGHT_MODS.some(([k])=>(u.rights||{})[k])&&projects.length&&S.projects.filter(p=>projects.includes(p.id)).every(p=>["dozor","extsv"].includes(p.members.find(m=>m.userId===u.id).role)))?"dozor":"clen";   /* externí (dozor, externý stavbyvedúci) – v databáze rola „dozor“: len svoje stavby */
   return {role,rights:role==="admin"?{}:(u.rights||{}),projects}}
 function profState(){return me?{first_name:me.firstName||null,last_name:me.lastName||null,phone:me.phone||null,stamp:me.stamp||null,prefs:me.dash?{dash:me.dash}:null}:{}}
 
