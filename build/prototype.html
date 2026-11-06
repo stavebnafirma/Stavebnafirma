@@ -3143,7 +3143,8 @@ const HOWTO=[
   {t:"Založenie stavby a denné záznamy",d:"Nová stavba, údaje pre stavebný denník, prvý denný záznam s počasím, tím stavby a pozvánka pre stavebný dozor.",url:"https://vimeo.com/1242587841",poster:"videa/zalozenie-stavby.jpg",len:"3:25"},
   {t:"Rozpočet, súpis prác a fakturácia",d:"Import rozpočtu z ľubovoľného rozpočtového programu po objektoch, priebežný súpis vykonaných prác a fakturácia.",url:"https://vimeo.com/1242587840",poster:"videa/rozpocet-supis-fakturacia.jpg",len:"2:10"},
   {t:"Dokumentácia a export stavebného denníka",d:"Zložky dokumentácie stavby, skúšky a atesty a kompletný stavebný denník v PDF.",url:"https://vimeo.com/1242587852",poster:"videa/dokumentacia-export-dennika.jpg",len:"1:39"},
-  {t:"Stavebný dozor",d:"Registrácia z pozvánky, zápisy a potvrdenia v dennom zázname, zvolanie kontrolného dňa a odsúhlasenie súpisu prác.",url:"https://vimeo.com/1242587866",poster:"videa/stavebny-dozor.jpg",len:"2:14"}];
+  {t:"Stavebný dozor",d:"Registrácia z pozvánky, zápisy a potvrdenia v dennom zázname, zvolanie kontrolného dňa a odsúhlasenie súpisu prác.",url:"https://vimeo.com/1242587866",poster:"videa/stavebny-dozor.jpg",len:"2:14"},
+  {t:"Spoločný stavebný denník pre viacerých dodávateľov stavby",d:"Stavba rozdelená na časti, subdodávatelia ako externí stavbyvedúci, vyjadrenia generálneho zhotoviteľa a jeden spoločný denník zo všetkých častí.",url:"https://vimeo.com/1244401833",poster:"videa/spolocny-dennik.jpg",len:"3:51"}];
 /* odkaz → adresa prehrávača; video sa načíta až po kliknutí (rýchlejšia stránka, YouTube/Vimeo neukladá cookies vopred) */
 function vidEmbed(u){u=String(u||"").trim();let m;
   if((m=u.match(/(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/)))return {src:`https://www.youtube-nocookie.com/embed/${m[1]}?autoplay=1&rel=0`,thumb:`https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg`};
