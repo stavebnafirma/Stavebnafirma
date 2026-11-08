@@ -34,16 +34,18 @@ async function mailer() {
   if (!pass) throw new Error("E-maily nie sú nastavené: chýba SMTP_PASS v Supabase (Edge Functions → Secrets).");
   const port = Number(clean(Deno.env.get("SMTP_PORT")) || 465);
   const own = clean(Deno.env.get("SMTP_HOST"));
-  const hosts = own ? [own] : ["smtp.m1.websupport.sk", "smtp.websupport.sk"];
+  const hosts = [...new Set([own, "smtp.m1.websupport.sk", "smtp.websupport.sk"].filter(Boolean))];
+  const ascii = /^[\x20-\x7e]*$/.test(pass);
   let last: any = null;
-  for (const host of hosts) {
-    const t = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user: FROM_ADDR, pass } });
-    try { await t.verify(); transport = t; console.log(`SMTP ok: ${FROM_ADDR} @ ${host}:${port}`); return t; }
+  for (const host of hosts) for (const authMethod of ["PLAIN", "LOGIN"]) {
+    const t = nodemailer.createTransport({ host, port, secure: port === 465, authMethod, auth: { user: FROM_ADDR, pass } });
+    try { await t.verify(); transport = t; console.log(`SMTP ok: ${FROM_ADDR} @ ${host}:${port} ${authMethod}`); return t; }
     catch (e) {
       last = e;
-      // diagnostika bez hesla: meno, server, dĺžka hesla a či sa v Secrets našli medzery/úvodzovky
-      console.error(`SMTP prihlásenie zlyhalo: user=${FROM_ADDR} host=${host}:${port} heslo_znakov=${pass.length} orezané=${raw.length !== pass.length} chyba=${(e as any)?.response || (e as Error)?.message}`);
-      if (!/535|EAUTH|Invalid login|authentication/i.test(String((e as any)?.response || (e as Error)?.message))) break;
+      const msg = String((e as any)?.response || (e as Error)?.message);
+      // diagnostika bez hesla: meno, server, spôsob prihlásenia, dĺžka hesla, či obsahuje znaky mimo ASCII (diakritika, €, §…)
+      console.error(`SMTP prihlásenie zlyhalo: user=${FROM_ADDR} host=${host}:${port} auth=${authMethod} heslo_znakov=${pass.length} heslo_ascii=${ascii} orezané=${raw.length !== pass.length} chyba=${msg}`);
+      if (!/535|EAUTH|Invalid login|authentication/i.test(msg)) break;
     }
   }
   throw last;
