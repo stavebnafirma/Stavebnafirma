@@ -232,9 +232,9 @@ table.inv td.cur{white-space:nowrap}
 .chk{flex-direction:row;align-items:center;gap:6px;color:var(--fg);font-weight:500}
 .chk input{width:auto}
 details summary{cursor:pointer;font-weight:600}
-.mrow,.crow{display:grid;grid-template-columns:2fr 1fr auto;gap:6px;align-items:end}
+.mrow,.crow{display:grid;grid-template-columns:2fr 1fr auto;gap:6px;align-items:end}.mrow.tm{grid-template-columns:2fr 1fr 1fr .9fr auto}
 .crow{grid-template-columns:2fr 1fr 1fr auto}.crow.tm{grid-template-columns:2fr .8fr 1fr 1fr .9fr auto}.wrow.hrs{grid-template-columns:2fr 1fr auto}
-@media (max-width:520px){.crow,.crow.tm{grid-template-columns:1fr 1fr auto}.crow .wsel{grid-column:1/-1}.wrow.hrs{grid-template-columns:1fr auto}}
+@media (max-width:520px){.mrow.tm{grid-template-columns:1fr 1fr 1fr auto}.mrow.tm .wsel{grid-column:1/-1}.crow,.crow.tm{grid-template-columns:1fr 1fr auto}.crow .wsel{grid-column:1/-1}.wrow.hrs{grid-template-columns:1fr auto}}
 fieldset.modes{border:1px solid var(--line);border-radius:8px;padding:8px 12px 10px;margin:0;display:flex;flex-direction:column;gap:8px;min-width:0}
 fieldset.modes legend{font-size:13px;font-weight:600;color:var(--muted);padding:0 4px}
 .radio{flex-direction:row;align-items:flex-start;gap:8px;color:var(--fg);font-weight:400;font-size:14px;cursor:pointer}
@@ -2007,7 +2007,7 @@ const ST_RANK={bad:3,soon:2,ok:1,none:0};
 const ST_PILL={bad:["Po termíne","s-ret"],soon:["Blíži sa termín","s-open"],ok:["V poriadku","s-ok"],none:["Bez termínov","s-lock"]};
 function termStatus(t){if(!t.until)return "none";const d=daysTo(t.until);return d<0?"bad":d<=(+t.warn||30)?"soon":"ok"}
 function termText(t){if(!t.until)return "bez dátumu";const d=daysTo(t.until);return d<0?`skončila pred ${-d} ${pl(-d,"dňom","dňami","dňami")}`:d===0?"končí dnes":`ešte ${d} ${pl(d,"deň","dni","dní")}`}
-function diaryHoursSince(m,date){return S.diary.reduce((s,e)=>s+(e.date>(date||"")?(e.mach||[]).filter(c=>c.machineId===m.id).reduce((a,c)=>a+(+c.hours||0),0):0),0)}
+function diaryHoursSince(m,date){return S.diary.reduce((s,e)=>s+(e.date>(date||"")?(e.mach||[]).filter(c=>c.machineId===m.id).reduce((a,c)=>a+hours(c),0):0),0)}
 function counterNow(m){if(!m.reading)return null;const add=catOf(m).unit==="h"?diaryHoursSince(m,m.reading.date):0;return {value:(+m.reading.value||0)+add,add,date:m.reading.date}}
 function svcCalc(m,s){const cur=counterNow(m);const nextDate=s.everyMonths&&s.lastDate?isoAddMonths(s.lastDate,+s.everyMonths):null;
   const nextQty=s.everyQty&&s.lastQty!=null&&s.lastQty!==""?(+s.lastQty)+(+s.everyQty):null;
@@ -5253,6 +5253,7 @@ const TIME_MODES={range:"Pracovný čas od – do",hours:"Celkový počet hodín
 const TEMP_MODES={avg:"Priemerná teplota",range:"Teplota od – do"};
 const timeMode=p=>p&&p.timeMode||(p&&p.crewMode==="count"?"hours":"range");
 const tempMode=p=>p&&p.tempMode||"avg";
+const tBlank=()=>timeMode(curProj())==="range"?{from:"07:00",to:"15:30",brk:30}:{hours:8};
 const hasT=v=>v!==""&&v!=null;
 /* teplota záznamu: priemer (temp) alebo rozpätie (tmin – tmax) */
 function setTemp(t,a,b){const f=(i,v)=>{const el=$("#"+i);if(el)el.value=v??""};if($("#dTmin")){f("dTmin",hasT(a)?a:t);f("dTmax",hasT(b)?b:t)}else f("dTemp",hasT(t)?t:hasT(a)&&hasT(b)?Math.round((+a+ +b)/2):"")}
@@ -5267,11 +5268,11 @@ const GROUPS={
   crew:{title:"Pracovníci",add:"+ Pridať pracovníka",hrs:c=>hours(c),
     blank:()=>timeMode(curProj())==="hours"?{workerId:S.workers[0]?.id,hours:8}:{workerId:S.workers[0]?.id,from:"07:00",to:"15:30",brk:30}},
   crewC:{title:"Pracovníci (počet)",add:"+ Pridať profesiu",hrs:c=>(+c.count||0)*hours(c),
-    blank:()=>timeMode(curProj())==="range"?{label:"",count:1,from:"07:00",to:"15:30",brk:30}:{label:"",count:1,hours:8}},
-  mach:{title:"Stroje a mechanizmy",add:"+ Pridať stroj",hrs:c=>+c.hours||0,
-    blank:()=>{const f=(S.machines||[])[0],x=(curProj()?.extMach||[])[0];return f?{machineId:f.id,hours:8}:x?{machineId:"",ext:x,hours:8}:{machineId:"__new",ext:"",hours:8}}},
-  machC:{title:"Stroje a mechanizmy (počet)",add:"+ Pridať druh stroja",hrs:c=>(+c.count||0)*(+c.hours||0),
-    blank:()=>({label:"",count:1,hours:8})}
+    blank:()=>({label:"",count:1,...tBlank()})},
+  mach:{title:"Stroje a mechanizmy",add:"+ Pridať stroj",hrs:c=>hours(c),
+    blank:()=>{const f=(S.machines||[])[0],x=(curProj()?.extMach||[])[0],t=tBlank();return f?{machineId:f.id,...t}:x?{machineId:"",ext:x,...t}:{machineId:"__new",ext:"",...t}}},
+  machC:{title:"Stroje a mechanizmy (počet)",add:"+ Pridať druh stroja",hrs:c=>(+c.count||0)*hours(c),
+    blank:()=>({label:"",count:1,...tBlank()})}
 };
 const grpHours=(g,rows)=>(rows||[]).reduce((s,c)=>s+GROUPS[g].hrs(c),0);
 const headCount=rows=>(rows||[]).reduce((s,c)=>s+(+c.count||0),0);
@@ -5286,8 +5287,9 @@ function diarySeenText(e){return (e.seen||[]).map(s=>`Videné – Stavebný dozo
 function entryPeopleText(e){const out=[];
   (e.crew||[]).forEach(c=>{const w=worker(c.workerId);out.push(`${w?fullName(w):"?"}${w&&w.profession?` (${w.profession})`:""} ${c.from&&c.to?`${c.from}–${c.to}, `:""}${h(hours(c))} h`)});
   (e.crewC||[]).forEach(c=>out.push(`${c.label||"Pracovníci"}: ${+c.count||0} × ${h(hours(c))} h${c.from&&c.to?` (${c.from}–${c.to}${+c.brk?`, prestávka ${c.brk} min`:""})`:""}`));return out}
-function entryMachText(e){const out=[];(e.mach||[]).forEach(c=>{out.push(`${machName(c)}: ${h(+c.hours||0)} h`)});
-  (e.machC||[]).forEach(c=>out.push(`${c.label||"Stroje"}: ${+c.count||0} × ${h(+c.hours||0)} h`));return out}
+const tSpan=c=>c.from&&c.to?` (${c.from}–${c.to}${+c.brk?`, prestávka ${c.brk} min`:""})`:"";
+function entryMachText(e){const out=[];(e.mach||[]).forEach(c=>{out.push(`${machName(c)}: ${h(hours(c))} h${tSpan(c)}`)});
+  (e.machC||[]).forEach(c=>out.push(`${c.label||"Stroje"}: ${+c.count||0} × ${h(hours(c))} h${tSpan(c)}`));return out}
 const entryWritten=e=>e.createdAt?dt(e.createdAt):"";
 /* záznamy do PDF (spoločné pre celý denník aj export za obdobie) */
 function pdfDiaryEntries(doc,es,y){const W=doc.internal.pageSize.getWidth(),L=14,R=W-14,need=hh=>{if(y+hh>280){doc.addPage();y=16}};
@@ -5501,11 +5503,11 @@ function entryTable(g,rows){
   const tot=grpHours(g,rows);
   if(g==="crew"){const b=rows.map(c=>{const w=worker(c.workerId);return `<tr><td>${esc(w?.name||"?")}</td><td class="muted">${esc(w?.profession||"")}</td><td class="num">${c.from&&c.to?`${c.from}–${c.to}`:"—"}</td><td class="num r">${c.from&&c.to?c.brk:"—"}</td><td class="num r">${h(hours(c))}</td></tr>`}).join("");
     return tbl(["Pracovník","Profesia","Čas","Prest. min","Hod."],[0,0,0,1,1],b,`Spolu ${rows.length} ${pl(rows.length,"pracovník","pracovníci","pracovníkov")}`,tot,5)}
-  if(g==="mach"){const b=rows.map(c=>{return `<tr><td>${esc(machName(c))}</td><td class="muted">${esc(machType(c))}</td><td class="num r">${h(+c.hours||0)}</td></tr>`}).join("");
-    return tbl(["Stroj","Druh","Hod."],[0,0,1],b,`Spolu ${rows.length} ${pl(rows.length,"stroj","stroje","strojov")}`,tot,3)}
+  if(g==="mach"){const tm=rows.some(c=>c.from&&c.to);const b=rows.map(c=>{return `<tr><td>${esc(machName(c))}</td><td class="muted">${esc(machType(c))}</td>${tm?`<td class="num">${c.from&&c.to?`${c.from}–${c.to}`:"—"}</td><td class="num r">${c.from&&c.to?c.brk:"—"}</td>`:""}<td class="num r">${h(hours(c))}</td></tr>`}).join("");
+    return tbl(["Stroj","Druh",...(tm?["Čas","Prest. min"]:[]),"Hod."],[0,0,...(tm?[0,1]:[]),1],b,`Spolu ${rows.length} ${pl(rows.length,"stroj","stroje","strojov")}`,tot,tm?5:3)}
   const n=headCount(rows),isC=g==="crewC";
-  const tm=isC&&rows.some(c=>c.from&&c.to);
-  const b=rows.map(c=>`<tr><td>${esc(c.label||(isC?"Pracovníci":"Stroje"))}</td><td class="num r">${+c.count||0}</td>${tm?`<td class="num">${c.from&&c.to?`${c.from}–${c.to}${+c.brk?` <span class="muted">(${c.brk} min)</span>`:""}`:"—"}</td>`:""}<td class="num r">${h(isC?hours(c):+c.hours||0)}</td><td class="num r">${h(GROUPS[g].hrs(c))}</td></tr>`).join("");
+  const tm=rows.some(c=>c.from&&c.to);
+  const b=rows.map(c=>`<tr><td>${esc(c.label||(isC?"Pracovníci":"Stroje"))}</td><td class="num r">${+c.count||0}</td>${tm?`<td class="num">${c.from&&c.to?`${c.from}–${c.to}${+c.brk?` <span class="muted">(${c.brk} min)</span>`:""}`:"—"}</td>`:""}<td class="num r">${h(hours(c))}</td><td class="num r">${h(GROUPS[g].hrs(c))}</td></tr>`).join("");
   return tbl([isC?"Profesia":"Druh stroja","Počet",...(tm?["Čas (prestávka)"]:[]),isC?"Hod. / os.":"Hod. / ks","Hod. spolu"],[0,1,...(tm?[0]:[]),1,1],b,
     isC?`Spolu ${n} ${pl(n,"pracovník","pracovníci","pracovníkov")}`:`Spolu ${n} ${pl(n,"stroj","stroje","strojov")}`,tot,tm?5:4)
 }
@@ -5560,6 +5562,10 @@ function diaryForm(p,e){
     <div class="row"><button class="btn primary" type="submit">Uložiť záznam</button><button type="button" class="btn ghost" data-a="cancel">Zrušiť</button></div>
   </form>`;
 }
+/* čas v riadku: od – do s prestávkou, alebo len hodiny */
+function tFields(c,id,lbl){return c.from!==undefined?`<label>Od<input type="time" data-f="from" id="${id("f")}" value="${c.from}"></label><label>Do<input type="time" data-f="to" id="${id("t")}" value="${c.to}"></label>
+    <label>Prest. min<input type="number" min="0" step="5" data-f="brk" id="${id("b")}" value="${c.brk}"></label>`
+    :`<label>${lbl}<input type="number" min="0" max="24" step="0.25" data-f="hours" id="${id("h")}" value="${c.hours}"></label>`}
 function rowHTML(g,c,i){
   const del=`<button type="button" class="x" data-a="delRow" data-g="${g}" data-i="${i}" aria-label="Odstrániť riadok">×</button>`;
   const id=f=>`${g}_${f}_${i}`;
@@ -5573,15 +5579,13 @@ function rowHTML(g,c,i){
     const o=(S.machines||[]).map(m=>`<option value="${m.id}" ${!c.ext&&!isNew&&m.id===c.machineId?"selected":""}>${esc(m.name)}</option>`).join("")
       +(xs.length?`<optgroup label="Cudzie stroje na tejto stavbe">${xs.map(x=>`<option value="x:${esc(x)}" ${!isNew&&c.ext===x?"selected":""}>${esc(x)}</option>`).join("")}</optgroup>`:"")
       +`<option value="__new" ${isNew?"selected":""}>✎ Iný stroj – dopísať…</option>`;
-    return `<div class="mrow" data-i="${i}"><label class="wsel">Stroj<select data-f="machineId" id="${id("m")}">${o}</select>
+    return `<div class="mrow ${c.from!==undefined?"tm":""}" data-i="${i}"><label class="wsel">Stroj<select data-f="machineId" id="${id("m")}">${o}</select>
       ${isNew?`<input data-f="ext" id="${id("x")}" value="${esc(c.ext||"")}" placeholder="napr. Rýpadlo EZ80 (KLC s.r.o.)" style="margin-top:6px">`:""}</label>
-      <label>Hodiny<input type="number" min="0" step="0.25" data-f="hours" id="${id("h")}" value="${c.hours}"></label>${del}</div>`}
+      ${tFields(c,id,"Hodiny")}${del}</div>`}
   const isC=g==="crewC";
-  return `<div class="crow ${isC&&c.from!==undefined?"tm":""}" data-i="${i}"><label class="wsel">${isC?"Profesia (nepovinné)":"Druh stroja (nepovinné)"}<input data-f="label" id="${id("l")}" value="${esc(c.label)}" placeholder="${isC?"napr. Murári":"napr. Rýpadlo"}" list="${isC?"profList":"machList"}"></label>
+  return `<div class="crow ${c.from!==undefined?"tm":""}" data-i="${i}"><label class="wsel">${isC?"Profesia (nepovinné)":"Druh stroja (nepovinné)"}<input data-f="label" id="${id("l")}" value="${esc(c.label)}" placeholder="${isC?"napr. Murári":"napr. Rýpadlo"}" list="${isC?"profList":"machList"}"></label>
     <label>Počet<input type="number" min="0" step="1" data-f="count" id="${id("c")}" value="${c.count}"></label>
-    ${isC&&c.from!==undefined?`<label>Od<input type="time" data-f="from" id="${id("f")}" value="${c.from}"></label><label>Do<input type="time" data-f="to" id="${id("t")}" value="${c.to}"></label>
-    <label>Prest. min<input type="number" min="0" step="5" data-f="brk" id="${id("b")}" value="${c.brk}"></label>`
-    :`<label>${isC?"Hod. / os.":"Hod. / ks"}<input type="number" min="0" step="0.25" data-f="hours" id="${id("h")}" value="${c.hours}"></label>`}${del}</div>`
+    ${tFields(c,id,isC?"Hod. / os.":"Hod. / ks")}${del}</div>`
 }
 function readDraft(){document.querySelectorAll("[data-grp]").forEach(box=>{const g=box.dataset.grp;
   box.querySelectorAll("[data-i]").forEach(r=>{const i=+r.dataset.i,row=view.draft[g][i];if(!row)return;
@@ -5934,7 +5938,7 @@ function modeFields(pre,crew,mach,time,temp){time=time||(crew==="count"?"hours":
   const radios=(name,M,cur,sub)=>Object.entries(M).map(([k,l])=>`<label class="radio"><input type="radio" name="${pre}${name}" value="${k}" ${cur===k?"checked":""}><span><b>${l}</b><br><span class="muted">${sub[k]}</span></span></label>`).join("");
   return `<fieldset class="modes"><legend>Pracovníci v dennom zázname</legend>${Object.entries(CREW_MODES).map(([k,l])=>{const off=false;return `<label class="radio ${off?"dis":""}"><input type="radio" name="${pre}Crew" value="${k}" ${(off?false:crew===k)?"checked":""} ${off?"disabled":""}><span><b>${l}</b><br><span class="muted">${off?"Vyžaduje modul Personalistika":k==="names"?"Meno, príchod, odchod a prestávka každého pracovníka":"Len počet ľudí a hodiny, napr. 4 murári × 8 h"}</span></span></label>`}).join("")}</fieldset>
   <fieldset class="modes"><legend>Stroje a mechanizmy</legend>${Object.entries(MACH_MODES).map(([k,l])=>{const off=false;return `<label class="radio ${off?"dis":""}"><input type="radio" name="${pre}Mach" value="${k}" ${(off?false:mach===k)?"checked":""} ${off?"disabled":""}><span><b>${l}</b><br><span class="muted">${off?"Vyžaduje modul Doprava a logistika":k==="list"?"Konkrétny stroj z číselníka a hodiny":k==="count"?"Len druh, počet strojov a hodiny":"Denný záznam bez strojov"}</span></span></label>`}).join("")}</fieldset>
-  <fieldset class="modes"><legend>Pracovný čas</legend>${radios("Time",TIME_MODES,time,{range:"Príchod, odchod a prestávka – hodiny sa vypočítajú",hours:"Len celkový počet odpracovaných hodín"})}</fieldset>
+  <fieldset class="modes"><legend>Pracovný čas</legend>${radios("Time",TIME_MODES,time,{range:"Príchod, odchod a prestávka pracovníkov aj strojov – hodiny sa vypočítajú",hours:"Len celkový počet hodín pracovníkov a strojov"})}</fieldset>
   <fieldset class="modes"><legend>Teplota dňa</legend>${radios("TempM",TEMP_MODES,temp,{avg:"Jedna priemerná teplota dňa",range:"Najnižšia a najvyššia teplota dňa"})}</fieldset>`
 }
 function settingsHTML(p){
@@ -6524,7 +6528,7 @@ const numIn=v=>+String(v??"").replace(/\s/g,"").replace(",",".")||0;
 function econAuto(p){const es=S.diary.filter(d=>d.projectId===p.id);let ph=0,pc=0,cntH=0,mh=0,mc=0;
   es.forEach(e=>{(e.crew||[]).forEach(c=>{const hh=hours(c);ph+=hh;pc+=hh*workerRate(worker(c.workerId))});
     (e.crewC||[]).forEach(c=>{const hh=GROUPS.crewC.hrs(c);ph+=hh;cntH+=hh});
-    (e.mach||[]).forEach(c=>{const hh=+c.hours||0,mm=machine(c.machineId);mh+=hh;mc+=hh*(mm?.rate||0)+(mm?.rateDay||0)});
+    (e.mach||[]).forEach(c=>{const hh=hours(c),mm=machine(c.machineId);mh+=hh;mc+=hh*(mm?.rate||0)+(mm?.rateDay||0)});
     (e.machC||[]).forEach(c=>{mh+=GROUPS.machC.hrs(c)})});
   const jobs=(S.jobs||[]).filter(j=>j.projectId===p.id),jc=jobs.reduce((s,j)=>s+jobCennik(j),0),jh=jobs.reduce((s,j)=>s+jobHours(j)*Math.max(1,(j.machines||[]).length),0);
   const cntRate=numIn(p.cntRate),cc=cntH*cntRate;   /* hodiny zapísané počtom pracovníkov × priemerný hodinový náklad zadaný v Ekonomike */
