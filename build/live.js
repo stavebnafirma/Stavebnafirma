@@ -205,11 +205,22 @@ async function afterLogin(u){authUser=u;lsSet("sf-uid",u.id);view={screen:"home"
     if(!pick){view={screen:"home",auth:"pick"};render();return}
     await openTenant(pick.tenant_id)}
   catch(e){console.error(e);if(isNetErr(e)&&await openFromCache())return;view={screen:"home",auth:"login",loginErr:"Prihlásenie zlyhalo: "+errText(e)};render()}}
+/* obnovenie stránky: vráti používateľa na kartu, kde bol (platí v tej istej záložke prehliadača) */
+const NAV_KEYS=["screen","projectId","tab","area","pTab","dTab","dbTab","firmTab","rTab","taskTab","vehId"];
+const NAV_SCREENS=["home","project","firma","personal","workers","doprava","pozicovna","howto","platform"];
+function navSave(){try{if(!me||!TID||view.auth||!NAV_SCREENS.includes(view.screen))return;const o={};NAV_KEYS.forEach(k=>{if(view[k]!=null&&view[k]!=="")o[k]=view[k]});
+  sessionStorage.setItem("sf-nav",JSON.stringify({tid:TID,uid:me.id,v:o}))}catch(e){}}
+function navRestore(tid){try{const x=JSON.parse(sessionStorage.getItem("sf-nav")||"null");if(!x||x.tid!==tid||x.uid!==me.id)return null;const v=x.v||{};
+  if(!NAV_SCREENS.includes(v.screen))return null;
+  if(v.screen==="project"&&!S.projects.some(p=>p.id===v.projectId))return null;
+  if(v.vehId&&!(S.machines||[]).some(m=>m.id===v.vehId))delete v.vehId;
+  return v}catch(e){return null}}
+{const _render=render;render=function(){_render();navSave()}}
 async function openTenant(tid){view={screen:"home",auth:"loading"};render();
   await loadTenant(tid);subscribeLive();
   if(!me){view={screen:"home",auth:"login",loginErr:"Do tejto firmy už nemáš prístup."};render();return}
   if(JSON.stringify(profState())!==PSNAP)save();
-  view=needsSetup()?{screen:"setup"}:needsProfile()?{screen:"profile"}:isExternal(me)?externalStart():{screen:startScreen(),tab:"dennik"};render();window.scrollTo(0,0);
+  view=needsSetup()?{screen:"setup"}:needsProfile()?{screen:"profile"}:navRestore(tid)||(isExternal(me)?externalStart():{screen:startScreen(),tab:"dennik"});render();window.scrollTo(0,0);
   if(/[?&]platba=/.test(location.search))afterPaymentReturn();else syncBilling()}
 async function createFirm(name){
   const mods=S.modules||MODS_ALL;const {data:tid,error}=await SB.rpc("create_tenant",{p_name:name,p_modules:mods});if(error)throw error;

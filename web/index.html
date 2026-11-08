@@ -1364,11 +1364,22 @@ async function afterLogin(u){authUser=u;lsSet("sf-uid",u.id);view={screen:"home"
     if(!pick){view={screen:"home",auth:"pick"};render();return}
     await openTenant(pick.tenant_id)}
   catch(e){console.error(e);if(isNetErr(e)&&await openFromCache())return;view={screen:"home",auth:"login",loginErr:"Prihlásenie zlyhalo: "+errText(e)};render()}}
+/* obnovenie stránky: vráti používateľa na kartu, kde bol (platí v tej istej záložke prehliadača) */
+const NAV_KEYS=["screen","projectId","tab","area","pTab","dTab","dbTab","firmTab","rTab","taskTab","vehId"];
+const NAV_SCREENS=["home","project","firma","personal","workers","doprava","pozicovna","howto","platform"];
+function navSave(){try{if(!me||!TID||view.auth||!NAV_SCREENS.includes(view.screen))return;const o={};NAV_KEYS.forEach(k=>{if(view[k]!=null&&view[k]!=="")o[k]=view[k]});
+  sessionStorage.setItem("sf-nav",JSON.stringify({tid:TID,uid:me.id,v:o}))}catch(e){}}
+function navRestore(tid){try{const x=JSON.parse(sessionStorage.getItem("sf-nav")||"null");if(!x||x.tid!==tid||x.uid!==me.id)return null;const v=x.v||{};
+  if(!NAV_SCREENS.includes(v.screen))return null;
+  if(v.screen==="project"&&!S.projects.some(p=>p.id===v.projectId))return null;
+  if(v.vehId&&!(S.machines||[]).some(m=>m.id===v.vehId))delete v.vehId;
+  return v}catch(e){return null}}
+{const _render=render;render=function(){_render();navSave()}}
 async function openTenant(tid){view={screen:"home",auth:"loading"};render();
   await loadTenant(tid);subscribeLive();
   if(!me){view={screen:"home",auth:"login",loginErr:"Do tejto firmy už nemáš prístup."};render();return}
   if(JSON.stringify(profState())!==PSNAP)save();
-  view=needsSetup()?{screen:"setup"}:needsProfile()?{screen:"profile"}:isExternal(me)?externalStart():{screen:startScreen(),tab:"dennik"};render();window.scrollTo(0,0);
+  view=needsSetup()?{screen:"setup"}:needsProfile()?{screen:"profile"}:navRestore(tid)||(isExternal(me)?externalStart():{screen:startScreen(),tab:"dennik"});render();window.scrollTo(0,0);
   if(/[?&]platba=/.test(location.search))afterPaymentReturn();else syncBilling()}
 async function createFirm(name){
   const mods=S.modules||MODS_ALL;const {data:tid,error}=await SB.rpc("create_tenant",{p_name:name,p_modules:mods});if(error)throw error;
@@ -6566,7 +6577,9 @@ function econHTML(p){const A=econAuto(p),costs=costsOf(p).sort((a,b)=>(b.date||"
   const auto={pers:(pers?A.pc:0)+A.cc,dop:(dop?A.jc:0)+A.mc};const tot=k=>(man[k]||0)+(auto[k]||0),all=COST_CATS.reduce((s,[k])=>s+tot(k),0);
   const B=p.budget?p.budget.sum:0,T=p.budget&&p.invoices&&p.invoices.length?invTotals(p):{lock:0,open:0},inv=T.lock,res=inv-all;
   const bar=(v,max,cls)=>`<div class="ecbar"><i class="${cls||""}" style="width:${max>0?Math.min(100,v/max*100):0}%"></i></div>`;
-  const X=view.ec||{},flt=X.cat||"";const shown=costs.filter(c=>!flt||c.cat===flt);
+  const X=view.ec||{},flt=X.cat||"";const filt=costs.filter(c=>!flt||c.cat===flt);
+  const lim=X.lim!=null?X.lim:(()=>{try{const v=localStorage.getItem("sf-ecLim");return v==="-1"?0:[10,50,100].includes(+v)?+v:10}catch(e){return 10}})();   /* počet zobrazených dokladov: 10 / 50 / 100 / všetky (0) */
+  const shown=lim?filt.slice(0,lim):filt;
   const D=view.ecEdit?(view.ecEdit==="__new"?{cat:flt||"mat",date:todayIso()}:costs.find(c=>c.id===view.ecEdit)||{}):null;
   const form=D?`<form class="card stack" id="ecForm"><div class="entry-head"><h3>${view.ecEdit==="__new"?"Nový náklad":"Upraviť náklad"}</h3><button type="button" class="btn small ghost" data-a="ecCancel">Zrušiť</button></div>
       <div class="seg ecseg" role="radiogroup" aria-label="Kategória">${COST_CATS.map(([k,l])=>`<label><input type="radio" name="ecCat" value="${k}" ${D.cat===k?"checked":""}><span>${l}</span></label>`).join("")}</div>
@@ -6593,8 +6606,9 @@ function econHTML(p){const A=econAuto(p),costs=costsOf(p).sort((a,b)=>(b.date||"
       <div class="card"><div class="muted">Výsledok (fakturované − náklady)</div><div class="total num" style="color:var(--${res>=0?"ok":"bad"})">${eur(res)}</div></div></div>
     ${B?`<div class="card stack"><div class="eyebrow">Čerpanie</div><div class="ecvs"><span>Vyfakturované</span>${bar(inv,B,"ok")}<span class="num">${B?nf1(Math.round(inv/B*1000)/10):0} %</span><span>Náklady</span>${bar(all,B,all>inv?"bad":"")}<span class="num">${nf1(Math.round(all/B*1000)/10)} %</span></div></div>`:""}
     ${form}
-    <div class="card stack"><div class="entry-head ecdh"><div class="eyebrow">Doklady</div><div class="ecdh-r">${ed&&!D?`<button class="btn small primary" data-a="ecNew">+ Pridať náklad</button>`:""}<select id="ecFlt" aria-label="Filtrovať kategóriu"><option value="">všetky kategórie</option>${COST_CATS.map(([k,l])=>`<option value="${k}" ${flt===k?"selected":""}>${l}</option>`).join("")}</select></div></div>
+    <div class="card stack"><div class="entry-head ecdh"><div class="eyebrow">Doklady</div><div class="ecdh-r"><select id="ecLim" aria-label="Počet zobrazených dokladov">${[[10,"posledných 10"],[50,"posledných 50"],[100,"posledných 100"],[0,"všetky"]].map(([n,l])=>`<option value="${n}" ${lim===n?"selected":""}>${l}</option>`).join("")}</select>${ed&&!D?`<button class="btn small primary" data-a="ecNew">+ Pridať náklad</button>`:""}<select id="ecFlt" aria-label="Filtrovať kategóriu"><option value="">všetky kategórie</option>${COST_CATS.map(([k,l])=>`<option value="${k}" ${flt===k?"selected":""}>${l}</option>`).join("")}</select></div></div>
       ${list?`<ul class="doclist eclist">${list}</ul>`:`<div class="muted">${costs.length?"V tejto kategórii nie sú žiadne doklady.":"Zatiaľ žiadne ručne zadané náklady."}</div>`}
+      ${shown.length<filt.length?`<div class="row muted" style="font-size:13px">Zobrazených ${shown.length} najnovších z ${filt.length} dokladov.<button class="btn small ghost" data-a="ecAll">Zobraziť všetky</button></div>`:""}
       ${costs.length?`<div class="row"><button class="btn small ghost" data-a="ecXls">Export nákladov do Excelu</button></div>`:""}</div></div>`}
 function ecXLSX(p){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.");return}const A=econAuto(p);
   const rows=costsOf(p).sort((a,b)=>(a.date||"").localeCompare(b.date||"")).map(c=>[d2(c.date),costCat(c.cat),c.supplier||"",c.docNo||"",c.desc||"",r2(numIn(c.amount))]);
@@ -6604,6 +6618,7 @@ function ecXLSX(p){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.")
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Náklady");offerFile(diaryFile(p,"naklady").replace("Stavebny_dennik_","Naklady_")+".xlsx",XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me||view.screen!=="project")return;const a=b.dataset.a;if(!/^ec[A-Z]/.test(a))return;
   const p=projCtx();if(!p)return;const c=(S.costs||[]).find(x=>x.id===(b.dataset.id||view.ecEdit));
+  if(a==="ecAll"){view.ec={...(view.ec||{}),lim:0};try{localStorage.setItem("sf-ecLim","-1")}catch(e){}render();return}
   if(a==="ecRateEdit"){view.cntRateEdit=true;render();$("#cntRate")?.focus();return}
   if(a==="ecRateNo"){view.cntRateEdit=false;render();return}
   if(a==="ecRateSave"){if(!can(p,"econ.edit"))return;const v=numIn($("#cntRate")?.value),PR={...(p.profRates||{})};let bad=v<0||v>500;
@@ -6616,6 +6631,7 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
   else if(a==="ecDelYes"&&c&&can(p,"econ.edit")){if(c.file)FILESTORE.del(c.file.path).catch(()=>{});S.costs=S.costs.filter(x=>x.id!==c.id);view.ecEdit=null;save();toast("Náklad odstránený");render()}
   else if(a==="ecOpen"&&c&&c.file)docOpen(c.file,false);else if(a==="ecXls")ecXLSX(p)});
 document.addEventListener("change",ev=>{if(!me)return;const t=ev.target;if(t.id==="ecFlt"){view.ec={...(view.ec||{}),cat:t.value};render()}
+  if(t.id==="ecLim"){const n=+t.value||0;view.ec={...(view.ec||{}),lim:n};try{localStorage.setItem("sf-ecLim",String(n||-1))}catch(e){}render()}
   else if(t.id==="ecFile"){const z=t.closest(".docdrop");if(z)z.querySelector("span").textContent=t.files[0]?t.files[0].name:"Odfotiť alebo priložiť doklad (fotka, PDF)"}});
 document.addEventListener("submit",async ev=>{if(ev.target.id!=="ecForm"||!me)return;ev.preventDefault();const p=projCtx();if(!p||!can(p,"econ.edit")||view.ecBusy)return;
   const amt=numIn($("#ecAmt").value);if(!amt){toast("Zadaj sumu bez DPH");return}
