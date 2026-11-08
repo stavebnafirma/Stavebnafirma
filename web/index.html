@@ -5324,7 +5324,7 @@ function pdfDiaryEntries(doc,es,y){const W=doc.internal.pageSize.getWidth(),L=14
     if(AR.length&&!e.areaId){doc.setFont("DVC","normal");doc.setFontSize(8.5);doc.text(wx,R-2,y+2,{align:"right"});y+=2}   /* záznam za celú stavbu: stačí nadpis dňa */
     else{if(dz)doc.setFillColor(222,241,228);else if(xs)doc.setFillColor(221,233,248);else doc.setFillColor(243,244,245);doc.rect(L,y,R-L,8,"F");doc.setFont("DVC","bold");doc.setFontSize(10.5);doc.text(plain(AR.length?areaName(P0,e.areaId):fmtDate(e.date)+(e.areaId?` · ${areaName(S.projects.find(x=>x.id===e.projectId),e.areaId)}`:"")),L+2,y+5.5);
     doc.setFont("DVC","normal");doc.setFontSize(8.5);doc.text(wx,R-2,y+5.5,{align:"right"});y+=11}
-    doc.setFontSize(8.5);doc.setTextColor(90);doc.text(plain(`Zapísal: ${user(e.authorId)?.name||""}${xs?" (externý stavbyvedúci)":""}${e.createdAt?` · ${dt(e.createdAt)}`:""}${e.updatedAt&&e.updatedAt!==e.createdAt?` · upravené ${dt(e.updatedAt)}`:""}${e.locked?` · podpísal a uzamkol ${user(e.lockedBy)?.name||""}${e.lockedAt?` ${dt(e.lockedAt)}`:""}`:""}`),L,y);doc.setTextColor(0);y+=5;
+    doc.setFontSize(8.5);doc.setTextColor(90);doc.text(plain(`Zapísal: ${user(e.authorId)?.name||""}${xs?" (externý stavbyvedúci)":""}${e.locked?` · podpísal a uzamkol ${user(e.lockedBy)?.name||""}`:""}`),L,y);doc.setTextColor(0);y+=5;
     doc.setFontSize(9.5);const wt=doc.splitTextToSize(plain(e.work||""),R-L);need(wt.length*4.6);doc.text(wt,L,y);y+=wt.length*4.6+2;
     const blk=(title,lines)=>{if(!lines.length)return;doc.setFont("DVC","bold");doc.setFontSize(8.8);need(8);doc.text(title,L,y);y+=4.3;doc.setFont("DVC","normal");
       lines.forEach(t=>{const ls=doc.splitTextToSize(plain("• "+t),R-L-4);need(ls.length*4);doc.text(ls,L+3,y);y+=ls.length*4});y+=1.5};
@@ -5407,10 +5407,10 @@ function diaryRangePDF(p){const es=diaryRangeEntries(p),X=view.dex||{};if(!es.le
   const doc=newPdf("portrait");if(!doc)return;pdfFirmHeader(doc,"Denné záznamy stavebného denníka",plain(`${p.name} · ${X.from?d2(X.from):"od začiatku"} – ${X.to?d2(X.to):"dnes"}`));
   pdfDiaryEntries(doc,es,28);pdfDiaryFooter(doc,p,`denné záznamy ${X.from||""} – ${X.to||""}`);offerFile(diaryFile(p,`${X.from||"zaciatok"}_${X.to||todayIso()}`)+".pdf",doc.output("arraybuffer"))}
 function diaryRangeXLSX(p){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.");return}const es=diaryRangeEntries(p);if(!es.length){toast("V zvolenom období nie sú žiadne denné záznamy");return}
-  const head=["Dátum","Zapísané (dátum a čas)","Zapísal","Počasie","Teplota","Vykonané práce","Pracovníci","Hodín pracovníkov","Stroje","Hodín strojov","Zápisy stavebného dozoru","Videné stavebným dozorom","Uzamknuté"];
-  const rows=es.map(e=>[d2(e.date),entryWritten(e),user(e.authorId)?.name||"",e.weather||"",tempText(e),e.work||"",entryPeopleText(e).join("\n"),r2(["crew","crewC"].reduce((s,g)=>s+grpHours(g,e[g]),0)),entryMachText(e).join("\n"),r2(["mach","machC"].reduce((s,g)=>s+grpHours(g,e[g]),0)),
-    (e.dozorNotes||[]).map(n=>`${user(n.by)?.name||""} ${dt(n.at)}: ${n.text}`).join("\n"),diarySeenText(e).join("\n"),e.locked?`${user(e.lockedBy)?.name||""}${e.lockedAt?" "+dt(e.lockedAt):""}`:""]);
-  const ws=XLSX.utils.aoa_to_sheet([[`Stavebný denník – ${p.name}`],[],head,...rows]);ws["!cols"]=[10,18,18,12,8,60,40,10,30,10,40,40,22].map(w=>({wch:w}));
+  const head=["Dátum","Zapísal","Počasie","Teplota","Vykonané práce","Pracovníci","Hodín pracovníkov","Stroje","Hodín strojov","Zápisy stavebného dozoru","Videné stavebným dozorom","Uzamknuté"];
+  const rows=es.map(e=>[d2(e.date),user(e.authorId)?.name||"",e.weather||"",tempText(e),e.work||"",entryPeopleText(e).join("\n"),r2(["crew","crewC"].reduce((s,g)=>s+grpHours(g,e[g]),0)),entryMachText(e).join("\n"),r2(["mach","machC"].reduce((s,g)=>s+grpHours(g,e[g]),0)),
+    (e.dozorNotes||[]).map(n=>`${user(n.by)?.name||""} ${dt(n.at)}: ${n.text}`).join("\n"),diarySeenText(e).join("\n"),e.locked?(user(e.lockedBy)?.name||""):""]);
+  const ws=XLSX.utils.aoa_to_sheet([[`Stavebný denník – ${p.name}`],[],head,...rows]);ws["!cols"]=[10,18,12,10,60,40,10,30,10,40,40,22].map(w=>({wch:w}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Denné záznamy");const X=view.dex||{};offerFile(diaryFile(p,`${X.from||"zaciatok"}_${X.to||todayIso()}`)+".xlsx",XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
 function diaryExportHTML(p,n){const X=view.dex||(view.dex={from:"",to:todayIso()});
   return `<details class="card dexp"><summary><b>Export stavebného denníka</b> <span class="muted">· ${n} ${pl(n,"záznam","záznamy","záznamov")}</span></summary>
