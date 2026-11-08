@@ -184,6 +184,9 @@ async function boot(){
   if(!SB){document.getElementById("app").innerHTML=`<div class="login"><div class="err">Nepodarilo sa načítať pripojenie k databáze. Skontroluj internet a obnov stránku.</div></div>`;return}
   view={screen:"home",auth:"loading"};render();
   SB.auth.onAuthStateChange((ev,s)=>{if(ev==="PASSWORD_RECOVERY"){me=null;TID=null;view={screen:"home",auth:"newpw"};render()}});
+  /* odkaz z e-mailu (pozvánka / nové heslo): token sa overí až po kliknutí na tlačidlo – kontrola odkazov v e-mailových schránkach ho tak nespotrebuje */
+  {const q=new URLSearchParams(location.search),th=q.get("pozvanka")||q.get("obnova");
+    if(th){view={screen:"home",auth:"otp",otpType:q.get("pozvanka")?"invite":"recovery",otpHash:th,otpEmail:q.get("e")||""};render();return}}
   const hash=location.hash||"";if(/type=recovery/.test(hash))return;
   if(/type=invite/.test(hash)){view={screen:"home",auth:"newpw",invite:true};render();return}   /* odkaz z pozvánky: najprv si nastaví heslo */
   if(/error_description=/.test(hash)){const m=decodeURIComponent((hash.match(/error_description=([^&]*)/)||[])[1]||"").replace(/\+/g," ");history.replaceState(null,"",location.pathname);view={screen:"home",auth:"login",loginErr:/expired/i.test(m)?"Odkaz v e-maile už neplatí. Prihlás sa alebo si vyžiadaj nový.":m};render();return}
@@ -226,6 +229,10 @@ function loginHTML(){
   if(A==="register")return registerHTML();
   if(A==="checkmail")return authShell("Skontroluj e-mail","Registrácia",`<div class="card stack"><div>Na adresu <b>${esc(view.regEmail||"")}</b> sme poslali odkaz na overenie. Klikni naň a potom sa prihlás.</div>
     <div class="muted" style="font-size:13px">Ak e-mail neprišiel do pár minút, pozri priečinok Spam alebo Hromadné.</div><button class="btn" data-a="authGo" data-to="login" style="align-self:flex-start">Na prihlásenie</button></div>`);
+  if(A==="otp"){const inv=view.otpType==="invite";return authShell(inv?"Prijatie pozvánky":"Nové heslo",inv?"Pozvánka do aplikácie":"Obnovenie hesla",`<div class="card stack">
+      <div>${inv?"Vitaj v aplikácii Stavebná firma. Pokračuj a nastav si heslo, ktorým sa budeš odteraz prihlasovať.":"Pokračuj a nastav si nové heslo."}${view.otpEmail?`<br><span class="muted">Účet: <b>${esc(view.otpEmail)}</b></span>`:""}</div>
+      ${view.loginErr?`<div class="err">${esc(view.loginErr)}</div>`:""}
+      <button class="btn primary" data-a="otpGo" ${view.otpBusy?"disabled":""} style="align-self:flex-start">${view.otpBusy?"Overujem odkaz…":inv?"Prijať pozvánku a nastaviť heslo":"Nastaviť nové heslo"}</button></div>`)}
   if(A==="newpw")return authShell(view.invite?"Nastav si heslo":"Nové heslo",view.invite?"Prijatie pozvánky":"Obnovenie hesla",`<form class="card stack" id="newPwForm">${view.invite?`<div class="muted">Vitaj v aplikácii Stavebná firma. Zvoľ si heslo, ktorým sa budeš odteraz prihlasovať. Po uložení sa ti otvorí firma, ktorá ťa pozvala.</div>`:""}
       <div class="grid2"><label>Nové heslo<input id="npPw" type="password" required minlength="8" autocomplete="new-password"></label><label>Heslo znova<input id="npPw2" type="password" required minlength="8" autocomplete="new-password"></label></div>
       ${view.loginErr?`<div class="err">${esc(view.loginErr)}</div>`:""}<button class="btn primary" type="submit">Uložiť heslo a prihlásiť sa</button></form>`);
@@ -272,13 +279,21 @@ document.addEventListener("submit",ev=>{const f=ev.target.id;if(!["loginForm","r
       if(data.session&&data.user){await afterLogin(data.user);return}
       view={screen:"home",auth:"checkmail",regEmail:email};render();window.scrollTo(0,0)}
     else if(f==="newPwForm"){const a=$("#npPw").value,b=$("#npPw2").value;if(a.length<8){view.loginErr="Heslo musí mať aspoň 8 znakov.";render();return}if(a!==b){view.loginErr="Heslá sa nezhodujú.";render();return}
-      const {data,error}=await SB.auth.updateUser({password:a});if(error){view.loginErr=AUTH_ERR(error.message);render();return}
+      const {data,error}=await SB.auth.updateUser({password:a,data:{pw_set:true}});if(error){view.loginErr=AUTH_ERR(error.message);render();return}
       history.replaceState(null,"",location.pathname);toast("Heslo zmenené");await afterLogin(data.user)}
   }catch(e){console.error(e);view.loginErr=errText(e);render()}})()},true);
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b)return;const a=b.dataset.a;
   if(a==="forgot"){ev.stopImmediatePropagation();const em=($("#loginEmail")&&$("#loginEmail").value.trim())||"";
     if(!em){view.loginErr="Najprv napíš svoj e-mail do políčka E-mail a potom klikni na Zabudnuté heslo.";render();return}
-    SB.auth.resetPasswordForEmail(em,{redirectTo:location.origin}).then(({error})=>{view.loginEmail=em;if(error){view.loginErr=AUTH_ERR(error.message);view.loginOk=""}else{view.loginErr="";view.loginOk=`Ak účet ${em} existuje, prišiel naň e-mail s odkazom na nové heslo.`}render()})}
+    /* nové heslo posiela naša funkcia (odkaz cez tlačidlo v aplikácii); ak by nebola dostupná, použije sa e-mail Supabase */
+    SB.functions.invoke("notify",{body:{action:"reset",email:em}}).then(({data,error})=>error||!data||data.error?SB.auth.resetPasswordForEmail(em,{redirectTo:location.origin}):{error:null}).then(({error})=>{view.loginEmail=em;if(error){view.loginErr=AUTH_ERR(error.message);view.loginOk=""}else{view.loginErr="";view.loginOk=`Ak účet ${em} existuje, prišiel naň e-mail s odkazom na nové heslo.`}render()})}
+  else if(a==="otpGo"){ev.stopImmediatePropagation();if(view.otpBusy)return;view.otpBusy=true;view.loginErr="";render();
+    (async()=>{const {otpType:type,otpHash:token_hash,otpEmail:em}=view;
+      try{await SB.auth.signOut({scope:"local"}).catch(()=>{});me=null;TID=null;
+        const {error}=await SB.auth.verifyOtp({type,token_hash});if(error)throw error;
+        history.replaceState(null,"",location.pathname);view={screen:"home",auth:"newpw",invite:type==="invite"};render()}
+      catch(e){console.error(e);history.replaceState(null,"",location.pathname);
+        view={screen:"home",auth:"login",loginEmail:em,loginErr:"Odkaz v e-maile už neplatí alebo bol použitý. Skontroluj e-mail nižšie a klikni na Zabudnuté heslo – príde ti nový odkaz."};render()}})()}
   else if(a==="pickTenant"){ev.stopImmediatePropagation();openTenant(b.dataset.id).catch(e=>{view={screen:"home",auth:"login",loginErr:errText(e)};render()})}
   else if(a==="switchTenant"){ev.stopImmediatePropagation();saveQ.then(()=>{view={screen:"home",auth:"pick"};me=null;render()})}
   else if(a==="logout"){ev.stopImmediatePropagation();logout()}},true);

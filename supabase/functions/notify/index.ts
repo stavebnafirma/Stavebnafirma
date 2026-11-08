@@ -120,6 +120,30 @@ const addMonths = (d: string, n: number) => { const x = new Date(d + "T12:00"); 
 const addDays = (d: string, n: number) => { const x = new Date(d + "T12:00"); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
 const pl = (n: number, a: string, b: string, c: string) => (n === 1 ? a : n >= 2 && n <= 4 ? b : c);
 const nf = (n: number) => Math.round(n).toLocaleString("sk-SK");
+const appLink = (kind: string, hash: string | undefined, email: string) => hash ? `${APP}/?${kind}=${encodeURIComponent(hash)}&e=${encodeURIComponent(email)}` : "";
+
+// ---------- zabudnuté heslo (bez prihlásenia) ----------
+async function doReset(body: any) {
+  const email = String(body.email || "").trim().toLowerCase();
+  if (!okEmail(email)) return json({ error: "Neplatný e-mail." }, 400);
+  const { data: rl, error } = await admin.auth.admin.generateLink({ type: "recovery", email });
+  if (error || !rl?.user) return json({ ok: true });            // neprezradí, či účet existuje
+  const uid = rl.user.id;
+  const since = new Date(Date.now() - 36e5).toISOString();
+  const { count } = await admin.from("mail_log").select("id", { count: "exact", head: true }).eq("user_id", uid).eq("kind", "reset").gte("created_at", since);
+  if ((count || 0) >= 3) return json({ ok: true });
+  await send({
+    to: [{ email }], fromName: "Stavebná firma", subject: "Nové heslo do aplikácie Stavebná firma",
+    mail: {
+      title: "Nastavenie nového hesla",
+      intro: `Niekto (pravdepodobne ty) požiadal o nové heslo k účtu ${email}. Klikni na tlačidlo a nastav si nové heslo.`,
+      button: { label: "Nastaviť nové heslo", url: appLink("obnova", rl.properties?.hashed_token, email) },
+      after: "Odkaz platí 24 hodín a dá sa použiť raz. Ak si o nové heslo nežiadal, e-mail ignoruj – heslo ostane nezmenené.",
+    },
+  });
+  await log(null, uid, "reset", 1);
+  return json({ ok: true });
+}
 
 // ---------- pozvánka ----------
 async function doInvite(user: any, body: any) {
@@ -148,10 +172,17 @@ async function doInvite(user: any, body: any) {
   }
   const email = String(inv.email).toLowerCase();
   const reg = `${APP}/?registracia=${encodeURIComponent(email)}`;
+  // odkaz vedie do aplikácie, token sa overí až kliknutím na tlačidlo (kontrola odkazov v Gmaili/Outlooku ho nespotrebuje)
   let link = "", existing = false;
   const { data: gl, error: ge } = await admin.auth.admin.generateLink({ type: "invite", email, options: { redirectTo: APP, data: { name: inv.name || "" } } });
   if (ge) { if (/already|registered|exists/i.test(ge.message)) existing = true; else throw ge; }
-  else link = gl?.properties?.action_link || "";
+  else link = appLink("pozvanka", gl?.properties?.hashed_token, email);
+  if (existing) {
+    // účet už existuje: ak vznikol z pozvánky a heslo si ešte nenastavil, pošle sa odkaz na nastavenie hesla
+    const { data: rl } = await admin.auth.admin.generateLink({ type: "recovery", email });
+    const u: any = rl?.user;
+    if (u && u.invited_at && !u.user_metadata?.pw_set) { existing = false; link = appLink("obnova", rl?.properties?.hashed_token, email); }
+  }
 
   await send({
     to: [{ email, name: inv.name || "" }], fromName: `${firmName} cez Stavebná firma`, replyTo: user.email,
@@ -324,6 +355,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const action = String(body.action || "");
+    if (action === "reset") return await doReset(body);
     if (action === "digest") {
       const key = req.headers.get("x-cron-key") || "";
       const { data: ok } = await admin.rpc("cron_key_ok", { key });
