@@ -4937,7 +4937,7 @@ function pl(n,one,few,many){return n===1?one:(n>=2&&n<=4?few:many)}
 
 /* ---------- Stavebný denník: export celého denníka a surový export záznamov ---------- */
 const memberRoleLabel=r=>({stavbyveduci:"Stavbyvedúci",majster:"Majster",dozor:"Stavebný dozor",extsv:"Externý stavbyvedúci",citanie:"Iba čítanie",spravca:"Správca stavieb",admin:"Administrátor"}[r]||ROLES[r]||r||"");
-function diarySeenText(e){return (e.seen||[]).map(s=>`Videné – Stavebný dozor ${s.name||user(s.by)?.name||""}${s.at?` · ${dt(s.at)}`:""}`)}
+function diarySeenText(e,noTime){return (e.seen||[]).map(s=>`Videné – Stavebný dozor ${s.name||user(s.by)?.name||""}${s.at&&!noTime?` · ${dt(s.at)}`:""}`)}
 function entryPeopleText(e){const out=[];
   (e.crew||[]).forEach(c=>{const w=worker(c.workerId);out.push(`${w?fullName(w):"?"}${w&&w.profession?` (${w.profession})`:""} ${c.from&&c.to?`${c.from}–${c.to}, `:""}${h(hours(c))} h`)});
   (e.crewC||[]).forEach(c=>out.push(`${c.label||"Pracovníci"}: ${+c.count||0} × ${h(hours(c))} h${c.from&&c.to?` (${c.from}–${c.to}${+c.brk?`, prestávka ${c.brk} min`:""})`:""}`));return out}
@@ -4967,10 +4967,10 @@ function pdfDiaryEntries(doc,es,y){const W=doc.internal.pageSize.getWidth(),L=14
     const blk=(title,lines)=>{if(!lines.length)return;doc.setFont("DVC","bold");doc.setFontSize(8.8);need(8);doc.text(title,L,y);y+=4.3;doc.setFont("DVC","normal");
       lines.forEach(t=>{const ls=doc.splitTextToSize(plain("• "+t),R-L-4);need(ls.length*4);doc.text(ls,L+3,y);y+=ls.length*4});y+=1.5};
     blk("Pracovníci",entryPeopleText(e));blk("Stroje a mechanizmy",entryMachText(e));
-    (e.gzNotes||[]).forEach(n=>dozBlk(`Vyjadrenie generálneho zhotoviteľa – ${user(n.by)?.name||""}, ${dt(n.at)}`,n.text,true));
+    (e.gzNotes||[]).forEach(n=>dozBlk(`Vyjadrenie generálneho zhotoviteľa – ${user(n.by)?.name||""}`,n.text,true));
     (e.dozorNotes||[]).forEach(n=>dozBlk(`Zápis stavebného dozoru – ${user(n.by)?.name||""}, ${dt(n.at)}`,n.text));
-    (e.requests||[]).forEach(r=>{blk(`Výzva dozoru na vyjadrenie – ${user(r.by)?.name||""}, ${dt(r.at)}`,[r.text]);if(r.answer)dozBlk(`Vyjadrenie stavebného dozoru – ${user(r.answer.by)?.name||""}, ${dt(r.answer.at)}`,r.answer.text)});
-    const seen=diarySeenText(e);if(seen.length){doc.setFont("DVC","bold");doc.setFontSize(8.8);seen.forEach(t=>{need(5);doc.setTextColor(29,122,74);doc.text(plain(t),L,y);doc.setTextColor(0);y+=4.6})}
+    (e.requests||[]).forEach(r=>{blk(`Výzva dozoru na vyjadrenie – ${user(r.by)?.name||""}`,[r.text]);if(r.answer)dozBlk(`Vyjadrenie stavebného dozoru – ${user(r.answer.by)?.name||""}, ${dt(r.answer.at)}`,r.answer.text)});
+    const seen=diarySeenText(e,true);if(seen.length){doc.setFont("DVC","bold");doc.setFontSize(8.8);seen.forEach(t=>{need(5);doc.setTextColor(29,122,74);doc.text(plain(t),L,y);doc.setTextColor(0);y+=4.6})}
     doc.setFont("DVC","normal");y+=4;doc.setDrawColor(220);doc.line(L,y-2,R,y-2);doc.setDrawColor(0)});
   return y}
 function pdfDiaryFooter(doc,p,label){const n=doc.internal.getNumberOfPages();for(let k=1;k<=n;k++){doc.setPage(k);doc.setFont("DVC","normal");doc.setFontSize(7.5);doc.setTextColor(200,95,25);doc.text("www.stavebnafirma.eu",14,290);doc.setTextColor(110);doc.text(`Strana ${k} / ${n}`,196,290,{align:"right"});doc.setTextColor(0)}}
@@ -5047,7 +5047,7 @@ function diaryRangePDF(p){const es=diaryRangeEntries(p),X=view.dex||{};if(!es.le
 function diaryRangeXLSX(p){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.");return}const es=diaryRangeEntries(p);if(!es.length){toast("V zvolenom období nie sú žiadne denné záznamy");return}
   const head=["Dátum","Zapísal","Počasie","Teplota","Vykonané práce","Pracovníci","Hodín pracovníkov","Stroje","Hodín strojov","Zápisy stavebného dozoru","Videné stavebným dozorom","Uzamknuté"];
   const rows=es.map(e=>[d2(e.date),user(e.authorId)?.name||"",e.weather||"",tempText(e),e.work||"",entryPeopleText(e).join("\n"),r2(["crew","crewC"].reduce((s,g)=>s+grpHours(g,e[g]),0)),entryMachText(e).join("\n"),r2(["mach","machC"].reduce((s,g)=>s+grpHours(g,e[g]),0)),
-    (e.dozorNotes||[]).map(n=>`${user(n.by)?.name||""} ${dt(n.at)}: ${n.text}`).join("\n"),diarySeenText(e).join("\n"),e.locked?(user(e.lockedBy)?.name||""):""]);
+    (e.dozorNotes||[]).map(n=>`${user(n.by)?.name||""} ${dt(n.at)}: ${n.text}`).join("\n"),diarySeenText(e,true).join("\n"),e.locked?(user(e.lockedBy)?.name||""):""]);
   const ws=XLSX.utils.aoa_to_sheet([[`Stavebný denník – ${p.name}`],[],head,...rows]);ws["!cols"]=[10,18,12,10,60,40,10,30,10,40,40,22].map(w=>({wch:w}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Denné záznamy");const X=view.dex||{};offerFile(diaryFile(p,`${X.from||"zaciatok"}_${X.to||todayIso()}`)+".xlsx",XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
 function diaryExportHTML(p,n){const X=view.dex||(view.dex={from:"",to:todayIso()});
