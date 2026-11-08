@@ -17,24 +17,36 @@ const json = (data: unknown, status = 200) =>
 
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 const APP = (() => { let u = (Deno.env.get("APP_URL") || "https://stavebnafirma.eu").trim().replace(/\/+$/, ""); if (!/^https?:\/\//i.test(u)) u = "https://" + u; return u; })();
-const FROM_ADDR = Deno.env.get("SMTP_USER") || "noreply@stavebnafirma.eu";
+const clean = (v: string | undefined) => String(v ?? "").trim().replace(/^(["'])(.*)\1$/s, "$2");
+const FROM_ADDR = clean(Deno.env.get("SMTP_USER")).toLowerCase() || "noreply@stavebnafirma.eu";
 const DAY_LIMIT = 300;          // e-mailov na firmu za 24 hodín
 const MAX_TO = 50;              // príjemcov v jednej správe
 const TASK_KINDS = ["req", "task", "supis"];   // vypína sa voľbou „Výzvy a úlohy“
 const KINDS = ["kd", ...TASK_KINDS];
 
 let transport: any = null;
-function mailer() {
+/* pripojenie k SMTP: heslo a meno sa očistia od medzier a úvodzoviek (častá chyba pri vkladaní do Secrets);
+   ak SMTP_HOST nie je zadaný a server odmietne prihlásenie, skúsi sa aj druhý server Websupportu */
+async function mailer() {
   if (transport) return transport;
-  const pass = Deno.env.get("SMTP_PASS");
+  const raw = Deno.env.get("SMTP_PASS") ?? "";
+  const pass = clean(raw);
   if (!pass) throw new Error("E-maily nie sú nastavené: chýba SMTP_PASS v Supabase (Edge Functions → Secrets).");
-  transport = nodemailer.createTransport({
-    host: Deno.env.get("SMTP_HOST") || "smtp.m1.websupport.sk",
-    port: Number(Deno.env.get("SMTP_PORT") || 465),
-    secure: true,
-    auth: { user: FROM_ADDR, pass },
-  });
-  return transport;
+  const port = Number(clean(Deno.env.get("SMTP_PORT")) || 465);
+  const own = clean(Deno.env.get("SMTP_HOST"));
+  const hosts = own ? [own] : ["smtp.m1.websupport.sk", "smtp.websupport.sk"];
+  let last: any = null;
+  for (const host of hosts) {
+    const t = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user: FROM_ADDR, pass } });
+    try { await t.verify(); transport = t; console.log(`SMTP ok: ${FROM_ADDR} @ ${host}:${port}`); return t; }
+    catch (e) {
+      last = e;
+      // diagnostika bez hesla: meno, server, dĺžka hesla a či sa v Secrets našli medzery/úvodzovky
+      console.error(`SMTP prihlásenie zlyhalo: user=${FROM_ADDR} host=${host}:${port} heslo_znakov=${pass.length} orezané=${raw.length !== pass.length} chyba=${(e as any)?.response || (e as Error)?.message}`);
+      if (!/535|EAUTH|Invalid login|authentication/i.test(String((e as any)?.response || (e as Error)?.message))) break;
+    }
+  }
+  throw last;
 }
 
 // ---------- šablóna e-mailu ----------
@@ -75,7 +87,7 @@ async function send(o: { to: { email: string; name?: string }[]; subject: string
   const fromName = (o.fromName || "Stavebná firma").replace(/["<>]/g, "");
   // každý príjemca dostane vlastnú správu (nevidia adresy ostatných)
   for (const r of o.to) {
-    await mailer().sendMail({
+    await (await mailer()).sendMail({
       from: `"${fromName}" <${FROM_ADDR}>`, to: r.name ? `"${r.name.replace(/["<>]/g, "")}" <${r.email}>` : r.email,
       replyTo: o.replyTo || undefined, subject: o.subject, html, text, attachments: o.attachments,
     });
@@ -207,6 +219,12 @@ async function doSend(user: any, body: any) {
 
 // ---------- ranný súhrn (plánovač) ----------
 const CAT_UNIT: Record<string, string> = { car: "km", truck: "km" };
+// hodiny riadku denného záznamu: od – do mínus prestávka, alebo priamo zadané hodiny
+const rowHours = (c: any) => {
+  if (!c.from || !c.to) return +c.hours || 0;
+  const [a, b] = String(c.from).split(":").map(Number), [x, y] = String(c.to).split(":").map(Number);
+  return Math.max(0, x * 60 + y - (a * 60 + b) - (+c.brk || 0)) / 60;
+};
 async function digestFor(t: any, today: string) {
   const tid = t.id as string;
   const firm = await firmOf(tid);
@@ -244,7 +262,7 @@ async function digestFor(t: any, today: string) {
         let cur = +m.reading.value || 0;
         if (unit === "h") {
           diary = diary || await rows("diary");
-          for (const e of diary) if (e && e.date > (m.reading.date || "")) for (const c of (e.mach || [])) if (c.machineId === m.id) cur += +c.hours || 0;
+          for (const e of diary) if (e && e.date > (m.reading.date || "")) for (const c of (e.mach || [])) if (c.machineId === m.id) cur += rowHours(c);
         }
         const left = (+s.lastQty) + (+s.everyQty) - cur;
         if (left <= 0) st = "bad"; else if (left <= +s.everyQty * 0.1 && st !== "bad") st = "soon";
@@ -319,6 +337,6 @@ Deno.serve(async (req) => {
   } catch (e) {
     console.error(e);
     const m = String((e as Error)?.message || e);
-    return json({ error: /535|EAUTH|Invalid login|authentication failed/i.test(m) ? "E-mail sa nepodarilo odoslať: schránka odmietla prihlásenie (skontroluj SMTP_PASS)." : m }, 500);
+    return json({ error: /535|EAUTH|Invalid login|authentication failed/i.test(m) ? `E-mail sa nepodarilo odoslať: schránka ${FROM_ADDR} odmietla prihlásenie (skontroluj SMTP_PASS a SMTP_USER).` : m }, 500);
   }
 });
