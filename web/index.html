@@ -6011,7 +6011,7 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
 
 function teamHTML(p){
   const rows=p.members.map(m=>{const u=user(m.userId)||{id:m.userId,name:"(odstránený používateľ)",email:""};
-    return `<div class="card entry-head"><div style="min-width:0"><b>${esc(u.name)}</b><div class="muted" style="font-size:13px;overflow-wrap:anywhere">${esc(u.email)}${u.phone?` · ${esc(u.phone)}`:""}${u.pending?" · ešte sa nezaregistroval":""}</div></div>
+    return `<div class="card entry-head"><div style="min-width:0"><b>${esc(u.name)}</b><div class="muted" style="font-size:13px;overflow-wrap:anywhere">${esc(u.email)}${u.phone?` · ${esc(u.phone)}`:""}${u.pending?` · ešte sa nezaregistroval${can(p,"team.invite")?` <button type="button" class="btn small ghost" data-a="invResend" data-id="${u.id}" style="padding:1px 8px;font-size:12px;margin-left:4px">Poslať pozvánku znova</button>`:""}`:""}</div></div>
       <div class="row">${u.pending?`<span class="pill s-pozvany">Pozvaný</span>`:""}${rolePill(m.role)}
       ${m.role==="extsv"&&areasOf(p).length?(can(p,"team.invite")?`<select data-marea="${u.id}" aria-label="Časť stavby pre ${esc(u.name)}" style="width:auto"><option value="">Celá stavba (bez obmedzenia)</option>${areasOf(p).map(a=>`<option value="${a.id}" ${(m.areaIds||[]).includes(a.id)?"selected":""}>Subdodávateľ: ${esc(a.name)}</option>`).join("")}</select>`:`<span class="pill areapill">${esc((m.areaIds||[]).map(id=>areaName(p,id)).join(", ")||"Celá stavba")}</span>`):""}
       ${can(p,"team.remove")?`<button class="btn small ghost" data-a="removeMember" data-id="${u.id}">Odobrať</button>`:""}</div></div>`}).join("");

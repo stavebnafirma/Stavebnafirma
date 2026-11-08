@@ -61,7 +61,7 @@ rep('if(!u){u={id:uid("u"),email,name:$("#invName").value.trim()||email.split("@
 rep('p.members.push({userId:u.id,role,status:"pozvaný",...(ar?{areaIds:ar}:{})});toast("Pozvánka pripravená. Odhlás sa a prihlás jeho e-mailom.")',
     'p.members.push({userId:u.id,role,status:u.pending?"pozvaný":"aktívny",...(ar?{areaIds:ar}:{})});toast(u.pending?`Pozvánka uložená. Pošli mu odkaz www.stavebnafirma.eu – zaregistruje sa e-mailom ${u.email}.`:`${u.name} pridaný na stavbu`)')
 rep('const rows=p.members.map(m=>{const u=user(m.userId);', 'const rows=p.members.map(m=>{const u=user(m.userId)||{id:m.userId,name:"(odstránený používateľ)",email:""};')
-rep('${m.role==="dozor"&&!u.pw&&m.status==="pozvaný"?" · ešte nepotvrdil pozvánku":""}', '${u.pending?" · ešte sa nezaregistroval":""}')
+rep('${m.role==="dozor"&&!u.pw&&m.status==="pozvaný"?" · ešte nepotvrdil pozvánku":""}', '${u.pending?` · ešte sa nezaregistroval${can(p,"team.invite")?` <button type="button" class="btn small ghost" data-a="invResend" data-id="${u.id}" style="padding:1px 8px;font-size:12px;margin-left:4px">Poslať pozvánku znova</button>`:""}`:""}')
 rep('${m.status==="pozvaný"?`<span class="pill s-pozvany">Pozvaný</span>`:""}', '${u.pending?`<span class="pill s-pozvany">Pozvaný</span>`:""}')
 
 # 5) heslo a OEV II
