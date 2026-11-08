@@ -412,6 +412,14 @@ tr.sel-row td{background:var(--tint)}
 .stab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .stab .soon{font-size:10px;font-weight:600;color:var(--muted)}
 .stab .tname{overflow:hidden;text-overflow:ellipsis}
+/* Stavba: „Všetky stavby“ a zvolená stavba v oranžovom, oddelené od kariet stavby */
+.subrow .stab.pnav{color:var(--accent);border-color:var(--accent-soft);background:var(--tint)}
+.subrow .stab.pnav:hover{color:var(--accent);border-color:var(--accent)}
+.subrow .stab.pnav[aria-selected="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);box-shadow:none}
+.stab.pname{max-width:220px}
+.sub-in.wide{max-width:1480px}
+@media (min-width:1100px){.sub-in.wide .stab{padding-inline:12px}}
+.ssep{flex:none;align-self:center;width:1px;height:22px;background:var(--line);margin:0 6px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .stab{background:rgba(255,255,255,.03)}}
 :root[data-theme="dark"] .stab{background:rgba(255,255,255,.03)}
 @media (max-width:919px){header.bar{position:relative;top:auto}}
@@ -4880,12 +4888,14 @@ function subnavRows(){
   if(sc==="doprava"){const al=fleetAlerts().length,t=view.dTab||"park";const r=[[{a:"dTab",tab:"park",l:"Stroje a vozidlá",sel:t==="park"},{a:"dTab",tab:"logi",l:"Logistika",sel:t==="logi"},{a:"dTab",tab:"pers",l:"Tímy",sel:t==="pers"},{a:"dTab",tab:"export",l:"Export",sel:t==="export"},{a:"dTab",tab:"gps",l:"Import z GPS",sel:t==="gps"},{a:"dTab",tab:"vazenie",l:"Váženie",sel:t==="vazenie"},{a:"dTab",tab:"terminy",l:"Údržba a servis",sel:t==="terminy",n:al},{a:"dTab",tab:"stat",l:"Štatistika",sel:t==="stat"}]];
     const m=view.vehId&&(S.machines||[]).find(x=>x.id===view.vehId);if(m){r[0][0].sel=true;r[0][1].sel=false;r.push([{a:"vehOpen",id:m.id,l:m.name,sel:true}])}return r}
   if(sc==="pozicovna"){const t=rTabCur();return [R_TABS.map(([k,l])=>({a:"rTab",tab:k,l,sel:t===k}))]}
-  if(sc==="home")return null;
+  /* Stavba: jeden rad – oranžové „Všetky stavby“ a zvolená stavba, za nimi karty stavby */
+  const allL=me&&isExternal(me)?"Moje stavby":"Všetky stavby";
+  if(sc==="home")return [[{a:"home",l:allL,sel:true,cls:"pnav"}]];
   if(sc==="project"){const p=projCtx();if(!p)return null;
-    return [[{a:"home",l:isExternal(me)?"Moje stavby":"Všetky stavby"},{a:"tab",tab:"dennik",l:p.name,sel:true}],projectTabs(p).map(([k,l,n,soon])=>({a:"tab",tab:k,l,n,soon,sel:view.tab===k}))]}
+    return [[{a:"home",l:allL,cls:"pnav"},{a:"tab",tab:"dennik",l:p.name,sel:true,cls:"pnav pname"},{sep:true},...projectTabs(p).map(([k,l,n,soon])=>({a:"tab",tab:k,l,n,soon,sel:view.tab===k}))]]}
   return null}
 function subnavHTML(){const rows=subnavRows();if(!rows)return "";
-  return rows.map((it,ri)=>`<div class="subrow l${ri+2}"><div class="sub-in" role="tablist" aria-label="${ri?"Časti":"Podkarty"}">${it.map(x=>`<button class="stab" role="tab" aria-selected="${!!x.sel}" data-a="${x.a}"${x.tab?` data-tab="${x.tab}"`:""}${x.sec?` data-sec="${x.sec}"`:""}${x.id?` data-id="${x.id}"`:""} title="${esc(x.l)}"><span class="tname">${esc(x.l)}</span>${x.soon?`<span class="soon">${x.soon}</span>`:""}${x.n?`<span class="badge">${x.n}</span>`:""}</button>`).join("")}</div></div>`).join("")}
+  return rows.map((it,ri)=>`<div class="subrow l${ri+2}"><div class="sub-in${it.some(x=>x.sep)?" wide":""}" role="tablist" aria-label="${ri?"Časti":"Podkarty"}">${it.map(x=>x.sep?`<span class="ssep" aria-hidden="true"></span>`:`<button class="stab${x.cls?" "+x.cls:""}" role="tab" aria-selected="${!!x.sel}" data-a="${x.a}"${x.tab?` data-tab="${x.tab}"`:""}${x.sec?` data-sec="${x.sec}"`:""}${x.id?` data-id="${x.id}"`:""} title="${esc(x.l)}"><span class="tname">${esc(x.l)}</span>${x.soon?`<span class="soon">${x.soon}</span>`:""}${x.n?`<span class="badge">${x.n}</span>`:""}</button>`).join("")}</div></div>`).join("")}
 function projectHTML(){
   const p0=S.projects.find(x=>x.id===view.projectId);
   if(!projectTabs(p0).some(t=>t[0]===view.tab))view.tab="dennik";
