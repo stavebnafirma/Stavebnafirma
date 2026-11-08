@@ -432,8 +432,7 @@ tr.sel-row td{background:var(--tint)}
 @media (min-width:760px){
   .sub-in.pin{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .sub-in.pin>:first-child{margin-left:0}.sub-in.pin>:last-child{margin-right:0}
-  .sub-in.pin>.ssep{margin-left:auto}
-  .sub-in.pin>.stab:not(.pnav):first-child{margin-left:auto}}
+  .sub-in.pin>.ssep{margin-left:auto}}
 @media (min-width:760px) and (max-width:1499px){.sub-in.pin{gap:4px}.sub-in.pin .stab{padding-inline:10px;font-size:13.5px}.sub-in.pin .stab.pname{max-width:170px}.sub-in.pin>.ssep{margin-right:2px}}
 @media (min-width:1500px){.sub-in.pin{max-width:1480px}}
 .ssep{flex:none;align-self:center;width:1px;height:22px;background:var(--line);margin:0 6px}
@@ -5278,7 +5277,7 @@ function subnavRows(){
     return narrowNav()?[top,tabs]:[[...top,{sep:true},...tabs]]}
   return null}
 function subnavHTML(){const rows=subnavRows();if(!rows)return "";
-  return rows.map((it,ri)=>`<div class="subrow l${ri+2}"><div class="sub-in pin" role="tablist" aria-label="${ri?"Časti":"Podkarty"}">${it.map(x=>x.sep?`<span class="ssep" aria-hidden="true"></span>`:`<button class="stab${x.cls?" "+x.cls:""}" role="tab" aria-selected="${!!x.sel}" data-a="${x.a}"${x.tab?` data-tab="${x.tab}"`:""}${x.sec?` data-sec="${x.sec}"`:""}${x.id?` data-id="${x.id}"`:""} title="${esc(x.l)}"><span class="tname">${esc(x.l)}</span>${x.soon?`<span class="soon">${x.soon}</span>`:""}${x.n?`<span class="badge">${x.n}</span>`:""}</button>`).join("")}</div></div>`).join("")}
+  return rows.map((it,ri)=>`<div class="subrow l${ri+2}"><div class="sub-in${view.screen==="home"||view.screen==="project"?" pin":""}" role="tablist" aria-label="${ri?"Časti":"Podkarty"}">${it.map(x=>x.sep?`<span class="ssep" aria-hidden="true"></span>`:`<button class="stab${x.cls?" "+x.cls:""}" role="tab" aria-selected="${!!x.sel}" data-a="${x.a}"${x.tab?` data-tab="${x.tab}"`:""}${x.sec?` data-sec="${x.sec}"`:""}${x.id?` data-id="${x.id}"`:""} title="${esc(x.l)}"><span class="tname">${esc(x.l)}</span>${x.soon?`<span class="soon">${x.soon}</span>`:""}${x.n?`<span class="badge">${x.n}</span>`:""}</button>`).join("")}</div></div>`).join("")}
 function projectHTML(){
   const p0=S.projects.find(x=>x.id===view.projectId);
   if(!projectTabs(p0).some(t=>t[0]===view.tab))view.tab="dennik";
