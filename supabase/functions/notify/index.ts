@@ -167,7 +167,9 @@ async function doInvite(user: any, body: any) {
     const names = (pr || []).map((r: any) => r.data?.name).filter(Boolean);
     // rola na stavbe podľa tímu stavby (pozvaný má v tíme id „inv:<id pozvánky>“)
     const pRoles = (pr || []).map((r: any) => (r.data?.members || []).find((m: any) => m.userId === `inv:${inv.id}`)?.role).filter(Boolean);
-    const as = pRoles.includes("dozor") ? "ako stavebný dozor " : pRoles.includes("extsv") ? "ako externý stavbyvedúci " : inv.role === "dozor" ? "ako stavebný dozor " : "";
+    const AS: Record<string, string> = { dozor: "ako stavebný dozor ", extsv: "ako externý stavbyvedúci ", projektant: "ako projektant ", geodet: "ako geodet ", ssd: "ako štátny stavebný dohľad " };
+    const r0 = ["dozor", "extsv", "projektant", "geodet", "ssd"].find((r) => pRoles.includes(r));
+    const as = r0 ? AS[r0] : inv.role === "dozor" ? "ako stavebný dozor " : "";
     if (names.length) what = `${as}na ${names.length > 1 ? "stavby" : "stavbu"} ${names.join(", ")}`;
   }
   const email = String(inv.email).toLowerCase();

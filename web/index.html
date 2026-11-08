@@ -77,7 +77,7 @@ textarea{min-height:80px;resize:vertical}
 .r-majster{background:var(--ok-bg);color:var(--ok)}
 .r-citanie{background:var(--lock-bg);color:var(--lock)}
 .r-dozor{background:color-mix(in srgb,var(--ink) 14%,var(--surface));color:var(--ink);border:1px solid var(--ink)}
-.r-extsv{background:color-mix(in srgb,var(--xsv) 14%,var(--surface));color:var(--xsv);border:1px solid var(--xsv)}
+.r-extsv,.r-projektant,.r-geodet,.r-ssd{background:color-mix(in srgb,var(--xsv) 14%,var(--surface));color:var(--xsv);border:1px solid var(--xsv)}
 .s-wait{background:color-mix(in srgb,var(--ink) 14%,var(--surface));color:var(--ink)}
 .s-ret{background:color-mix(in srgb,var(--bad) 14%,var(--surface));color:var(--bad)}
 .s-ok{background:var(--ok-bg);color:var(--ok)}
@@ -1117,7 +1117,10 @@ function detectWorkbook(sheets){ // sheets: [{name, rows}]
 }
 
 
-const ROLES={admin:"Administrátor",spravca:"Správca stavieb",sledovanie:"Sledovanie stavieb",ekonom:"Ekonóm",pripravar:"Prípravár stavieb",stavbyveduci:"Stavbyvedúci",majster:"Majster",dozor:"Stavebný dozor",extsv:"Externý stavbyvedúci",citanie:"Iba čítanie"};
+/* externí účastníci výstavby s rovnakými právami ako externý stavbyvedúci: vlastné denné záznamy, dokumenty, vidia len svoju stavbu */
+const XSV=["extsv","projektant","geodet","ssd"];
+const XSV_OF={extsv:"externého stavbyvedúceho",projektant:"projektanta",geodet:"geodeta",ssd:"štátneho stavebného dohľadu"};
+const ROLES={admin:"Administrátor",spravca:"Správca stavieb",sledovanie:"Sledovanie stavieb",ekonom:"Ekonóm",pripravar:"Prípravár stavieb",stavbyveduci:"Stavbyvedúci",majster:"Majster",dozor:"Stavebný dozor",extsv:"Externý stavbyvedúci",projektant:"Projektant",geodet:"Geodet",ssd:"Štátny stavebný dohľad",citanie:"Iba čítanie"};
 const WEATHER=["Jasno","Polojasno","Zamračené","Dážď","Sneh","Mráz","Vietor"];
 const KEY="kalimis-stavby-proto-v2";
 
@@ -1288,7 +1291,7 @@ function remapInvites(){const acc=(S._inv||[]).filter(i=>i.accepted_by);if(!acc.
   (S.tasks||[]).forEach(t=>["assignee","assignedTo","by","doneBy"].forEach(k=>{if(M[t[k]])t[k]=M[t[k]]}))}
 function userState(u){const projects=S.projects.filter(p=>(p.members||[]).some(m=>m.userId===u.id)).map(p=>p.id).sort();
   let role=u.companyRole==="admin"?"admin":(u.dbRole==="spravca"&&RIGHT_MODS.every(([k])=>(u.rights||{})[k]==="edit"))?"spravca":
-    (!RIGHT_MODS.some(([k])=>(u.rights||{})[k])&&projects.length&&S.projects.filter(p=>projects.includes(p.id)).every(p=>["dozor","extsv"].includes(p.members.find(m=>m.userId===u.id).role)))?"dozor":"clen";   /* externí (dozor, externý stavbyvedúci) – v databáze rola „dozor“: len svoje stavby */
+    (!RIGHT_MODS.some(([k])=>(u.rights||{})[k])&&projects.length&&S.projects.filter(p=>projects.includes(p.id)).every(p=>["dozor","extsv","projektant","geodet","ssd"].includes(p.members.find(m=>m.userId===u.id).role)))?"dozor":"clen";   /* externí (dozor, externý stavbyvedúci) – v databáze rola „dozor“: len svoje stavby */
   let rights=role==="admin"?{}:{...(u.rights||{})};delete rights.areas;
   if(role==="dozor"){const A={};S.projects.forEach(p=>{const m=(p.members||[]).find(x=>x.userId===u.id&&x.role==="extsv");if(m&&m.areaIds&&m.areaIds.length)A[p.id]=m.areaIds.slice().sort()});if(Object.keys(A).length)rights.areas=A}
   return {role,rights,projects}}
@@ -1680,21 +1683,21 @@ function can(p,act,entry){
       case"docs.delete":return gz||(sub&&!!entry&&entry.by===me.id);}return false}
   switch(act){
     case"close":return r==="admin";
-    case"diary.create":return["admin","stavbyveduci","majster","extsv"].includes(r);
-    case"diary.edit":return entry&&!entry.locked&&((["admin","stavbyveduci"].includes(r)&&!isExtSvEntry(p,entry))||(["majster","extsv"].includes(r)&&entry.authorId===me.id));
-    case"diary.lock":return entry&&!entry.locked&&((["admin","stavbyveduci"].includes(r)&&!isExtSvEntry(p,entry))||(r==="extsv"&&entry.authorId===me.id));
+    case"diary.create":return["admin","stavbyveduci","majster",...XSV].includes(r);
+    case"diary.edit":return entry&&!entry.locked&&((["admin","stavbyveduci"].includes(r)&&!isExtSvEntry(p,entry))||(["majster",...XSV].includes(r)&&entry.authorId===me.id));
+    case"diary.lock":return entry&&!entry.locked&&((["admin","stavbyveduci"].includes(r)&&!isExtSvEntry(p,entry))||(XSV.includes(r)&&entry.authorId===me.id));
     case"diary.gznote":return !!entry&&["admin","stavbyveduci"].includes(r)&&isExtSvEntry(p,entry);   /* vyjadrenie generálneho zhotoviteľa k záznamu subdodávateľa */
     case"team.invite":return["admin","stavbyveduci"].includes(r);
     case"team.remove":return r==="admin";
     case"econ.view":return r==="admin"||r==="sledovanie";
     case"econ.edit":return r==="admin";
     case"budget.import":return["admin","stavbyveduci"].includes(r);
-    case"docs.upload":return["admin","stavbyveduci"].includes(r)||(r==="extsv"&&!isSubOf(p));   /* subdodávateľ nahráva do svojho priečinka */
-    case"docs.delete":return ["admin","stavbyveduci"].includes(r)||(r==="extsv"&&!!entry&&entry.by===me.id);   /* externý stavbyvedúci maže len to, čo sám nahral */
+    case"docs.upload":return["admin","stavbyveduci"].includes(r)||(XSV.includes(r)&&!isSubOf(p));   /* subdodávateľ nahráva do svojho priečinka */
+    case"docs.delete":return ["admin","stavbyveduci"].includes(r)||(XSV.includes(r)&&!!entry&&entry.by===me.id);   /* externý stavbyvedúci maže len to, čo sám nahral */
     case"docs.folders":return["admin","stavbyveduci"].includes(r);
-    case"team.view":return !["dozor","extsv"].includes(r);
+    case"team.view":return !["dozor",...XSV].includes(r);
     case"budget.upload":return["admin","stavbyveduci"].includes(r);
-    case"inv.view":return["admin","sledovanie","stavbyveduci","dozor","extsv","citanie"].includes(r);
+    case"inv.view":return["admin","sledovanie","stavbyveduci","dozor",...XSV,"citanie"].includes(r);
     case"inv.edit":return["admin","stavbyveduci"].includes(r);
     case"inv.unlock":return r==="admin";
     case"inv.approve":return r==="dozor";
@@ -1704,7 +1707,7 @@ function can(p,act,entry){
     case"diary.request":return["admin","stavbyveduci","majster"].includes(r);
     case"settings":return["admin","stavbyveduci"].includes(r);
   }return false}
-function inviteRoles(p){return ["admin","spravca"].includes(roleIn(p))?["stavbyveduci","majster","dozor","extsv","citanie"]:["majster","dozor","extsv","citanie"]}
+function inviteRoles(p){return ["admin","spravca"].includes(roleIn(p))?["stavbyveduci","majster","dozor",...XSV,"citanie"]:["majster","dozor",...XSV,"citanie"]}
 function visibleProjects(){return canSee("stavba")?S.projects:S.projects.filter(p=>p.members.some(m=>m.userId===me.id))}
 
 /* ---------- účty: pozri OSTRÁ VERZIA vyššie ---------- */
@@ -2617,7 +2620,7 @@ function usersHTML(){
     ${list.map(card).join("")}
     ${ext.length?`<h3 style="margin-top:6px">Externí používatelia aplikácie</h3><div class="muted" style="font-size:13px">Zoznam používateľov pozvaných len pre konkrétnu stavbu. Spravidla to je napríklad investor alebo stavebný dozor. Ich práva a role upravuješ v nastavení stavby v záložke Tím. Používateľ pozvaný na konkrétnu stavbu nevidí žiadny iný modul ani údaje o firme.</div>
       ${ext.map(u=>`<div class="card entry-head"><div style="min-width:0"><b>${esc(u.name||u.email)}</b><div class="muted" style="font-size:13px;overflow-wrap:anywhere">${esc(u.email)}${u.phone?` · ${esc(u.phone)}`:""}</div>
-        <div class="muted" style="font-size:12px">${esc(dozorProjects(u).map(p=>p.name).join(", "))}</div></div>${rolePill(dozorProjects(u).some(p=>p.members.some(m=>m.userId===u.id&&m.role==="dozor"))?"dozor":"extsv")}</div>`).join("")}`:""}
+        <div class="muted" style="font-size:12px">${esc(dozorProjects(u).map(p=>p.name).join(", "))}</div></div>${rolePill(dozorProjects(u).flatMap(p=>p.members.filter(m=>m.userId===u.id).map(m=>m.role)).find(r=>EXT_ROLES.includes(r))||"extsv")}</div>`).join("")}`:""}
   </div>`}
 document.addEventListener("change",ev=>{const t=ev.target;if(!me||!isAdmin(me))return;
   if(t.dataset&&t.dataset.ur){const u=user(t.dataset.ur);if(!u||isAdmin(u))return;u.rights=u.rights||{};if(t.checked)u.rights[t.dataset.umod]=u.rights[t.dataset.umod]||"view";else delete u.rights[t.dataset.umod];save();toast("Prístup uložený");render()}
@@ -5001,7 +5004,7 @@ function startChecklist(){
 /* externý = pozvaný iba ako stavebný dozor, bez prístupu k modulom; vidí len svoje stavby */
 function isExternal(u){if(!u||isAdmin(u)||RIGHT_MODS.some(([k])=>(u.rights||{})[k]))return false;
   const ms=S.projects.flatMap(p=>p.members.filter(m=>m.userId===u.id));return ms.length>0&&ms.every(m=>EXT_ROLES.includes(m.role))}
-const EXT_ROLES=["dozor","extsv"];   /* externé roly: vidia len stavby, na ktoré boli pozvaní */
+const EXT_ROLES=["dozor",...XSV];   /* externé roly: vidia len stavby, na ktoré boli pozvaní */
 function dozorProjects(u){return S.projects.filter(p=>p.members.some(m=>m.userId===u.id&&EXT_ROLES.includes(m.role)))}
 function needsProfile(){return !!me&&isExternal(me)&&!(me.firstName&&me.lastName&&me.phone)}
 function externalStart(){const ps=dozorProjects(me);return ps.length===1?{screen:"project",projectId:ps[0].id,tab:"dennik"}:{screen:"home"}}
@@ -5332,7 +5335,7 @@ function entryGroups(e){return Object.keys(GROUPS).filter(g=>e[g]&&e[g].length)}
 function pl(n,one,few,many){return n===1?one:(n>=2&&n<=4?few:many)}
 
 /* ---------- Stavebný denník: export celého denníka a surový export záznamov ---------- */
-const memberRoleLabel=r=>({stavbyveduci:"Stavbyvedúci",majster:"Majster",dozor:"Stavebný dozor",extsv:"Externý stavbyvedúci",citanie:"Iba čítanie",spravca:"Správca stavieb",admin:"Administrátor"}[r]||ROLES[r]||r||"");
+const memberRoleLabel=r=>({stavbyveduci:"Stavbyvedúci",majster:"Majster",dozor:"Stavebný dozor",extsv:"Externý stavbyvedúci",projektant:"Projektant",geodet:"Geodet",ssd:"Štátny stavebný dohľad",citanie:"Iba čítanie",spravca:"Správca stavieb",admin:"Administrátor"}[r]||ROLES[r]||r||"");
 function diarySeenText(e,noTime){return (e.seen||[]).map(s=>`Videné – Stavebný dozor ${s.name||user(s.by)?.name||""}${s.at&&!noTime?` · ${dt(s.at)}`:""}`)}
 function entryPeopleText(e){const out=[];
   (e.crew||[]).forEach(c=>{const w=worker(c.workerId);out.push(`${w?fullName(w):"?"}${w&&w.profession?` (${w.profession})`:""} ${c.from&&c.to?`${c.from}–${c.to}, `:""}${h(hours(c))} h`)});
@@ -5354,11 +5357,11 @@ function pdfDiaryEntries(doc,es,y){const W=doc.internal.pageSize.getWidth(),L=14
   let lastDay="";
   es.forEach(e=>{if(AR.length&&e.date!==lastDay){lastDay=e.date;need(44);doc.setFillColor(60,64,70);doc.rect(L,y,R-L,9,"F");doc.setTextColor(255);doc.setFont("DVC","bold");doc.setFontSize(11.5);doc.text(plain(fmtDate(e.date)),L+2.5,y+6.2);
       const n=es.filter(x=>x.date===e.date).length;doc.setFont("DVC","normal");doc.setFontSize(8.5);doc.text(plain(`${n} ${pl(n,"záznam","záznamy","záznamov")}`),R-2.5,y+6.2,{align:"right"});doc.setTextColor(0);y+=12}
-    need(30);const dz=isDoz(e),xs=isExtSvEntry(S.projects.find(x=>x.id===e.projectId),e);const wx=plain([e.weather,tempText(e)].filter(Boolean).join(", "));
+    need(30);const pE=S.projects.find(x=>x.id===e.projectId),dz=isDoz(e),xs=isExtSvEntry(pE,e);const wx=plain([e.weather,tempText(e)].filter(Boolean).join(", "));
     if(AR.length&&!e.areaId){doc.setFont("DVC","normal");doc.setFontSize(8.5);doc.text(wx,R-2,y+2,{align:"right"});y+=2}   /* záznam za celú stavbu: stačí nadpis dňa */
     else{if(dz)doc.setFillColor(222,241,228);else if(xs)doc.setFillColor(221,233,248);else doc.setFillColor(243,244,245);doc.rect(L,y,R-L,8,"F");doc.setFont("DVC","bold");doc.setFontSize(10.5);doc.text(plain(AR.length?areaName(P0,e.areaId):fmtDate(e.date)+(e.areaId?` · ${areaName(S.projects.find(x=>x.id===e.projectId),e.areaId)}`:"")),L+2,y+5.5);
     doc.setFont("DVC","normal");doc.setFontSize(8.5);doc.text(wx,R-2,y+5.5,{align:"right"});y+=11}
-    doc.setFontSize(8.5);doc.setTextColor(90);doc.text(plain(`Zapísal: ${user(e.authorId)?.name||""}${xs?" (externý stavbyvedúci)":""}${e.locked?` · podpísal a uzamkol ${user(e.lockedBy)?.name||""}`:""}`),L,y);doc.setTextColor(0);y+=5;
+    doc.setFontSize(8.5);doc.setTextColor(90);doc.text(plain(`Zapísal: ${user(e.authorId)?.name||""}${xs?` (${memberRoleLabel(xsvRole(pE,e)).toLowerCase()})`:""}${e.locked?` · podpísal a uzamkol ${user(e.lockedBy)?.name||""}`:""}`),L,y);doc.setTextColor(0);y+=5;
     doc.setFontSize(9.5);const wt=doc.splitTextToSize(plain(e.work||""),R-L);need(wt.length*4.6);doc.text(wt,L,y);y+=wt.length*4.6+2;
     const blk=(title,lines)=>{if(!lines.length)return;doc.setFont("DVC","bold");doc.setFontSize(8.8);need(8);doc.text(title,L,y);y+=4.3;doc.setFont("DVC","normal");
       lines.forEach(t=>{const ls=doc.splitTextToSize(plain("• "+t),R-L-4);need(ls.length*4);doc.text(ls,L+3,y);y+=ls.length*4});y+=1.5};
@@ -5395,8 +5398,16 @@ async function diaryFullPDF(p){const es=diaryOf(p).sort((a,b)=>(a.date+(a.create
   doc.addPage();pdfFirmHeader(doc,"Identifikačné údaje stavby",plain(p.name),true);
   const D=p.dn||{},sec=(t,list)=>[[{content:t,colSpan:2,styles:{fontStyle:"bold",fillColor:[43,47,51],textColor:255}}],...list.map(([k,l])=>[l,plain(D[k]||"")])];
   const zh=["Zhotoviteľ",plain([F.name||S.company,firmAddress(F),F.ico?`IČO ${F.ico}`:""].filter(Boolean).join(", "))];
-  doc.autoTable({...tbl,body:[["Stavba",plain(p.name)],["Objednávateľ",plain(p.client||"")],...sec("Miesto stavby",DN_PLACE),...sec("Účastníci výstavby",DN_PEOPLE.slice(0,3)),zh,...DN_PEOPLE.slice(3).map(([k,l])=>[l,plain(D[k]||"")]),...sec("Stavebné povolenie a termíny",DN_PERMIT)],
-    startY:28,margin:{left:14,right:14},columnStyles:{0:{cellWidth:62,fontStyle:"bold",fillColor:[245,246,247]}}});
+  doc.autoTable({...tbl,body:[["Stavba",plain(p.name)],["Objednávateľ",plain(p.client||"")],...sec("Miesto stavby",DN_PLACE),...sec("Účastníci výstavby",DN_PEOPLE.slice(0,4)),zh,["Subdodávatelia",plain(D.subdodavatelia||"")],...DN_PEOPLE.slice(4).map(([k,l])=>[l,plain(D[k]||"")]),...sec("Stavebné povolenie, overovacia doložka a termíny",DN_PERMIT),...sec("Zmluvy",[]),[DN_LONG[1][1],plain(D.zmluvy||"")]],
+    startY:28,margin:{left:14,right:14},styles:{...tbl.styles,fontSize:9,cellPadding:1.3,minCellHeight:5.6},columnStyles:{0:{cellWidth:62,fontStyle:"bold",fillColor:[245,246,247]}}});
+  /* osoby oprávnené na zápisy do stavebného denníka – tím stavby (okrem rolí iba na čítanie) */
+  doc.addPage();pdfFirmHeader(doc,"Osoby oprávnené na zápisy do stavebného denníka",plain(p.name),true);
+  const ROLE_ORD=["stavbyveduci","majster","extsv","dozor","projektant","geodet","ssd"];
+  const oz=(p.members||[]).filter(m=>ROLE_ORD.includes(m.role)&&user(m.userId)).sort((a,b)=>ROLE_ORD.indexOf(a.role)-ROLE_ORD.indexOf(b.role)||(user(a.userId).name||"").localeCompare(user(b.userId).name||"","sk"))
+    .map((m,i)=>{const u=user(m.userId),ar=m.role==="extsv"&&(m.areaIds||[]).length?" – "+m.areaIds.map(id=>areaName(p,id)).filter(Boolean).join(", "):"";
+      return [String(i+1),plain(u.name||u.email||""),plain(memberRoleLabel(m.role)+ar),""]});
+  if(oz.length)doc.autoTable({...tbl,head:[["Č.","Meno a priezvisko","Funkcia (rola na stavbe)","Podpis"]],body:oz,startY:28,margin:{left:14,right:14},styles:{...tbl.styles,minCellHeight:11},columnStyles:{0:{cellWidth:12,halign:"center"},1:{cellWidth:62},2:{cellWidth:68}}});
+  else{doc.setFontSize(10);doc.text("Tím stavby je zatiaľ prázdny. Osoby pridáš v karte Tím.",14,34)}
   /* 3. strana – kontrolné dni: dátum a miesto na podpis stavebného dozoru */
   doc.addPage();pdfFirmHeader(doc,"Kontrolné dni",plain(p.name),true);
   const kds=(p.inspections||[]).filter(k=>k.status!=="cancelled").sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
@@ -5514,7 +5525,9 @@ function subTransfer(px,inv){const p=px.__base,sp=px.__sub;if(!p||!sp||!sp.budge
   inv.transfer={gzNo:g.no,items:n,miss:miss.map(i=>`${i.code||""} ${i.desc}`.trim()),at:nowIso()};
   return {n,miss,no:g.no}}
 function gzOf(p){const b=p.__base||p;return [...S.users.filter(u=>isAdmin(u)),...b.members.filter(m=>m.role==="stavbyveduci").map(m=>user(m.userId))].filter((u,i,a)=>u&&a.indexOf(u)===i)}
-function isExtSvEntry(p,e){return !!p&&p.members.some(m=>m.role==="extsv"&&m.userId===e.authorId)}
+function isExtSvEntry(p,e){return !!p&&p.members.some(m=>XSV.includes(m.role)&&m.userId===e.authorId)}
+/* rola autora externého záznamu (externý stavbyvedúci, projektant, geodet, štátny stavebný dohľad) */
+function xsvRole(p,e){const m=p&&p.members.find(m=>XSV.includes(m.role)&&m.userId===e.authorId);return m?m.role:"extsv"}
 function diaryHTML(p){
   const entries=diaryOf(p).sort((a,b)=>b.date.localeCompare(a.date));
   const editing=view.editId?S.diary.find(d=>d.id===view.editId)||{new:true}:null;
@@ -5530,7 +5543,7 @@ function diaryHTML(p){
       can(p,"diary.lock",e)?`<button class="btn small" data-a="lock" data-id="${e.id}">Podpísať a uzamknúť</button>`:""].join("");
     const tables=entryGroups(e).map(g=>entryTable(g,e[g])).join("");
     const xs=isExtSvEntry(p,e);
-    return `<article class="card stack${xs?" extsv":""}" id="e_${e.id}">${xs?`<div class="eyebrow xsv">Záznam externého stavbyvedúceho · ${esc(user(e.authorId)?.name||"")}</div>`:""}
+    return `<article class="card stack${xs?" extsv":""}" id="e_${e.id}">${xs?`<div class="eyebrow xsv">Záznam ${XSV_OF[xsvRole(p,e)]} · ${esc(user(e.authorId)?.name||"")}</div>`:""}
       <div class="entry-head"><div><div class="date">${fmtDate(e.date)}${e.areaId?` <span class="pill areapill">${esc(areaName(p,e.areaId))}</span>`:""}</div><div class="muted" style="font-size:13px">${esc(e.weather)}${tempText(e)?`, ${esc(tempText(e))}`:""}${e.wxCheckedBy?` (počasie overil ${esc(user(e.wxCheckedBy)?.name||"")})`:""} · zapísal ${esc(user(e.authorId)?.name||"")}${e.createdAt?` · ${esc(dt(e.createdAt))}`:""}</div></div>${status}</div>
       <div>${esc(e.work)}</div>${tables}${photosViewHTML(e)}
       ${(e.gzNotes||[]).map(n=>`<div class="dnote gz"><div class="eyebrow">Vyjadrenie generálneho zhotoviteľa · ${esc(user(n.by)?.name||"")} · ${dt(n.at)}</div><div>${esc(n.text)}</div></div>`).join("")}
@@ -5711,7 +5724,7 @@ function kdCandidates(p){
   const add=(key,name,email,role,pre)=>{if(seen.has(key))return;seen.add(key);out.push({key,name,email,role,pre:pre&&key!=="u:"+me.id})};
   S.users.filter(u=>u.companyRole==="admin").forEach(u=>add("u:"+u.id,u.name,u.email,"Administrátor",true));
   (p.contacts||[]).filter(c=>c.role==="Investor").forEach((c,i)=>add("c:inv"+i,c.name||p.investor||"Investor",c.email,"Investor",true));
-  p.members.forEach(m=>{const u=user(m.userId);if(u)add("u:"+u.id,u.name,u.email,ROLES[m.role],["stavbyveduci","majster","dozor","extsv"].includes(m.role))});
+  p.members.forEach(m=>{const u=user(m.userId);if(u)add("u:"+u.id,u.name,u.email,ROLES[m.role],["stavbyveduci","majster","dozor",...XSV].includes(m.role))});
   S.users.filter(u=>!isAdmin(u)&&rightOf(u,"stavba")).forEach(u=>add("u:"+u.id,u.name,u.email,rightOf(u,"stavba")==="edit"?"Správca stavieb":"Sledovanie stavieb",false));
   (p.contacts||[]).filter(c=>c.role!=="Investor"&&c.email).forEach((c,i)=>add("c:o"+i,c.name||c.role,c.email,c.role,false));
   return out}
@@ -5970,9 +5983,12 @@ function projectInfoHTML(p){
 
 /* ---------- nastavenia stavby ---------- */
 /* údaje pre 2. stranu stavebného denníka (identifikačné údaje stavby) – nepovinné, zadávajú sa raz v nastaveniach stavby */
+/* viacriadkové údaje: subdodávatelia a zmluvy */
+const DN_LONG=[["subdodavatelia","Subdodávatelia","názov firmy, IČO, čo robí – každý na nový riadok"],["zmluvy","Zmluvy, na základe ktorých sa uskutočňujú stavebné práce","napr. Zmluva o dielo č. 12/2026 zo dňa 2. 3. 2026 – každá na nový riadok"]];
 const DN_PLACE=[["kraj","Kraj"],["okres","Okres"],["obec","Obec"],["ku","Katastrálne územie"],["miesto","Miesto (ulica, parcela)"],["usek","Úsek"]];
-const DN_PEOPLE=[["genInvestor","Generálny investor"],["priamyInvestor","Priamy investor"],["tdi","Technický dozor investora"],["genRiaditel","Generálny riaditeľ"],["hlStavbyveduci","Hlavný stavbyvedúci"],["stavbyveduci","Stavbyvedúci"],["genProjektant","Generálny projektant"],["zodpProjektant","Zodpovedný projektant"],["autorDozor","Autorský dozor"]];
-const DN_PERMIT=[["povolenieCislo","Stavebné povolenie č."],["povolenieVydal","Vydal (stavebný úrad)"],["povolenieDna","Zo dňa"],["pravoplatne","Právoplatné dňa"],["zaciatok","Začatie stavby"],["ukoncenie","Ukončenie stavby"]];
+const DN_PEOPLE=[["genInvestor","Generálny investor"],["priamyInvestor","Priamy investor"],["vlastnik","Vlastník stavby (ak nie je stavebníkom)"],["tdi","Technický dozor investora"],["genRiaditel","Generálny riaditeľ"],["hlStavbyveduci","Hlavný stavbyvedúci"],["stavbyveduci","Stavbyvedúci"],["pomStavbyveduci","Pomocný stavbyvedúci"],["genProjektant","Generálny projektant"],["zodpProjektant","Zodpovedný projektant"],["autorDozor","Autorský dozor"]];
+const DN_PERMIT=[["idStavby","ID stavby (z informačného systému)"],["povolenieCislo","Stavebné povolenie č."],["povolenieVydal","Vydal (stavebný úrad)"],["povolenieDna","Zo dňa"],["pravoplatne","Právoplatné dňa"],
+  ["dolozkaCislo","Overovacia doložka projektu stavby č."],["dolozkaVydal","Overovaciu doložku vydal (stavebný úrad)"],["dolozkaDna","Overovacia doložka zo dňa"],["zaciatok","Začatie stavby"],["ukoncenie","Ukončenie stavby"]];
 function dnFields(pre,p){const D=p.dn||{},f=([k,l],ph)=>`<label>${l}<input id="${pre}Dn_${k}" value="${esc(D[k]||"")}"${ph?` placeholder="${ph}"`:""}></label>`;
   return `<fieldset class="modes"><legend>Údaje pre stavebný denník (nepovinné)</legend>
     <div class="muted" style="font-size:13px">Zadávajú sa raz a vypíšu sa na 2. strane stavebného denníka pri exporte do PDF. Vyplň len to, čo potrebuješ.</div>
@@ -5980,10 +5996,11 @@ function dnFields(pre,p){const D=p.dn||{},f=([k,l],ph)=>`<label>${l}<input id="$
     <div class="grid3">${DN_PLACE.map(x=>f(x)).join("")}</div>
     <div class="eyebrow" style="margin-top:4px">Účastníci výstavby</div>
     <div class="grid2">${DN_PEOPLE.map(x=>f(x,"meno, firma, kontakt")).join("")}</div>
-    <div class="eyebrow" style="margin-top:4px">Povolenie a termíny</div>
-    <div class="grid2">${DN_PERMIT.map(x=>f(x,x[0]==="povolenieCislo"?"napr. SÚ-123/2026":x[0]==="povolenieVydal"?"napr. Mesto Tornaľa, stavebný úrad":"napr. 15. 3. 2026")).join("")}</div>
+    ${DN_LONG.map(([k,l,ph])=>`<label>${l}<textarea id="${pre}Dn_${k}" rows="3" placeholder="${ph}">${esc(D[k]||"")}</textarea></label>`).join("")}
+    <div class="eyebrow" style="margin-top:4px">Povolenie, overovacia doložka a termíny</div>
+    <div class="grid2">${DN_PERMIT.map(x=>f(x,x[0]==="povolenieCislo"?"napr. SÚ-123/2026":x[0]==="dolozkaCislo"?"číslo overovacej doložky":x[0]==="idStavby"?"ID pridelené informačným systémom":/Vydal/.test(x[1])?"napr. Obec Horná Dolná, stavebný úrad":"napr. 15. 3. 2026")).join("")}</div>
   </fieldset>`}
-function readDn(pre){const o={};[...DN_PLACE,...DN_PEOPLE,...DN_PERMIT].forEach(([k])=>{const v=($("#"+pre+"Dn_"+k)?.value||"").trim();if(v)o[k]=v});return o}
+function readDn(pre){const o={};[...DN_PLACE,...DN_PEOPLE,...DN_LONG,...DN_PERMIT].forEach(([k])=>{const v=($("#"+pre+"Dn_"+k)?.value||"").trim();if(v)o[k]=v});return o}
 function modeFields(pre,crew,mach,time,temp){time=time||(crew==="count"?"hours":"range");temp=temp||"avg";
   const radios=(name,M,cur,sub)=>Object.entries(M).map(([k,l])=>`<label class="radio"><input type="radio" name="${pre}${name}" value="${k}" ${cur===k?"checked":""}><span><b>${l}</b><br><span class="muted">${sub[k]}</span></span></label>`).join("");
   return `<fieldset class="modes"><legend>Pracovníci v dennom zázname</legend>${Object.entries(CREW_MODES).map(([k,l])=>{const off=false;return `<label class="radio ${off?"dis":""}"><input type="radio" name="${pre}Crew" value="${k}" ${(off?false:crew===k)?"checked":""} ${off?"disabled":""}><span><b>${l}</b><br><span class="muted">${off?"Vyžaduje modul Personalistika":k==="names"?"Meno, príchod, odchod a prestávka každého pracovníka":"Len počet ľudí a hodiny, napr. 4 murári × 8 h"}</span></span></label>`}).join("")}</fieldset>
@@ -6072,7 +6089,7 @@ function teamHTML(p){
     ${areasOf(p).length?`<label>Časť stavby (pre externého stavbyvedúceho – subdodávateľa)<select id="invArea"><option value="">Celá stavba (bez obmedzenia)</option>${areasOf(p).map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("")}</select></label>
     <div class="hint">Subdodávateľ s pridelenou časťou vidí len denné záznamy svojej časti, má vlastný rozpočet a súpisy prác (odsúhlasuješ ich ty) a vlastný priečinok dokumentov.</div>`:""}
     <button class="btn primary" type="submit">Poslať pozvánku</button>
-    <div class="muted" style="font-size:13px">Pozvaný dostane pozvánku e-mailom, nastaví si heslo a uvidí iba túto stavbu s pridelenými právami. <b>Stavebný dozor</b> a <b>externý stavbyvedúci</b> (napr. stavbyvedúci objednávateľa) uvidia len túto stavbu – denník, kontrolné dni, rozpočet, fakturáciu a dokumentáciu. Externý stavbyvedúci môže písať vlastné denné záznamy (v denníku sú označené modrou) a nahrávať dokumenty. Pri prvom prihlásení si doplnia meno, telefón a môžu nahrať pečiatku s podpisom.</div></form>`:"";
+    <div class="muted" style="font-size:13px">Pozvaný dostane pozvánku e-mailom, nastaví si heslo a uvidí iba túto stavbu s pridelenými právami. <b>Stavebný dozor</b>, <b>externý stavbyvedúci</b> (napr. stavbyvedúci objednávateľa), <b>projektant</b>, <b>geodet</b> a <b>štátny stavebný dohľad</b> uvidia len túto stavbu – denník, kontrolné dni, rozpočet, fakturáciu a dokumentáciu. Externý stavbyvedúci, projektant, geodet a štátny stavebný dohľad môžu písať vlastné denné záznamy (v denníku sú označené modrou) a nahrávať dokumenty. Pri prvom prihlásení si doplnia meno, telefón a môžu nahrať pečiatku s podpisom.</div></form>`:"";
   return `<div class="stack">${inv}<div class="eyebrow">Tím stavby</div>${rows||`<div class="card muted">Na stavbe zatiaľ nie je nikto pridelený.</div>`}<div class="eyebrow">Prístup cez modul Stavba</div>${admins}</div>`;
 }
 

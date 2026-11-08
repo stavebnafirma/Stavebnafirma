@@ -116,7 +116,7 @@ function remapInvites(){const acc=(S._inv||[]).filter(i=>i.accepted_by);if(!acc.
   (S.tasks||[]).forEach(t=>["assignee","assignedTo","by","doneBy"].forEach(k=>{if(M[t[k]])t[k]=M[t[k]]}))}
 function userState(u){const projects=S.projects.filter(p=>(p.members||[]).some(m=>m.userId===u.id)).map(p=>p.id).sort();
   let role=u.companyRole==="admin"?"admin":(u.dbRole==="spravca"&&RIGHT_MODS.every(([k])=>(u.rights||{})[k]==="edit"))?"spravca":
-    (!RIGHT_MODS.some(([k])=>(u.rights||{})[k])&&projects.length&&S.projects.filter(p=>projects.includes(p.id)).every(p=>["dozor","extsv"].includes(p.members.find(m=>m.userId===u.id).role)))?"dozor":"clen";   /* externí (dozor, externý stavbyvedúci) – v databáze rola „dozor“: len svoje stavby */
+    (!RIGHT_MODS.some(([k])=>(u.rights||{})[k])&&projects.length&&S.projects.filter(p=>projects.includes(p.id)).every(p=>["dozor","extsv","projektant","geodet","ssd"].includes(p.members.find(m=>m.userId===u.id).role)))?"dozor":"clen";   /* externí (dozor, externý stavbyvedúci) – v databáze rola „dozor“: len svoje stavby */
   let rights=role==="admin"?{}:{...(u.rights||{})};delete rights.areas;
   if(role==="dozor"){const A={};S.projects.forEach(p=>{const m=(p.members||[]).find(x=>x.userId===u.id&&x.role==="extsv");if(m&&m.areaIds&&m.areaIds.length)A[p.id]=m.areaIds.slice().sort()});if(Object.keys(A).length)rights.areas=A}
   return {role,rights,projects}}
