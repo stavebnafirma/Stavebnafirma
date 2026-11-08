@@ -4880,6 +4880,9 @@ function projectTabs(p){
   if(can(p,"settings")||(p.closed&&canDelProj()))tabs.push(["nastavenia","Nastavenia"]);
   tabs.push(["dokumentacia","Dokumentácia",0]);
   return tabs}
+/* na mobile sú karty stavby v samostatnom riadku pod „Všetky stavby“ a názvom stavby */
+const narrowNav=()=>{try{return window.matchMedia("(max-width:759px)").matches}catch(e){return false}};
+try{window.matchMedia("(max-width:759px)").addEventListener("change",()=>{if(me&&view.screen==="project")render()})}catch(e){}
 /* druhý rad menu: podkarty aktuálnej sekcie */
 function subnavRows(){
   if(!me||view.screen==="setup"||view.screen==="profile")return null;const sc=view.screen;
@@ -4892,7 +4895,8 @@ function subnavRows(){
   const allL=me&&isExternal(me)?"Moje stavby":"Všetky stavby";
   if(sc==="home")return [[{a:"home",l:allL,sel:true,cls:"pnav"}]];
   if(sc==="project"){const p=projCtx();if(!p)return null;
-    return [[{a:"home",l:allL,cls:"pnav"},{a:"tab",tab:"dennik",l:p.name,sel:true,cls:"pnav pname"},{sep:true},...projectTabs(p).map(([k,l,n,soon])=>({a:"tab",tab:k,l,n,soon,sel:view.tab===k}))]]}
+    const top=[{a:"home",l:allL,cls:"pnav"},{a:"tab",tab:"dennik",l:p.name,sel:true,cls:"pnav pname"}],tabs=projectTabs(p).map(([k,l,n,soon])=>({a:"tab",tab:k,l,n,soon,sel:view.tab===k}));
+    return narrowNav()?[top,tabs]:[[...top,{sep:true},...tabs]]}
   return null}
 function subnavHTML(){const rows=subnavRows();if(!rows)return "";
   return rows.map((it,ri)=>`<div class="subrow l${ri+2}"><div class="sub-in${it.some(x=>x.sep)?" wide":""}" role="tablist" aria-label="${ri?"Časti":"Podkarty"}">${it.map(x=>x.sep?`<span class="ssep" aria-hidden="true"></span>`:`<button class="stab${x.cls?" "+x.cls:""}" role="tab" aria-selected="${!!x.sel}" data-a="${x.a}"${x.tab?` data-tab="${x.tab}"`:""}${x.sec?` data-sec="${x.sec}"`:""}${x.id?` data-id="${x.id}"`:""} title="${esc(x.l)}"><span class="tname">${esc(x.l)}</span>${x.soon?`<span class="soon">${x.soon}</span>`:""}${x.n?`<span class="badge">${x.n}</span>`:""}</button>`).join("")}</div></div>`).join("")}
