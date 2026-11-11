@@ -4459,11 +4459,16 @@ function navHTML(){if(!me||view.screen==="setup"||needsProfile())return "";
   return `<nav class="topnav" role="tablist" aria-label="Hlavné menu">${items.map(k=>{const locked=k!=="firma"&&!hasMod(SEC_MOD[k]);const n=0;const [full,short]=NAV_LABELS[k];
     return `<button class="ntab ${locked?"locked":""}" role="tab" aria-selected="${cur===k}" data-a="${locked?"secLocked":"sec"}" data-sec="${k}" ${locked?`title="Modul ${full} nie je v predplatnom"`:""}>${icon(locked?"lock":k)}<span class="l-full">${full}</span><span class="l-short">${short}</span>${n?`<span class="badge">${n}</span>`:""}</button>`}).join("")}</nav>`}
 function setupHTML(){return `<div class="stack"><div><div class="eyebrow">Vitaj v aplikácii, ${esc(me.name)}</div><h1>Nastavenie firmy</h1></div>${firmFormHTML("setup")}</div>`}
-function firmTabs(){return [["nastenka","Nástenka"],["udaje","Údaje o firme"],...(isAdmin(me)?[["fin","Financie"]]:[]),["moduly","Moduly"],["role","Používatelia a prístupy"],["ponuka","Ponuka strojov"]]}
+function firmTabs(){return [["nastenka","Nástenka"],["udaje","Údaje o firme"],...(isAdmin(me)?[["fin","Obchod"]]:[]),["moduly","Moduly"],["role","Používatelia a prístupy"],["ponuka","Ponuka strojov"]]}
 /* podkarty karty „Údaje o firme“ */
 function firmSubTabs(){return [["udaje","Základné údaje"],...(isCompanyRole(me)?[["zam","Zamestnanci"],["park","Strojový a vozový park"]]:[])]}
-function firmTabCur(){const t=view.firmTab||"nastenka";return firmTabs().some(x=>x[0]===t)||firmSubTabs().some(x=>x[0]===t)?t:"nastenka"}
-const firmTabTop=()=>{const t=firmTabCur();return firmSubTabs().some(x=>x[0]===t)?"udaje":t};
+/* podkarty karty „Obchod“ (len admin) */
+function obchodSubTabs(){return isAdmin(me)?[["fin","Financie"],["ponuky","Cenové ponuky"],["obj","Objednávky"]]:[]}
+const firmGroups=()=>({udaje:firmSubTabs(),fin:obchodSubTabs()});
+function firmTabCur(){const t=view.firmTab||"nastenka";return firmTabs().some(x=>x[0]===t)||Object.values(firmGroups()).some(g=>g.some(x=>x[0]===t))?t:"nastenka"}
+const firmTabTop=()=>{const t=firmTabCur(),G=firmGroups();return Object.keys(G).find(k=>G[k].some(x=>x[0]===t))||t};
+function obchodSoonHTML(t){const L={ponuky:["Cenové ponuky","Tu budeš evidovať cenové ponuky pre zákazníkov – číslo, odberateľa, stavbu, sumu a stav (odoslaná, prijatá, zamietnutá)."],obj:["Objednávky","Tu budeš evidovať objednávky u dodávateľov – materiál, služby a subdodávky, s prepojením na stavbu a náklady."]}[t];
+  return `<div class="card stack"><div class="entry-head"><h3>${L[0]}</h3><span class="pill">pripravujeme</span></div><p class="muted" style="margin:0">${L[1]}</p></div>`}
 /* ---------- Nástenka: prehľad zo všetkých modulov ---------- */
 function dashFleetHTML(){
   if(!(hasMod("doprava")&&canSee("doprava")))return "";
@@ -4601,8 +4606,9 @@ document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||(id!=="fin
     if(isNew)(S.finInc=S.finInc||[]).push(x);view.finIncEdit=null;save();toast(isNew?"Príjem pridaný":"Príjem uložený");render()}});
 function firmaHTML(){
   const t=firmTabCur(),tabs="";
-  const body=t==="fin"?financeHTML():t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():t==="ponuka"?marketHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML()+mailSetHTML()+accDelHTML("firm"));
-  const sub=firmTabTop()==="udaje"&&firmSubTabs().length>1?`<div class="tabs firmsub" role="tablist" aria-label="Údaje o firme">${firmSubTabs().map(([k,l])=>`<button class="tab" role="tab" data-a="firmTab" data-tab="${k}" aria-selected="${t===k}">${l}</button>`).join("")}</div>`:"";
+  const body=t==="fin"?financeHTML():t==="ponuky"||t==="obj"?obchodSoonHTML(t):t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():t==="ponuka"?marketHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML()+mailSetHTML()+accDelHTML("firm"));
+  const top=firmTabTop(),grp=firmGroups()[top]||[];
+  const sub=grp.length>1?`<div class="tabs firmsub" role="tablist" aria-label="${top==="fin"?"Obchod":"Údaje o firme"}">${grp.map(([k,l])=>`<button class="tab" role="tab" data-a="firmTab" data-tab="${k}" aria-selected="${t===k}">${l}</button>`).join("")}</div>`:"";
   return `<div class="stack"><div><div class="eyebrow">Firma</div><h1>${esc(S.firm.name||"Firma")}</h1></div>${sub}${t==="udaje"&&!view.firmEditing?firmStartRowHTML():""}${body}</div>`}
 const P_TABS=[["emp","Zamestnanci"],["att","Dochádzka"],["mzdy","Podklady pre mzdy"],["sc","Služobné cesty"],["skol","Školenia"],["ost","Ostatné"]];
 /* služobné cesty sa skladajú z dní "SC" v dochádzke; po sebe idúce dni jedného zamestnanca = jedna cesta */
