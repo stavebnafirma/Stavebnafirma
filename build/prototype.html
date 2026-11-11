@@ -895,6 +895,7 @@ table.dxt{font-size:13.5px}table.dxt td.dxw{white-space:normal;min-width:240px;l
 .obdel{align-self:center;font-size:18px;line-height:1;padding:4px 10px}
 @media (max-width:760px){.obrow{grid-template-columns:repeat(3,minmax(0,1fr));position:relative;padding-top:10px}.obrow .obn{position:absolute;top:6px;left:10px;font-size:12px}.obname{grid-column:1/-1;padding-left:22px}.obsum{grid-column:span 2;align-items:flex-start;padding-bottom:0}.obdel{justify-self:end}}
 .obtot{align-self:flex-end;min-width:280px;display:flex;flex-direction:column;gap:2px}.obtot>div{display:flex;justify-content:space-between;gap:16px;font-size:14px}.obtot>div:first-child{background:var(--tint);border-radius:8px;padding:8px 12px;font-size:16px}.obtot>div:not(:first-child){padding:0 12px;color:var(--muted)}
+.obsend{border:2px solid var(--accent)}
 .okmsg{background:var(--tint);border-radius:8px;padding:8px 12px;font-size:13.5px}
 .obup{cursor:pointer}.obup.dis{opacity:.6;cursor:progress}
 .fintab{width:100%}.fintab td{vertical-align:top}.fintab td.num{font-family:inherit;white-space:nowrap}.fintab td{overflow-wrap:anywhere}
@@ -4645,7 +4646,7 @@ function obListHTML(k){const C=OB[k],F=view.obF||{},q=(F.q||"").toLowerCase();
   const st=x=>{const s=C.st.find(z=>z[0]===x.status)||C.st[0];return `<span class="pill ${s[2]}">${s[1]}</span>`};
   const rows=L.map(x=>{const T=obTotals(x),p=S.projects.find(z=>z.id===x.projectId);return `<tr class="clickrow" data-a="obOpen" data-k="${k}" data-id="${x.id}"><td class="num"><b>${esc(x.no)}</b><div class="muted" style="font-size:12px">${x.date?d2(x.date):""}</div></td>
     <td>${esc(x.partner&&x.partner.name||"–")}<div class="muted" style="font-size:12px">${[x.subject,p&&p.name].filter(Boolean).map(esc).join(" · ")}</div></td>
-    <td class="num r"><b>${eur(T.b)}</b><div style="margin-top:3px">${st(x)}</div></td></tr>`}).join("");
+    <td class="num r"><b>${eur(T.b)}</b><div style="margin-top:3px">${st(x)}</div>${(x.sent||[]).length?`<div class="muted" style="font-size:11.5px">odoslaná ${d2(x.sent[x.sent.length-1].at.slice(0,10))}</div>`:""}</td></tr>`}).join("");
   const up=k==="o"?`<label class="btn obup${view.obBusy?" dis":""}"><input type="file" id="obSrc" accept="application/pdf,image/*" hidden ${view.obBusy?"disabled":""}>${view.obBusy?"Čítam ponuku…":"Vytvoriť objednávku z cenovej ponuky"}</label>`:"";
   return `<div class="card stack"><div class="entry-head ecdh"><h3>${C.plural}</h3><div class="ecdh-r">${L.length>5||F.q?`<input id="obQ" type="search" placeholder="Hľadať…" value="${esc(F.q||"")}" style="max-width:180px">`:""}${up}<button class="btn primary" data-a="obNew" data-k="${k}">${C.add}</button></div></div>
     ${k==="o"?`<div class="muted" style="font-size:13px">Nahraj cenovú ponuku, ktorú si dostal od dodávateľa (PDF alebo fotku). Údaje dodávateľa a položky sa z nej vyčítajú a pripraví sa objednávka na odoslanie.</div>`:""}
@@ -4686,8 +4687,9 @@ function obFormHTML(){const D=view.obDraft,k=D.k,C=OB[k],P=D.partner||{},T=obTot
     <div class="obtot"><div><span>Spolu bez DPH</span><b id="obTB">${eur(T.b)}</b></div><div><span>DPH</span><span id="obTV">${eur(T.v)}</span></div><div><span>Spolu s DPH</span><span id="obTS">${eur(T.s)}</span></div></div>
     <label>Poznámka a podmienky (vytlačí sa pod položkami)<textarea id="obNote" rows="3" placeholder="${k==="q"?"napr. Ceny sú platné pri objednaní do konca mesiaca. Doprava v cene.":"napr. Dodanie na stavbu, vykládka hydraulickou rukou."}">${esc(D.note||"")}</textarea></label>
     <label class="chk"><input type="checkbox" id="obShowVat" ${D.showVat?"checked":""}> V PDF uviesť aj DPH a sumu s DPH</label>
-    <div class="row"><button class="btn primary" type="submit">Uložiť</button><button type="button" class="btn" data-a="obPdf">Uložiť a stiahnuť PDF</button>${ex?`<button type="button" class="btn ghost findel" data-a="obDel">Odstrániť</button>`:""}</div></form>`}
-function obHTML(k){if($("#obForm"))obRead();return `<div class="stack">${view.obDraft&&view.obDraft.k===k?obFormHTML():""}${obListHTML(k)}</div>`}
+    ${(D.sent||[]).length?`<div class="muted" style="font-size:13px">Odoslané: ${D.sent.map(x=>`${d2(x.at.slice(0,10))} na ${esc(x.to)}`).join(" · ")}</div>`:""}
+    <div class="row"><button class="btn primary" type="submit">Uložiť</button><button type="button" class="btn" data-a="obPdf">Uložiť a stiahnuť PDF</button><button type="button" class="btn" data-a="obSend">Odoslať e-mailom</button>${ex?`<button type="button" class="btn ghost findel" data-a="obDel">Odstrániť</button>`:""}</div></form>`}
+function obHTML(k){if($("#obForm"))obRead();if($("#obSendForm"))obSendRead();return `<div class="stack">${view.obDraft&&view.obDraft.k===k?obSendHTML()+obFormHTML():""}${obListHTML(k)}</div>`}
 
 /* načítanie formulára do konceptu */
 function obRead(){const D=view.obDraft,f=$("#obForm");if(!D||!f)return D;const v=id=>($("#"+id)?.value??"").trim();
@@ -4708,7 +4710,7 @@ function obCommit(){const D=obRead();if(!D)return null;
   obSavePartner(D.partner);save();return rec}
 
 /* PDF – vzhľad podľa cenových ponúk Kalimis: svetlosivá A4, logo vľavo hore, pečiatka vpravo dole */
-function obPdf(k,D){const doc=newPdf("portrait");if(!doc)return;const C=OB[k],F=S.firm||{},P=D.partner||{},T=obTotals(D);
+function obPdf(k,D,asData){const doc=newPdf("portrait");if(!doc)return null;const C=OB[k],F=S.firm||{},P=D.partner||{},T=obTotals(D);
   const W=210,H=297,L=16,R=W-16,INK=[28,28,27],MU=[107,107,104],LN=[220,220,217],GR=[237,237,235];
   const col=c=>doc.setTextColor(...c),font=(st,sz)=>{doc.setFont("DVC",st);doc.setFontSize(sz)};
   const cap=(t,x,y,al)=>{font("bold",7.2);col(MU);doc.setCharSpace(0.5);doc.text(t.toUpperCase(),x,y,al?{align:al}:undefined);doc.setCharSpace(0)};
@@ -4761,7 +4763,20 @@ function obPdf(k,D){const doc=newPdf("portrait");if(!doc)return;const C=OB[k],F=
   const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setDrawColor(...LN);doc.line(L,H-15,R,H-15);font("normal",7.2);col(MU);
     if(F.orsr)doc.text(doc.splitTextToSize(plain(/^spoločnosť/i.test(F.orsr)?F.orsr:"Zápis: "+F.orsr),R-L-25),L,H-11);doc.text(`Strana ${i}/${n}`,R,H-11,{align:"right"})}
   const nm=`${k==="q"?"Cenova_ponuka":"Objednavka"}_${D.no}_${P.name||""}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_").slice(0,80).replace(/[_.]+$/,"");
+  if(asData)return {filename:nm+".pdf",data:doc.output("arraybuffer")};
   offerFile(nm+".pdf",doc.output("arraybuffer"))}
+/* odoslanie e-mailom: v skúšobnej verzii sa len zaznamená; ostrá verzia (live.js) posiela cez server */
+let obMail=async()=>({demo:true});
+function obMailText(k,D){const F=S.firm||{},sig=[me.name,F.name||S.company,F.phone,F.email].filter(Boolean).join("\n");
+  return k==="q"?`Dobrý deň,\n\nv prílohe Vám posielame cenovú ponuku č. ${D.no}${D.subject?` – ${D.subject}`:""}.\nV prípade otázok nás neváhajte kontaktovať.\n\nS pozdravom\n${sig}`
+    :`Dobrý deň,\n\n${D.refNo?`na základe Vašej cenovej ponuky č. ${D.refNo} `:""}Vám v prílohe posielame objednávku č. ${D.no}${D.subject?` – ${D.subject}`:""}.\nProsíme o potvrdenie jej prijatia${D.due&&D.due!=="podľa dohody"?` a dodržanie termínu plnenia ${D.due}`:""}.\n\nS pozdravom\n${sig}`}
+function obSendHTML(){const M=view.obSend,D=view.obDraft;if(!M||!D)return "";const C=OB[D.k];
+  return `<form class="card stack obsend" id="obSendForm"><div class="entry-head"><h3>Odoslať ${D.k==="q"?"cenovú ponuku":"objednávku"} č. ${esc(D.no)}</h3><button type="button" class="btn small ghost" data-a="obSendNo">Zrušiť</button></div>
+    <div class="grid2"><label>Komu<input type="email" id="osTo" value="${esc(M.to)}" required placeholder="e-mail ${C.party.toLowerCase()}a" multiple></label><label>Kópia (nepovinné)<input type="email" id="osCc" value="${esc(M.cc)}" multiple></label></div>
+    <label>Predmet<input id="osSubj" value="${esc(M.subj)}" required></label>
+    <label>Správa<textarea id="osBody" rows="9">${esc(M.body)}</textarea></label>
+    <div class="muted" style="font-size:13px">Príloha: <b>${esc(M.file)}</b> · Odpovede prídu na ${esc((S.firm&&S.firm.email)||me.email||"e-mail firmy")}.</div>
+    <div class="row"><button class="btn primary" type="submit" ${view.obSending?"disabled":""}>${view.obSending?"Odosielam…":"Odoslať"}</button><button type="button" class="btn ghost" data-a="obPdf">Stiahnuť PDF</button></div></form>`}
 
 /* vyčítanie cudzej cenovej ponuky (PDF alebo fotka) cez Claude */
 const PDFJS_V="4.10.38";
@@ -4806,14 +4821,31 @@ Pravidlá: dodávateľ je firma, ktorá ponuku VYSTAVILA (nie odberateľ, ktoré
 
 /* udalosti */
 document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;if(!/^ob/.test(a)||!isAdmin(me))return;
-  if(a==="obNew"){view.obDraft=obBlank(b.dataset.k);view.obMsg=null;render();window.scrollTo({top:0,behavior:"smooth"})}
-  else if(a==="obOpen"){const x=obList(b.dataset.k).find(z=>z.id===b.dataset.id);if(!x)return;view.obDraft={...JSON.parse(JSON.stringify(x)),k:b.dataset.k};if(!view.obDraft.items.length)view.obDraft.items=[obItem()];view.obMsg=null;render();window.scrollTo({top:0,behavior:"smooth"})}
-  else if(a==="obClose"){view.obDraft=null;render()}
+  if(a==="obNew"){view.obDraft=obBlank(b.dataset.k);view.obMsg=null;view.obSend=null;render();window.scrollTo({top:0,behavior:"smooth"})}
+  else if(a==="obOpen"){const x=obList(b.dataset.k).find(z=>z.id===b.dataset.id);if(!x)return;view.obDraft={...JSON.parse(JSON.stringify(x)),k:b.dataset.k};view.obSend=null;if(!view.obDraft.items.length)view.obDraft.items=[obItem()];view.obMsg=null;render();window.scrollTo({top:0,behavior:"smooth"})}
+  else if(a==="obClose"){view.obDraft=null;view.obSend=null;render()}
+  else if(a==="obSend"){const k=view.obDraft&&view.obDraft.k,rec=obCommit();if(!rec)return;const D=view.obDraft,F=S.firm||{};
+    view.obSend={to:D.partner.email||"",cc:"",subj:`${OB[k].title} č. ${D.no} – ${F.name||S.company||""}`.replace(/ – $/,""),body:obMailText(k,D),file:(obPdf(k,rec,true)||{}).filename||"PDF"};render();window.scrollTo({top:0,behavior:"smooth"});setTimeout(()=>$("#osTo")?.focus(),50)}
+  else if(a==="obSendNo"){view.obSend=null;render()}
   else if(a==="obItemAdd"){const D=obRead();const last=D.items[D.items.length-1];D.items.push(obItem({vat:last?last.vat:23}));render();const r=document.querySelectorAll(".obrow");r[r.length-1]?.querySelector("input")?.focus()}
   else if(a==="obItemDel"){const D=obRead();if(D.items.length>1)D.items.splice(+b.dataset.i,1);render()}
   else if(a==="obPdf"){const k=view.obDraft&&view.obDraft.k,rec=obCommit();if(!rec)return;obPdf(k,rec);toast("Uložené");render()}
   else if(a==="obDel"){const D=view.obDraft;if(!D||!D.id)return;if(!b.dataset.sure){b.dataset.sure="1";b.textContent="Naozaj odstrániť?";return}
     S[OB[D.k].key]=obList(D.k).filter(x=>x.id!==D.id);view.obDraft=null;save();toast("Odstránené");render()}});
+function obSendRead(){const M=view.obSend;if(!M||!$("#obSendForm"))return M;M.to=$("#osTo").value.trim();M.cc=$("#osCc").value.trim();M.subj=$("#osSubj").value.trim();M.body=$("#osBody").value;return M}
+document.addEventListener("submit",async ev=>{if(ev.target.id!=="obSendForm"||!me)return;ev.preventDefault();if(!isAdmin(me)||view.obSending)return;
+  const M=obSendRead(),D=view.obDraft;if(!M||!D)return;const k=D.k,ok=e=>e.split(/[,;\s]+/).filter(Boolean).every(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+  if(!M.to||!ok(M.to)||(M.cc&&!ok(M.cc))){toast("Skontroluj e-mailovú adresu");return}
+  const rec=obCommit();if(!rec)return;const pdf=obPdf(k,rec,true);if(!pdf)return;
+  view.obSending=true;render();let res;
+  try{const b=new Uint8Array(pdf.data);let bin="";for(let i=0;i<b.length;i+=8192)bin+=String.fromCharCode.apply(null,b.subarray(i,i+8192));
+    res=await obMail({kind:k==="q"?"quote":"order",to:M.to,cc:M.cc,subject:M.subj,text:M.body,filename:pdf.filename,pdf:btoa(bin),replyTo:(S.firm&&S.firm.email)||me.email||"",fromName:(S.firm&&S.firm.name)||S.company||""})}
+  catch(e){res={error:e&&e.message||"chyba"}}
+  view.obSending=false;
+  if(res&&res.error){toast("E-mail sa nepodarilo odoslať: "+res.error);render();return}
+  const x=obList(k).find(z=>z.id===rec.id);if(x){(x.sent=x.sent||[]).push({at:nowIso(),to:M.to,by:me.id,...(res&&res.demo?{demo:true}:{})});if(x.status==="koncept")x.status="odoslana";save()}
+  view.obSend=null;view.obDraft=null;
+  toast(res&&res.demo?`Skúšobná verzia: e-mail sa reálne neodoslal (v ostrej verzii odíde na ${M.to}). Označené ako odoslané.`:`Odoslané na ${M.to}`);render()});
 document.addEventListener("submit",ev=>{if(ev.target.id!=="obForm"||!me)return;ev.preventDefault();if(!isAdmin(me))return;const D=view.obDraft,rec=obCommit();if(!rec)return;
   toast(`${OB[D.k].title} uložená`);view.obDraft=null;render()});
 document.addEventListener("input",ev=>{const t=ev.target;if(!me)return;
