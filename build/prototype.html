@@ -896,6 +896,7 @@ table.dxt{font-size:13.5px}table.dxt td.dxw{white-space:normal;min-width:240px;l
 @media (max-width:760px){.obrow{grid-template-columns:repeat(3,minmax(0,1fr));position:relative;padding-top:10px}.obrow .obn{position:absolute;top:6px;left:10px;font-size:12px}.obname{grid-column:1/-1;padding-left:22px}.obsum{grid-column:span 2;align-items:flex-start;padding-bottom:0}.obdel{justify-self:end}}
 .obtot{align-self:flex-end;min-width:280px;display:flex;flex-direction:column;gap:2px}.obtot>div{display:flex;justify-content:space-between;gap:16px;font-size:14px}.obtot>div:first-child{background:var(--tint);border-radius:8px;padding:8px 12px;font-size:16px}.obtot>div:not(:first-child){padding:0 12px;color:var(--muted)}
 .obsend{border:2px solid var(--accent)}
+.feread{align-self:flex-start;cursor:pointer}.feread.dis{opacity:.6;cursor:progress}.feritems td{padding:2px 6px;font-size:13px;border:0}
 .obpick{gap:8px}.obpick #obPick{flex:1 1 280px;max-width:520px}
 .cenpart{display:grid;grid-template-columns:minmax(0,1fr) 80px 44px 100px 34px;gap:8px;align-items:center}@media (max-width:560px){.cenpart{grid-template-columns:minmax(0,1fr) 70px 34px}.cenpart>span{display:none}}
 .okmsg{background:var(--tint);border-radius:8px;padding:8px 12px;font-size:13.5px}
@@ -4526,7 +4527,10 @@ function finExpFormHTML(){const D=view.finEdit&&view.finEdit!=="__new"?(S.finExp
   const K=view.finKeep||{},mode=K.feMode||(D.area==="sklad"?"sklad":"spot"),skl=mode==="sklad",area=skl?"sklad":(K.feArea&&K.feArea!=="sklad"?K.feArea:D.area&&D.area!=="sklad"?D.area:"stroje"),mach=(S.machines||[]).filter(m=>!m.archived),stv=area==="stavba";
   const mats=(S.cennik||[]).filter(i=>i.type==="mat"),dIt=D.itemId&&cenItem(D.itemId);
   const projs=S.projects.filter(p=>!p.closed||p.id===K.feProj);
+  const R=view.feRead;
   return `<form class="card stack finbox" id="finExpForm"><div class="entry-head"><h3>${view.finEdit&&view.finEdit!=="__new"?"Upraviť výdavok":"Nový výdavok"}</h3>${view.finEdit&&view.finEdit!=="__new"?`<button type="button" class="btn small ghost" data-a="finCancel">Zrušiť</button>`:""}</div>
+    <label class="btn feread${view.feBusy?" dis":""}"><input type="file" id="feFile" accept="image/*,application/pdf" hidden ${view.feBusy?"disabled":""}>${view.feBusy?"Čítam doklad…":"📷 Načítať z bločku alebo faktúry"}</label>
+    ${R?`<div class="okmsg stack" style="gap:4px"><div>${esc(R.msg)}</div>${(R.items||[]).length?`<table class="fintab feritems"><tbody>${R.items.map(i=>`<tr><td>${esc(i.nazov||"")}</td><td class="num r">${i.mnozstvo!=null&&i.mnozstvo!==""?`${nf(+i.mnozstvo)} ${esc(i.mj||"")}`:""}</td><td class="num r">${i.spolu_bez_dph!=null&&i.spolu_bez_dph!==""?eur(+i.spolu_bez_dph):""}</td></tr>`).join("")}</tbody></table>`:""}<button type="button" class="btn small ghost" data-a="feReadX" style="align-self:flex-start">Skryť</button></div>`:""}
     <div class="grid2"><label>Dátum dokladu<input type="date" id="feDate" value="${esc(D.date||"")}" required></label><label>Číslo dokladu<input id="feNo" value="${esc(D.docNo||"")}" placeholder="faktúra, bloček"></label></div>
     <div class="seg" role="radiogroup" aria-label="Spôsob nákupu"><label><input type="radio" name="feMode" value="spot" ${!skl?"checked":""}><span>Okamžitá spotreba</span></label><label><input type="radio" name="feMode" value="sklad" ${skl?"checked":""}><span>Nákup na sklad</span></label></div>
     ${skl?`<div class="grid3"><label style="grid-column:span 2">Materiál<input id="feItem" list="feItems" value="${esc(K.feItem??(dIt?dIt.name:""))}" required placeholder="vyber z cenníka alebo napíš nový"></label><label>MJ<input id="feMj" value="${esc(K.feMj??(dIt?dIt.mj:""))}" list="obMjs" placeholder="ks, m3…"></label></div>
@@ -4544,6 +4548,36 @@ function finExpFormHTML(){const D=view.finEdit&&view.finEdit!=="__new"?(S.finExp
     ${stv||skl?"":`<div><label class="chk"><input type="checkbox" id="feRec" ${D.recurring?"checked":""}> Pravidelný mesačný výdavok</label><div class="muted" style="font-size:12.5px;margin:2px 0 0 24px">leasing, nájom, mzdy… – zadáš raz, počíta sa každý mesiac</div></div>`}
     ${!stv&&!skl&&D.recurring?`<label>Platí do (nepovinné)<input type="date" id="feUntil" value="${esc(D.until||"")}"></label>`:""}
     <div class="row"><button class="btn primary" type="submit">${view.finEdit&&view.finEdit!=="__new"?"Uložiť":"+ Pridať výdavok"}</button>${view.finEdit&&view.finEdit!=="__new"?`<button type="button" class="btn ghost findel" data-a="finDel">Odstrániť</button>`:""}</div></form>`}
+/* vyčítanie výdavku z fotky bločku alebo z faktúry (PDF) cez Claude */
+async function feFromFile(file){const isPdf=/pdf$/i.test(file.type)||/\.pdf$/i.test(file.name);
+  if(!isPdf&&!/^image\//.test(file.type)){toast("Nahraj fotku (JPG, PNG) alebo PDF.");return}
+  view.finKeep=finFormKeep();view.feBusy=true;view.feRead=null;render();finFormRestore();
+  const fin=(msg,K)=>{view.finKeep={...finFormKeep(),...(K||{})};view.feBusy=false;view.feRead=msg;render();finFormRestore()};
+  let src;try{src=isPdf?await obReadPdf(file):{text:"",imgs:[(await oevImage(file)).blob]}}catch(e){return fin({msg:"Doklad sa nepodarilo otvoriť. Údaje zadaj ručne."})}
+  let sample=null;try{sample=await window.claude?.use?.("sample")}catch(e){}
+  const lim=sample?await sample.limits().catch(()=>null):null,imgs=lim&&lim.images?src.imgs.slice(0,2):[];
+  if(!sample)return fin({msg:"Automatické čítanie dokladov tu zatiaľ nie je dostupné. Údaje zadaj ručne."});
+  if(!imgs.length&&src.text.length<20)return fin({msg:"Z dokladu sa nedal prečítať text. Údaje zadaj ručne."});
+  const cats=FIN_CATS.map(([k,l])=>`${k} = ${l}`).join("; ");
+  const prompt=`Toto je slovenský daňový doklad – pokladničný bloček (eKasa) alebo faktúra – za nákup stavebnej firmy.
+${src.text?`Text dokladu (z PDF):\n<<<\n${src.text.slice(0,12000)}\n>>>\n`:""}${imgs.length?"Doklad je na obrázku.\n":""}
+Vráť IBA jeden JSON objekt:
+{"typ":"blocek|faktura","dodavatel":"","ico":"","cislo_dokladu":"","datum":"RRRR-MM-DD","polozky":[{"nazov":"","mnozstvo":0,"mj":"","spolu_bez_dph":0,"dph":23}],"spolu_bez_dph":0,"dph_spolu":0,"spolu_s_dph":0,"hlavna_sadzba_dph":23,"kategoria":"","popis":"","material":false}
+Pravidlá: dodávateľ je predajca, ktorý doklad vystavil. Pri bločku je číslo dokladu číslo bločku alebo ID dokladu (nie kód pokladnice). Ak sú na doklade len ceny s DPH, dopočítaj sumy bez DPH podľa sadzby. Čísla vráť ako čísla s desatinnou bodkou. "kategoria" vyber jeden kľúč z: ${cats}. "popis" je krátky popis nákupu (napr. "nafta 62 l" alebo "cement, malta"). "material" je true, ak ide hlavne o stavebný materiál. Ak údaj chýba, daj prázdny reťazec alebo null. Nič si nedomýšľaj.`;
+  try{const d=await sample.json(prompt,{...(imgs.length?{images:imgs}:{}),modelTier:"default"})||{};
+    const n=v=>v==null||v===""||isNaN(+v)?null:+v,its=Array.isArray(d.polozky)?d.polozky.filter(i=>i&&i.nazov):[];
+    let base=n(d.spolu_bez_dph);if(base==null&&n(d.spolu_s_dph)!=null)base=Math.round(n(d.spolu_s_dph)/(1+(n(d.hlavna_sadzba_dph)??23)/100)*100)/100;
+    const K={};if(/^\d{4}-\d{2}-\d{2}$/.test(d.datum||""))K.feDate=d.datum;if(d.cislo_dokladu)K.feNo=String(d.cislo_dokladu);if(d.dodavatel)K.feSup=String(d.dodavatel);
+    K.feDesc=String(d.popis||its.slice(0,3).map(i=>i.nazov).join(", ")).slice(0,120);if(base!=null)K.feAmt=base.toFixed(2).replace(".",",");
+    const vr=n(d.hlavna_sadzba_dph);if(vr!=null&&FIN_VAT.includes(vr))K.feVat=String(vr);
+    const c=FIN_CATS.find(x=>x[0]===d.kategoria),curMode=document.querySelector('input[name="feMode"]:checked')?.value||"spot";
+    if(curMode==="sklad"){if(its[0]){K.feItem=String(its[0].nazov);if(n(its[0].mnozstvo)!=null)K.feQty=String(n(its[0].mnozstvo)).replace(".",",");if(its[0].mj)K.feMj=String(its[0].mj)}}
+    else if(c&&$("#feArea")?.value!=="stavba"){K.feCat=c[0];K.feArea=c[2]}
+    const rates=[...new Set(its.map(i=>n(i.dph)).filter(v=>v!=null))];
+    fin({items:its,msg:`Vyčítané z dokladu${d.dodavatel?` ${d.dodavatel}`:""}: ${its.length} ${pl(its.length,"položka","položky","položiek")}${base!=null?`, spolu bez DPH ${eur(base)}`:""}${n(d.spolu_s_dph)!=null?` (s DPH ${eur(n(d.spolu_s_dph))})`:""}.${rates.length>1?" Doklad má viac sadzieb DPH – suma bez DPH je spolu za všetky.":""}${curMode==="sklad"&&its.length>1?" Na sklad sa zapíše prvá položka – ostatné pridaj ako ďalší nákup.":""} Skontroluj údaje a ulož.`},K)}
+  catch(e){fin({msg:(OEV_ERR[e&&e.code]||"Údaje sa nepodarilo vyčítať.")+" Údaje zadaj ručne."})}}
+document.addEventListener("change",ev=>{const t=ev.target;if(t.id==="feFile"&&t.files&&t.files[0]&&me&&isAdmin(me)){const f=t.files[0];t.value="";feFromFile(f)}});
+document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="feReadX"]');if(b&&me){view.finKeep=finFormKeep();view.feRead=null;render();finFormRestore()}});
 function finSumHTML(all,y){const sum=a=>all.filter(x=>!a||x.area===a).reduce((s,x)=>s+x.amount,0),tot=sum();
   const rec=(S.finExp||[]).filter(x=>x.recurring&&(!x.until||x.until>=todayIso()));
   const col=a=>{const L=rec.filter(x=>x.area===a),s=L.reduce((t,x)=>t+numIn(x.amount),0);
@@ -4596,7 +4630,7 @@ function financeHTML(){const y=finYear(),all=finAllExp(y);
 document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
   if(!/^fin/.test(a)||!isAdmin(me))return;
   if(a==="finOpen"){view.finEdit=b.dataset.id;render();window.scrollTo({top:0,behavior:"smooth"})}
-  else if(a==="finCancel"){view.finEdit=null;render()}
+  else if(a==="finCancel"){view.finEdit=null;view.feRead=null;render()}
   else if(a==="finDel"){const x=(S.finExp||[]).find(e=>e.id===view.finEdit);if(!x)return;S.finExp=S.finExp.filter(e=>e!==x);if(x.stockMove)S.stock=(S.stock||[]).filter(m=>m.id!==x.stockMove);view.finEdit=null;save();toast("Výdavok odstránený");render()}
   else if(a==="finProj"){view={screen:"project",projectId:b.dataset.id,tab:"ekonomika"};render()}
   else if(a==="finIncOpen"){view.finIncEdit=b.dataset.id;render()}
@@ -4624,14 +4658,14 @@ document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||(id!=="fin
       const isNew=!view.finEdit||view.finEdit==="__new",x=isNew?{id:uid("fe")}:(S.finExp||[]).find(e=>e.id===view.finEdit);if(!x)return;
       Object.assign(x,{date:v("feDate"),docNo:v("feNo"),cat:"mat",area:"sklad",itemId:it.id,qty:String(qty),machineId:"",supplier:v("feSup"),desc:v("feDesc")||`${it.name} – ${nf(qty)} ${it.mj||""}`.trim(),amount:amt,vat:+v("feVat"),recurring:false,until:""});
       let m=x.stockMove&&(S.stock||[]).find(z=>z.id===x.stockMove);if(m)Object.assign(m,{date:x.date,itemId:it.id,qty:String(qty),price:unit,docNo:x.docNo,supplier:x.supplier});else{m=stockIn({date:x.date,itemId:it.id,qty:String(qty),price:unit,docNo:x.docNo,supplier:x.supplier,expId:x.id});x.stockMove=m.id}
-      if(isNew)(S.finExp=S.finExp||[]).push(x);view.finEdit=null;view.finKeep=null;save();toast(`Nákup na sklad: ${nf(qty)} ${it.mj||""} ${it.name}`);render();return}
+      if(isNew)(S.finExp=S.finExp||[]).push(x);view.finEdit=null;view.feRead=null;view.finKeep=null;save();toast(`Nákup na sklad: ${nf(qty)} ${it.mj||""} ${it.name}`);render();return}
     if(v("feArea")==="stavba"){const pid=v("feProj");if(!pid){toast("Vyber stavbu");return}
       (S.costs=S.costs||[]).push({id:uid("nk"),projectId:pid,cat:v("feCat")||"ine",date:v("feDate"),supplier:v("feSup"),docNo:v("feNo"),desc:v("feDesc"),amount:amt,by:me.id,at:nowIso()});
-      view.finEdit=null;view.finKeep=null;save();toast("Náklad pridaný do stavby");render();return}
+      view.finEdit=null;view.feRead=null;view.finKeep=null;save();toast("Náklad pridaný do stavby");render();return}
     const isNew=!view.finEdit||view.finEdit==="__new",x=isNew?{id:uid("fe")}:(S.finExp||[]).find(e=>e.id===view.finEdit);if(!x)return;
     if(x.stockMove){S.stock=(S.stock||[]).filter(m=>m.id!==x.stockMove);delete x.stockMove;delete x.itemId;delete x.qty}
     Object.assign(x,{date:v("feDate"),docNo:v("feNo"),cat:v("feCat"),area:v("feArea"),machineId:v("feArea")==="stroje"?v("feMach"):"",supplier:v("feSup"),desc:v("feDesc"),amount:amt,vat:+v("feVat"),recurring:!!$("#feRec").checked,until:$("#feRec").checked?v("feUntil"):""});
-    if(isNew)(S.finExp=S.finExp||[]).push(x);view.finEdit=null;save();toast(isNew?"Výdavok pridaný":"Výdavok uložený");render()}
+    if(isNew)(S.finExp=S.finExp||[]).push(x);view.finEdit=null;view.feRead=null;save();toast(isNew?"Výdavok pridaný":"Výdavok uložený");render()}
   else{const amt=moneyVal("fiAmt");if(!amt){toast("Suma má mať tvar napr. 1200 alebo 1199,90");return}
     const isNew=!view.finIncEdit||view.finIncEdit==="__new",x=isNew?{id:uid("fi")}:(S.finInc||[]).find(e=>e.id===view.finIncEdit);if(!x)return;
     Object.assign(x,{type:document.querySelector('input[name="fiType"]:checked').value,date:v("fiDate"),docNo:v("fiNo"),client:v("fiClient"),projectId:v("fiProj"),desc:v("fiDesc"),amount:amt,vat:+v("fiVat"),due:v("fiDue"),paid:!!$("#fiPaid").checked});
