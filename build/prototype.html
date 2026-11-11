@@ -896,6 +896,12 @@ table.dxt{font-size:13.5px}table.dxt td.dxw{white-space:normal;min-width:240px;l
 @media (max-width:760px){.obrow{grid-template-columns:repeat(3,minmax(0,1fr));position:relative;padding-top:10px}.obrow .obn{position:absolute;top:6px;left:10px;font-size:12px}.obname{grid-column:1/-1;padding-left:22px}.obsum{grid-column:span 2;align-items:flex-start;padding-bottom:0}.obdel{justify-self:end}}
 .obtot{align-self:flex-end;min-width:280px;display:flex;flex-direction:column;gap:2px}.obtot>div{display:flex;justify-content:space-between;gap:16px;font-size:14px}.obtot>div:first-child{background:var(--tint);border-radius:8px;padding:8px 12px;font-size:16px}.obtot>div:not(:first-child){padding:0 12px;color:var(--muted)}
 .obsend{border:2px solid var(--accent)}
+.ferows{display:flex;flex-direction:column;gap:8px}
+.ferow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px 8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);position:relative}
+.ferow label{gap:2px}.ferow label>span{font-size:11.5px;color:var(--muted);font-weight:600}.ferow input,.ferow select{min-width:0}
+.ferow .fr-name{grid-column:span 4}.ferow .fr-amt{grid-column:span 2;padding-right:30px}.ferow .fr-del{position:absolute;top:6px;right:6px;padding:2px 8px;font-size:16px}
+.ferow .fr-dest{grid-column:span 3}.ferow .fr-cat{grid-column:span 6}
+@media (max-width:560px){.ferow .fr-name{grid-column:span 6;padding-right:30px}.ferow .fr-amt{grid-column:span 3;padding-right:0}.ferow>label:nth-of-type(3){grid-column:span 3}.ferow>label:nth-of-type(4),.ferow>label:nth-of-type(5){grid-column:span 3}.ferow .fr-dest{grid-column:span 6}}
 .feread{align-self:flex-start;cursor:pointer}.feread.dis{opacity:.6;cursor:progress}.feritems td{padding:2px 6px;font-size:13px;border:0}
 .obpick{gap:8px}.obpick #obPick{flex:1 1 280px;max-width:520px}
 .cenpart{display:grid;grid-template-columns:minmax(0,1fr) 80px 44px 100px 34px;gap:8px;align-items:center}@media (max-width:560px){.cenpart{grid-template-columns:minmax(0,1fr) 70px 34px}.cenpart>span{display:none}}
@@ -4532,7 +4538,8 @@ function finExpFormHTML(){const D=view.finEdit&&view.finEdit!=="__new"?(S.finExp
     <label class="btn feread${view.feBusy?" dis":""}"><input type="file" id="feFile" accept="image/*,application/pdf" hidden ${view.feBusy?"disabled":""}>${view.feBusy?"Čítam doklad…":"📷 Načítať z bločku alebo faktúry"}</label>
     ${R?`<div class="okmsg stack" style="gap:4px"><div>${esc(R.msg)}</div>${(R.items||[]).length?`<table class="fintab feritems"><tbody>${R.items.map(i=>`<tr><td>${esc(i.nazov||"")}</td><td class="num r">${i.mnozstvo!=null&&i.mnozstvo!==""?`${nf(+i.mnozstvo)} ${esc(i.mj||"")}`:""}</td><td class="num r">${i.spolu_bez_dph!=null&&i.spolu_bez_dph!==""?eur(+i.spolu_bez_dph):""}</td></tr>`).join("")}</tbody></table>`:""}<button type="button" class="btn small ghost" data-a="feReadX" style="align-self:flex-start">Skryť</button></div>`:""}
     <div class="grid2"><label>Dátum dokladu<input type="date" id="feDate" value="${esc(D.date||"")}" required></label><label>Číslo dokladu<input id="feNo" value="${esc(D.docNo||"")}" placeholder="faktúra, bloček"></label></div>
-    <div class="seg" role="radiogroup" aria-label="Spôsob nákupu"><label><input type="radio" name="feMode" value="spot" ${!skl?"checked":""}><span>Okamžitá spotreba</span></label><label><input type="radio" name="feMode" value="sklad" ${skl?"checked":""}><span>Nákup na sklad</span></label></div>
+    ${view.finEdit&&view.finEdit!=="__new"?"":`<label class="chk"><input type="checkbox" id="feMulti" ${view.feRows?"checked":""}> Viac položiek z jedného dokladu</label>`}
+    ${view.feRows&&!(view.finEdit&&view.finEdit!=="__new")?feRowsHTML():`<div class="seg" role="radiogroup" aria-label="Spôsob nákupu"><label><input type="radio" name="feMode" value="spot" ${!skl?"checked":""}><span>Okamžitá spotreba</span></label><label><input type="radio" name="feMode" value="sklad" ${skl?"checked":""}><span>Nákup na sklad</span></label></div>
     ${skl?`<div class="grid3"><label style="grid-column:span 2">Materiál<input id="feItem" list="feItems" value="${esc(K.feItem??(dIt?dIt.name:""))}" required placeholder="vyber z cenníka alebo napíš nový"></label><label>MJ<input id="feMj" value="${esc(K.feMj??(dIt?dIt.mj:""))}" list="obMjs" placeholder="ks, m3…"></label></div>
       <datalist id="feItems">${mats.map(i=>`<option value="${esc(i.name)}">${esc([i.code,i.mj].filter(Boolean).join(" · "))}</option>`).join("")}</datalist><datalist id="obMjs">${["ks","m","m2","m3","t","kg","bm","l","bal","vrece"].map(x=>`<option value="${x}">`).join("")}</datalist>
       <label>Množstvo<input id="feQty" inputmode="decimal" value="${esc(K.feQty??(D.qty?String(D.qty).replace(".",","):""))}" required></label>
@@ -4546,8 +4553,58 @@ function finExpFormHTML(){const D=view.finEdit&&view.finEdit!=="__new"?(S.finExp
     <div class="grid2"><label>Suma bez DPH (€)<input id="feAmt" inputmode="decimal" value="${esc(D.amount!=null?String(D.amount).replace(".",","):"")}" placeholder="0,00" required></label>
       <label>DPH<select id="feVat">${FIN_VAT.map(v=>`<option value="${v}" ${+D.vat===v?"selected":""}>${v} %</option>`).join("")}</select></label></div>
     ${stv||skl?"":`<div><label class="chk"><input type="checkbox" id="feRec" ${D.recurring?"checked":""}> Pravidelný mesačný výdavok</label><div class="muted" style="font-size:12.5px;margin:2px 0 0 24px">leasing, nájom, mzdy… – zadáš raz, počíta sa každý mesiac</div></div>`}
-    ${!stv&&!skl&&D.recurring?`<label>Platí do (nepovinné)<input type="date" id="feUntil" value="${esc(D.until||"")}"></label>`:""}
-    <div class="row"><button class="btn primary" type="submit">${view.finEdit&&view.finEdit!=="__new"?"Uložiť":"+ Pridať výdavok"}</button>${view.finEdit&&view.finEdit!=="__new"?`<button type="button" class="btn ghost findel" data-a="finDel">Odstrániť</button>`:""}</div></form>`}
+    ${!stv&&!skl&&D.recurring?`<label>Platí do (nepovinné)<input type="date" id="feUntil" value="${esc(D.until||"")}"></label>`:""}`}
+    <div class="row"><button class="btn primary" type="submit">${view.finEdit&&view.finEdit!=="__new"?"Uložiť":view.feRows?"+ Pridať položky dokladu":"+ Pridať výdavok"}</button>${view.finEdit&&view.finEdit!=="__new"?`<button type="button" class="btn ghost findel" data-a="finDel">Odstrániť</button>`:""}</div></form>`}
+/* výdavok rozpísaný na viac položiek z jedného dokladu – každá položka môže ísť inam (sklad, stavba, stroje, personalistika, réžia) */
+const feRowNew=o=>({name:"",qty:"",mj:"",amt:"",vat:23,dest:"rezia",cat:"",...o});
+const feDestCats=d=>d==="sklad"?[]:d.startsWith("p:")?COST_CATS:FIN_CATS.filter(c=>c[2]===d);
+function feRowsHTML(){const R=view.feRows,projs=S.projects.filter(p=>!p.closed);
+  const tot=R.reduce((s,r)=>s+numIn(r.amt),0),totv=R.reduce((s,r)=>s+numIn(r.amt)*(1+(+r.vat||0)/100),0);
+  return `<div class="grid2"><label>Dodávateľ<input id="feSup" value="${esc(view.feSup||"")}" list="feSups" placeholder="napr. Stavebniny Javor"></label><div></div></div>
+    <datalist id="feSups">${[...new Set([...(S.finExp||[]),...(S.costs||[])].map(c=>c.supplier).filter(Boolean))].sort().map(s=>`<option value="${esc(s)}">`).join("")}</datalist>
+    <datalist id="feItems">${(S.cennik||[]).filter(i=>i.type==="mat").map(i=>`<option value="${esc(i.name)}">`).join("")}</datalist><datalist id="obMjs">${["ks","m","m2","m3","t","kg","bm","l","bal","vrece","hod"].map(x=>`<option value="${x}">`).join("")}</datalist>
+    <div class="eyebrow">Položky dokladu</div>
+    <div class="ferows">${R.map((r,i)=>{const cats=feDestCats(r.dest);return `<div class="ferow" data-i="${i}">
+      <label class="fr-name"><span>Položka ${i+1}</span><input class="feR" data-f="name" value="${esc(r.name)}" ${r.dest==="sklad"?'list="feItems"':""} placeholder="${r.dest==="sklad"?"materiál z cenníka alebo nový":"napr. lepiaca páska"}"></label>
+      <label class="fr-amt"><span>Bez DPH (€)</span><input class="feR" data-f="amt" inputmode="decimal" value="${esc(String(r.amt??"").replace(".",","))}" placeholder="0,00"></label>
+      <button type="button" class="btn small ghost fr-del" data-a="feRowDel" data-i="${i}" aria-label="Odstrániť položku ${i+1}" ${R.length<2?"disabled":""}>×</button>
+      <label><span>Množstvo</span><input class="feR" data-f="qty" inputmode="decimal" value="${esc(String(r.qty??"").replace(".",","))}"></label>
+      <label><span>MJ</span><input class="feR" data-f="mj" value="${esc(r.mj||"")}" list="obMjs"></label>
+      <label><span>DPH</span><select class="feR" data-f="vat">${FIN_VAT.map(v=>`<option value="${v}" ${+r.vat===v?"selected":""}>${v} %</option>`).join("")}</select></label>
+      <label class="fr-dest"><span>Zaradiť</span><select class="feR" data-f="dest"><option value="sklad" ${r.dest==="sklad"?"selected":""}>Nákup na sklad</option>${FIN_AREAS.filter(a=>a[0]!=="sklad"&&a[0]!=="stavba").map(([k,l])=>`<option value="${k}" ${r.dest===k?"selected":""}>${l}</option>`).join("")}
+        ${projs.length?`<optgroup label="Na stavbu (okamžitá spotreba)">${projs.map(p=>`<option value="p:${p.id}" ${r.dest==="p:"+p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</optgroup>`:""}</select></label>
+      ${cats.length?`<label class="fr-cat"><span>Kategória</span><select class="feR" data-f="cat">${cats.map(([k,l])=>`<option value="${k}" ${r.cat===k?"selected":""}>${l}</option>`).join("")}</select></label>`:`<div class="fr-cat muted" style="font-size:12px;align-self:center">${r.dest==="sklad"?"pripíše sa na sklad":""}</div>`}
+    </div>`}).join("")}</div>
+    <div class="row" style="justify-content:space-between"><button type="button" class="btn small" data-a="feRowAdd">+ Pridať položku</button><span>Spolu bez DPH <b id="feRowsTot">${eur(Math.round(tot*100)/100)}</b> <span class="muted" id="feRowsTotV">· s DPH ${eur(Math.round(totv*100)/100)}</span></span></div>`}
+function feRowsSync(){const R=view.feRows;if(!R)return;document.querySelectorAll(".ferow").forEach(el=>{const r=R[+el.dataset.i];if(!r)return;el.querySelectorAll(".feR").forEach(e=>{const f=e.dataset.f;r[f]=f==="vat"?+e.value:e.value})});
+  const s=$("#feSup");if(s)view.feSup=s.value;
+  const tot=R.reduce((s,r)=>s+numIn(r.amt),0),totv=R.reduce((s,r)=>s+numIn(r.amt)*(1+(+r.vat||0)/100),0);const a=$("#feRowsTot"),b=$("#feRowsTotV");if(a)a.textContent=eur(Math.round(tot*100)/100);if(b)b.textContent="· s DPH "+eur(Math.round(totv*100)/100)}
+function feRowsRerender(){const keep=finFormKeep();view.finKeep=keep;render();finFormRestore()}
+document.addEventListener("input",ev=>{if(ev.target.closest&&ev.target.closest("#finExpForm")&&view.feRows)feRowsSync()});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me)return;
+  if(t.id==="feMulti"){if(t.checked){const v=id=>($("#"+id)?.value||"").trim();view.feSup=v("feSup");
+      const m=document.querySelector('input[name="feMode"]:checked')?.value==="sklad",ar=$("#feArea")?.value||"rezia",pj=$("#feProj")?.value;
+      view.feRows=[feRowNew({name:m?v("feItem"):v("feDesc"),qty:v("feQty"),mj:v("feMj"),amt:v("feAmt"),vat:+(v("feVat")||23),dest:m?"sklad":ar==="stavba"?(pj?"p:"+pj:"rezia"):ar,cat:$("#feCat")?.value||""}),feRowNew({dest:m?"sklad":ar==="stavba"&&pj?"p:"+pj:ar==="stavba"?"rezia":ar})]}
+    else{const r=(view.feRows||[])[0];view.feRows=null;const k=finFormKeep();if(r){k.feDesc=r.name;k.feAmt=r.amt;k.feVat=String(r.vat)}k.feSup=view.feSup||k.feSup;view.finKeep=k;render();finFormRestore();return}
+    feRowsRerender()}
+  else if(t.classList&&t.classList.contains("feR")){feRowsSync();if(t.dataset.f==="dest"){const r=view.feRows[+t.closest(".ferow").dataset.i];const c=feDestCats(r.dest);r.cat=c.length?c[0][0]:"";feRowsRerender()}}});
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me||!view.feRows)return;const a=b.dataset.a;
+  if(a==="feRowAdd"){feRowsSync();const l=view.feRows[view.feRows.length-1];view.feRows.push(feRowNew({dest:l?l.dest:"rezia",cat:l?l.cat:"",vat:l?l.vat:23}));feRowsRerender();const r=document.querySelectorAll(".ferow");r[r.length-1]?.querySelector("input")?.focus()}
+  else if(a==="feRowDel"){feRowsSync();view.feRows.splice(+b.dataset.i,1);feRowsRerender()}});
+/* uloženie dokladu s viacerými položkami: každá položka sa zapíše tam, kam patrí */
+function feRowsSave(){feRowsSync();const v=id=>($("#"+id)?.value||"").trim(),date=v("feDate"),docNo=v("feNo"),supplier=v("feSup"),grp=uid("dk");
+  const R=view.feRows.filter(r=>r.name||numIn(r.amt));if(!R.length){toast("Pridaj aspoň jednu položku");return false}
+  for(const r of R){const a=String(r.amt||"").replace(/\s|€/g,"").replace(",",".");if(!/^\d+(\.\d{1,2})?$/.test(a)){toast(`Položka „${r.name||"?"}“: suma má mať tvar napr. 12 alebo 12,50`);return false}
+    if(r.dest==="sklad"&&(!r.name||!(numIn(r.qty)>0))){toast(`Položka na sklad „${r.name||"?"}“: doplň názov a množstvo`);return false}}
+  let n=0;R.forEach(r=>{const amt=String(+String(r.amt).replace(/\s|€/g,"").replace(",",".")),qty=numIn(r.qty),desc=[r.name,qty?`${nf(qty)} ${r.mj||""}`.trim():""].filter(Boolean).join(" – ");
+    if(r.dest==="sklad"){let it=(S.cennik||[]).find(i=>i.type==="mat"&&i.name.toLowerCase()===r.name.toLowerCase());const unit=String(Math.round(+amt/qty*10000)/10000);
+      if(!it){it={id:uid("cn"),type:"mat",code:"",name:r.name,sub:"",mj:r.mj||"ks",price:"",cost:unit,vat:+r.vat,stock:true};(S.cennik=S.cennik||[]).push(it)}
+      const x={id:uid("fe"),date,docNo,supplier,cat:"mat",area:"sklad",itemId:it.id,qty:String(qty),desc,amount:amt,vat:+r.vat,grp};
+      x.stockMove=stockIn({date,itemId:it.id,qty:String(qty),price:unit,docNo,supplier,expId:x.id}).id;(S.finExp=S.finExp||[]).push(x)}
+    else if(r.dest.startsWith("p:"))(S.costs=S.costs||[]).push({id:uid("nk"),projectId:r.dest.slice(2),cat:r.cat||"mat",date,supplier,docNo,desc,amount:amt,grp,by:me.id,at:nowIso()});
+    else (S.finExp=S.finExp||[]).push({id:uid("fe"),date,docNo,supplier,cat:r.cat||"ine",area:r.dest,machineId:"",desc,amount:amt,vat:+r.vat,recurring:false,until:"",grp});
+    n++});
+  view.feRows=null;view.feSup="";view.feRead=null;view.finKeep=null;save();toast(`Z dokladu pridaných ${n} ${pl(n,"položka","položky","položiek")}`);render();return true}
 /* vyčítanie výdavku z fotky bločku alebo z faktúry (PDF) cez Claude */
 async function feFromFile(file){const isPdf=/pdf$/i.test(file.type)||/\.pdf$/i.test(file.name);
   if(!isPdf&&!/^image\//.test(file.type)){toast("Nahraj fotku (JPG, PNG) alebo PDF.");return}
@@ -4562,8 +4619,8 @@ async function feFromFile(file){const isPdf=/pdf$/i.test(file.type)||/\.pdf$/i.t
   const prompt=`Toto je slovenský daňový doklad – pokladničný bloček (eKasa) alebo faktúra – za nákup stavebnej firmy.
 ${src.text?`Text dokladu (z PDF):\n<<<\n${src.text.slice(0,12000)}\n>>>\n`:""}${imgs.length?"Doklad je na obrázku.\n":""}
 Vráť IBA jeden JSON objekt:
-{"typ":"blocek|faktura","dodavatel":"","ico":"","cislo_dokladu":"","datum":"RRRR-MM-DD","polozky":[{"nazov":"","mnozstvo":0,"mj":"","spolu_bez_dph":0,"dph":23}],"spolu_bez_dph":0,"dph_spolu":0,"spolu_s_dph":0,"hlavna_sadzba_dph":23,"kategoria":"","popis":"","material":false}
-Pravidlá: dodávateľ je predajca, ktorý doklad vystavil. Pri bločku je číslo dokladu číslo bločku alebo ID dokladu (nie kód pokladnice). Ak sú na doklade len ceny s DPH, dopočítaj sumy bez DPH podľa sadzby. Čísla vráť ako čísla s desatinnou bodkou. "kategoria" vyber jeden kľúč z: ${cats}. "popis" je krátky popis nákupu (napr. "nafta 62 l" alebo "cement, malta"). "material" je true, ak ide hlavne o stavebný materiál. Ak údaj chýba, daj prázdny reťazec alebo null. Nič si nedomýšľaj.`;
+{"typ":"blocek|faktura","dodavatel":"","ico":"","cislo_dokladu":"","datum":"RRRR-MM-DD","polozky":[{"nazov":"","mnozstvo":0,"mj":"","spolu_bez_dph":0,"dph":23,"kategoria":"","material":false}],"spolu_bez_dph":0,"dph_spolu":0,"spolu_s_dph":0,"hlavna_sadzba_dph":23,"kategoria":"","popis":"","material":false}
+Pravidlá: dodávateľ je predajca, ktorý doklad vystavil. Pri bločku je číslo dokladu číslo bločku alebo ID dokladu (nie kód pokladnice). Ak sú na doklade len ceny s DPH, dopočítaj sumy bez DPH podľa sadzby. Čísla vráť ako čísla s desatinnou bodkou. "kategoria" (pri doklade aj pri každej položke) vyber jeden kľúč z: ${cats}. "material" pri položke je true, ak je to stavebný materiál (cement, tvárnice, piesok, lepidlo…). "popis" je krátky popis nákupu (napr. "nafta 62 l" alebo "cement, malta"). "material" je true, ak ide hlavne o stavebný materiál. Ak údaj chýba, daj prázdny reťazec alebo null. Nič si nedomýšľaj.`;
   try{const d=await sample.json(prompt,{...(imgs.length?{images:imgs}:{}),modelTier:"default"})||{};
     const n=v=>v==null||v===""||isNaN(+v)?null:+v,its=Array.isArray(d.polozky)?d.polozky.filter(i=>i&&i.nazov):[];
     let base=n(d.spolu_bez_dph);if(base==null&&n(d.spolu_s_dph)!=null)base=Math.round(n(d.spolu_s_dph)/(1+(n(d.hlavna_sadzba_dph)??23)/100)*100)/100;
@@ -4571,6 +4628,11 @@ Pravidlá: dodávateľ je predajca, ktorý doklad vystavil. Pri bločku je čís
     K.feDesc=String(d.popis||its.slice(0,3).map(i=>i.nazov).join(", ")).slice(0,120);if(base!=null)K.feAmt=base.toFixed(2).replace(".",",");
     const vr=n(d.hlavna_sadzba_dph);if(vr!=null&&FIN_VAT.includes(vr))K.feVat=String(vr);
     const c=FIN_CATS.find(x=>x[0]===d.kategoria),curMode=document.querySelector('input[name="feMode"]:checked')?.value||"spot";
+    if(its.length>1&&!(view.finEdit&&view.finEdit!=="__new")){const ar=$("#feArea")?.value,pj=$("#feProj")?.value;
+      view.feRows=its.map(i=>{const ic=FIN_CATS.find(x=>x[0]===i.kategoria)||c;const dest=curMode==="sklad"||i.material?"sklad":ar==="stavba"&&pj?"p:"+pj:ic?ic[2]:"rezia";
+        return feRowNew({name:String(i.nazov),qty:n(i.mnozstvo)!=null?String(n(i.mnozstvo)).replace(".",","):"",mj:String(i.mj||""),amt:n(i.spolu_bez_dph)!=null?n(i.spolu_bez_dph).toFixed(2).replace(".",","):"",vat:FIN_VAT.includes(n(i.dph))?n(i.dph):23,dest,cat:dest.startsWith("p:")?(i.material?"mat":"ine"):dest==="sklad"?"":(ic&&ic[2]===dest?ic[0]:(feDestCats(dest)[0]||[""])[0])})});
+      view.feSup=d.dodavatel?String(d.dodavatel):"";
+      return fin({items:[],msg:`Vyčítané z dokladu${d.dodavatel?` ${d.dodavatel}`:""}: ${its.length} ${pl(its.length,"položka","položky","položiek")}${base!=null?`, spolu bez DPH ${eur(base)}`:""}. Každú položku zaraď (na sklad, na stavbu, stroje, réžia…), skontroluj a ulož.`},K)}
     if(curMode==="sklad"){if(its[0]){K.feItem=String(its[0].nazov);if(n(its[0].mnozstvo)!=null)K.feQty=String(n(its[0].mnozstvo)).replace(".",",");if(its[0].mj)K.feMj=String(its[0].mj)}}
     else if(c&&$("#feArea")?.value!=="stavba"){K.feCat=c[0];K.feArea=c[2]}
     const rates=[...new Set(its.map(i=>n(i.dph)).filter(v=>v!=null))];
@@ -4629,8 +4691,8 @@ function financeHTML(){const y=finYear(),all=finAllExp(y);
   return `<div class="stack"><div class="fingrid">${finExpFormHTML()}${finSumHTML(all,y)}</div>${finListHTML(all)}${finIncHTML(y)}</div>`}
 document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
   if(!/^fin/.test(a)||!isAdmin(me))return;
-  if(a==="finOpen"){view.finEdit=b.dataset.id;render();window.scrollTo({top:0,behavior:"smooth"})}
-  else if(a==="finCancel"){view.finEdit=null;view.feRead=null;render()}
+  if(a==="finOpen"){view.finEdit=b.dataset.id;view.feRows=null;render();window.scrollTo({top:0,behavior:"smooth"})}
+  else if(a==="finCancel"){view.finEdit=null;view.feRead=null;view.feRows=null;render()}
   else if(a==="finDel"){const x=(S.finExp||[]).find(e=>e.id===view.finEdit);if(!x)return;S.finExp=S.finExp.filter(e=>e!==x);if(x.stockMove)S.stock=(S.stock||[]).filter(m=>m.id!==x.stockMove);view.finEdit=null;save();toast("Výdavok odstránený");render()}
   else if(a==="finProj"){view={screen:"project",projectId:b.dataset.id,tab:"ekonomika"};render()}
   else if(a==="finIncOpen"){view.finIncEdit=b.dataset.id;render()}
@@ -4651,6 +4713,7 @@ function finFormRestore(){const o=view.finKeep;if(!o)return;Object.entries(o).fo
   if(!o.feRec)$("#feUntil")?.closest("label")?.remove()}
 document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||(id!=="finExpForm"&&id!=="finIncForm"))return;ev.preventDefault();if(!isAdmin(me))return;
   const v=k=>($("#"+k)?.value||"").trim();
+  if(id==="finExpForm"&&view.feRows&&!(view.finEdit&&view.finEdit!=="__new")){feRowsSave();return}
   if(id==="finExpForm"){const amt=moneyVal("feAmt");if(!amt){toast("Suma má mať tvar napr. 90 alebo 89,50");return}
     if(document.querySelector('input[name="feMode"]:checked')?.value==="sklad"){const nm=v("feItem"),qty=numIn(v("feQty"));if(!nm){toast("Zadaj materiál");return}if(!(qty>0)){toast("Zadaj množstvo");return}
       let it=(S.cennik||[]).find(i=>i.type==="mat"&&i.name.toLowerCase()===nm.toLowerCase());const unit=String(Math.round(+amt/qty*10000)/10000);
