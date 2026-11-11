@@ -413,6 +413,9 @@ mail=async(kind,o)=>{if(!TID||!navigator.onLine)return;if(!(o.users||[]).length&
   try{await saveQ.catch(()=>{});const d=await notifyCall({action:"send",kind,...o});
     if(d.sent)mailToast(`E-mail odoslaný (${d.sent} ${pl(d.sent,"príjemca","príjemcovia","príjemcov")})`)}
   catch(e){console.error(e);mailToast("E-mail sa nepodarilo odoslať: "+(e.message||e))}};
+/* cenová ponuka / objednávka e-mailom s PDF v prílohe (Firma → Obchod) */
+window.obMailLive=async p=>{if(!TID)return {error:"Nie si prihlásený do firmy."};if(!navigator.onLine)return {error:"Si offline."};
+  try{await saveQ.catch(()=>{});const d=await notifyCall({action:"doc",...p});return d}catch(e){console.error(e);return {error:e.message||String(e)}}};
 async function sendInvite(id,email){try{const d=await notifyCall({action:"invite",invite_id:id});
     mailToast(d.existing?`${email} už má účet – poslali sme mu e-mail, že ho pridávaš`:`Pozvánka odoslaná na ${email}`)}
   catch(e){console.error(e);mailToast("Pozvánku sa nepodarilo odoslať e-mailom: "+(e.message||e))}}

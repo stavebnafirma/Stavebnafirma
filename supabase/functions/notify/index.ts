@@ -2,6 +2,7 @@
 // Nasadiť BEZ overovania JWT (ranný súhrn spúšťa plánovač s vlastným kľúčom); používateľa overuje funkcia sama.
 //   POST { action: "invite", tenant_id, invite_id }        – pozvánka do firmy / na stavbu (s odkazom na nastavenie hesla)
 //   POST { action: "send", tenant_id, kind, ... }          – upozornenie (kontrolný deň, výzva, úloha, súpis)
+//   POST { action: "doc", tenant_id, kind: quote|order, to, cc, subject, text, filename, pdf } – cenová ponuka / objednávka s PDF
 //   POST { action: "digest" } + hlavička x-cron-key         – ranný súhrn pre všetky firmy (plánovač)
 // Nastavenia (Edge Functions → Secrets): SMTP_PASS (heslo schránky), voliteľne SMTP_USER, SMTP_HOST, SMTP_PORT, APP_URL.
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -252,6 +253,31 @@ async function doSend(user: any, body: any) {
   return json({ sent: to.length });
 }
 
+// ---------- cenová ponuka / objednávka zákazníkovi alebo dodávateľovi (PDF v prílohe) ----------
+async function doDoc(user: any, body: any) {
+  const tid = String(body.tenant_id || ""), kind = body.kind === "order" ? "order" : "quote";
+  const { data: mem } = await admin.from("members").select("role").eq("tenant_id", tid).eq("user_id", user.id).maybeSingle();
+  if (!mem || !["admin", "spravca"].includes(String(mem.role))) return json({ error: "Posielať ponuky a objednávky môže len administrátor firmy." }, 403);
+  const list = (v: any) => String(v || "").split(/[,;\s]+/).map((e) => e.trim().toLowerCase()).filter(Boolean);
+  const to = [...new Set([...list(body.to).slice(0, 5), ...list(body.cc).slice(0, 3)])];
+  if (!to.length || !to.every(okEmail)) return json({ error: "Skontroluj e-mailovú adresu príjemcu." }, 400);
+  const b64 = String(body.pdf || "").replace(/^data:[^,]*,/, "");
+  if (!b64 || !/\.pdf$/i.test(String(body.filename || ""))) return json({ error: "Chýba PDF príloha." }, 400);
+  if (b64.length > 6_000_000) return json({ error: "Príloha je príliš veľká." }, 400);
+  if (await sentToday(tid) + to.length > DAY_LIMIT) return json({ error: `Firma dnes už poslala ${DAY_LIMIT} e-mailov. Skús to zajtra.` }, 429);
+  const firm = await firmOf(tid), firmName = clip(firm.name || body.fromName || "Stavebná firma", 80);
+  const replyTo = okEmail(String(body.replyTo || "").trim()) ? String(body.replyTo).trim() : (okEmail(String(firm.email || "")) ? firm.email : user.email);
+  const subject = clip(body.subject, 150) || (kind === "order" ? "Objednávka" : "Cenová ponuka");
+  await send({
+    to: to.map((email) => ({ email })), fromName: firmName, replyTo, subject,
+    attachments: [{ filename: clip(body.filename, 100).replace(/[\\/:*?"<>|]/g, "_"), content: b64, encoding: "base64", contentType: "application/pdf" }],
+    mail: { firm: firmName, title: subject, text: clip(body.text, 6000),
+      footer: `Odoslané z aplikácie Stavebná firma (www.stavebnafirma.eu) v mene firmy ${firmName}. Odpoveď na tento e-mail príde priamo firme.` },
+  });
+  await log(tid, user.id, kind, to.length);
+  return json({ sent: to.length });
+}
+
 // ---------- ranný súhrn (plánovač) ----------
 const CAT_UNIT: Record<string, string> = { car: "km", truck: "km" };
 // hodiny riadku denného záznamu: od – do mínus prestávka, alebo priamo zadané hodiny
@@ -369,6 +395,7 @@ Deno.serve(async (req) => {
     if (uerr || !user) return json({ error: "Nie si prihlásený." }, 401);
     if (action === "invite") return await doInvite(user, body);
     if (action === "send") return await doSend(user, body);
+    if (action === "doc") return await doDoc(user, body);
     return json({ error: "Neznáma akcia." }, 400);
   } catch (e) {
     console.error(e);

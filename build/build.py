@@ -66,14 +66,16 @@ rep('${m.status==="pozvaný"?`<span class="pill s-pozvany">Pozvaný</span>`:""}'
 
 # 5) heslo a OEV II
 rep('me.pw=await hashPw(a);save();toast("Heslo zmenené");', 'const {error}=await SB.auth.updateUser({password:a});if(error){toast(AUTH_ERR(error.message));return}toast("Heslo zmenené");')
-rep('let sample=null;try{sample=await window.claude?.use?.("sample")}catch(e){}', 'let sample=null;')
+_X = 'let sample=null;try{sample=await window.claude?.use?.("sample")}catch(e){}'
+if s.count(_X) < 3: sys.exit(f"Build: čítanie dokladov cez Claude sa našlo {s.count(_X)}× (čakal som 3)")
+s = s.replace(_X, 'let sample=null;')   # ostrá verzia: čítanie dokladov (OEV II, ponuka, bloček) zatiaľ bez Clauda
 rep('"Automatické vyčítanie tu nie je dostupné. Fotky sú uložené, údaje doplň ručne."', '"Automatické vyčítanie z fotky pripravujeme. Fotky sú uložené, údaje zatiaľ doplň ručne."')
 
 # 5b) súbory: úložisko prototypu (IndexedDB) → Supabase Storage (FILESTORE v live.js)
 cut("/* FILESTORE-START */", "/* FILESTORE-END */", "/* FILESTORE: pozri OSTRÁ VERZIA vyššie */", keep_end=False)
 
 # 6) koniec skriptu: bez ukážkových dát, štart cez Supabase
-i = s.index('if(!ROOT.tenants.demo.trainings)'); j = s.index('render();\n</script>', i)
+i = s.index('/* ukážkové výdavky a príjmy firmy'); j = s.index('render();\n</script>', i)   # ukážkové dáta (financie, cenník, sklad, obchod, školenia) len v prototype
 s = s[:i] + 'boot();\n</script>' + s[j + len('render();\n</script>'):]
 
 # 6b) predplatné: dostupné moduly určuje server (billing_status), karta Moduly je z live.js

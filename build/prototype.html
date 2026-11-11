@@ -5160,7 +5160,7 @@ function obPdf(k,D,asData){const doc=newPdf("portrait");if(!doc)return null;cons
   if(asData)return {filename:nm+".pdf",data:doc.output("arraybuffer")};
   offerFile(nm+".pdf",doc.output("arraybuffer"))}
 /* odoslanie e-mailom: v skúšobnej verzii sa len zaznamená; ostrá verzia (live.js) posiela cez server */
-let obMail=async()=>({demo:true});
+const obMail=async p=>typeof window.obMailLive==='function'?window.obMailLive(p):{demo:true};
 function obMailText(k,D){const F=S.firm||{},sig=[me.name,F.name||S.company,F.phone,F.email].filter(Boolean).join("\n");
   return k==="q"?`Dobrý deň,\n\nv prílohe Vám posielame cenovú ponuku č. ${D.no}${D.subject?` – ${D.subject}`:""}.\nV prípade otázok nás neváhajte kontaktovať.\n\nS pozdravom\n${sig}`
     :`Dobrý deň,\n\n${D.refNo?`na základe Vašej cenovej ponuky č. ${D.refNo} `:""}Vám v prílohe posielame objednávku č. ${D.no}${D.subject?` – ${D.subject}`:""}.\nProsíme o potvrdenie jej prijatia${D.due&&D.due!=="podľa dohody"?` a dodržanie termínu plnenia ${D.due}`:""}.\n\nS pozdravom\n${sig}`}

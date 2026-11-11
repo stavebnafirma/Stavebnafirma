@@ -91,6 +91,7 @@ textarea{min-height:80px;resize:vertical}
 .proj{display:block;width:100%;text-align:left;cursor:pointer}
 .proj:hover{border-color:var(--accent)}
 .tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin-inline:-4px;padding-inline:4px}
+.firmsub{flex-wrap:wrap}
 .tab{background:none;border:0;border-bottom:3px solid transparent;padding:8px 10px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
 .tab[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
 .tab .soon{font-size:10px;font-weight:600;color:var(--muted);margin-left:4px}
@@ -890,6 +891,43 @@ table.dxt{font-size:13.5px}table.dxt td.dxw{white-space:normal;min-width:240px;l
 .jfm{display:grid;grid-template-columns:1.2fr 1fr 110px auto;gap:8px;align-items:end}
 @media (max-width:560px){.jfm{grid-template-columns:1fr auto}.jfm>label:nth-child(2),.jfm>:nth-child(3){grid-column:1}}
 .bad{color:var(--bad)}
+/* Firma → Financie */
+.fingrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch}@media (max-width:900px){.fingrid{grid-template-columns:1fr}}
+.finbig{font-size:24px;font-weight:700;line-height:1.15}.finbig .muted{font-size:13px;font-weight:500}.fintot{font-size:34px;color:var(--accent)}
+.finsplit{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}.finsplit>div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding:4px 0;font-size:14px}
+.fincols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}@media (max-width:560px){.fincols,.finsplit{grid-template-columns:1fr}}
+.fincol{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}.fincol .finbig{font-size:20px}
+.finrec{list-style:none;margin:0;padding:0;font-size:13px}.finrec li{display:flex;justify-content:space-between;gap:6px;padding:2px 0}.finrec li{border-top:1px solid var(--line);padding:4px 0;flex-wrap:wrap;column-gap:8px;row-gap:0}.finrec li span{flex:1 1 110px}.finrec li b{margin-left:auto}.finrec li span{min-width:0;overflow-wrap:anywhere}.finrec li b{white-space:nowrap;font-weight:600}
+.obgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}@media (max-width:900px){.obgrid{grid-template-columns:1fr}}
+.obitems{display:flex;flex-direction:column;gap:8px}
+.obrow{display:grid;grid-template-columns:24px minmax(0,1fr) 84px 70px 110px 70px 104px 34px;gap:8px;align-items:end;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.obrow .obn{align-self:center;font-weight:600;color:var(--muted)}.obname{display:flex;flex-direction:column;gap:4px}.obname .obsub{font-size:13px;padding-block:5px;min-height:0}
+.obc{gap:2px}.obc>span{font-size:11.5px;color:var(--muted);font-weight:600}.obsum{display:flex;flex-direction:column;align-items:flex-end;padding-bottom:9px}.obsum b{white-space:nowrap}
+.obdel{align-self:center;font-size:18px;line-height:1;padding:4px 10px}
+@media (max-width:760px){.obrow{grid-template-columns:repeat(3,minmax(0,1fr));position:relative;padding-top:10px}.obrow .obn{position:absolute;top:6px;left:10px;font-size:12px}.obname{grid-column:1/-1;padding-left:22px}.obsum{grid-column:span 2;align-items:flex-start;padding-bottom:0}.obdel{justify-self:end}}
+.obtot{align-self:flex-end;min-width:280px;display:flex;flex-direction:column;gap:2px}.obtot>div{display:flex;justify-content:space-between;gap:16px;font-size:14px}.obtot>div:first-child{background:var(--tint);border-radius:8px;padding:8px 12px;font-size:16px}.obtot>div:not(:first-child){padding:0 12px;color:var(--muted)}
+.obsend{border:2px solid var(--accent)}
+.ferows{display:flex;flex-direction:column;gap:8px}
+.ferow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px 8px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);position:relative}
+.ferow label{gap:2px}.ferow label>span{font-size:11.5px;color:var(--muted);font-weight:600}.ferow input,.ferow select{min-width:0}
+.ferow .fr-name{grid-column:span 4}.ferow .fr-amt{grid-column:span 2;padding-right:30px}.ferow .fr-del{position:absolute;top:6px;right:6px;padding:2px 8px;font-size:16px}
+.ferow .fr-dest{grid-column:span 3}.ferow .fr-cat{grid-column:span 6}
+@media (max-width:560px){.ferow .fr-name{grid-column:span 6;padding-right:30px}.ferow .fr-amt{grid-column:span 3;padding-right:0}.ferow>label:nth-of-type(3){grid-column:span 3}.ferow>label:nth-of-type(4),.ferow>label:nth-of-type(5){grid-column:span 3}.ferow .fr-dest{grid-column:span 6}}
+.feread{align-self:flex-start;cursor:pointer}.feread.dis{opacity:.6;cursor:progress}.feritems td{padding:2px 6px;font-size:13px;border:0}
+.obpick{gap:8px}.obpick #obPick{flex:1 1 280px;max-width:520px}
+.acpop{position:absolute;z-index:9999;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:300px;overflow:auto;padding:4px}
+.acopt{padding:8px 10px;border-radius:7px;cursor:pointer;font-size:14px;line-height:1.3}.acopt:hover,.acopt.on{background:var(--tint)}
+.skrows{display:flex;flex-direction:column;gap:8px}
+.skrow{display:grid;grid-template-columns:minmax(0,1fr) 110px 34px;gap:4px 8px;align-items:end;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.skrow.in{grid-template-columns:minmax(0,1fr) 84px 70px 100px 34px}.skrow label{gap:2px}.skrow label>span{font-size:11.5px;color:var(--muted);font-weight:600}.skrow select,.skrow input{min-width:0}
+.skrow .sk-del{padding:4px 8px;font-size:16px;margin-bottom:4px}.skrow .sk-info{grid-column:1/-1;font-size:12px}
+@media (max-width:560px){.skrow{grid-template-columns:1fr 34px}.skrow.in{grid-template-columns:1fr 1fr 1fr 34px}.skrow .sk-it{grid-column:1/-1}}
+.cenpart{display:grid;grid-template-columns:minmax(0,1fr) 80px 44px 100px 34px;gap:8px;align-items:center}@media (max-width:560px){.cenpart{grid-template-columns:minmax(0,1fr) 70px 34px}.cenpart>span{display:none}}
+.okmsg{background:var(--tint);border-radius:8px;padding:8px 12px;font-size:13.5px}
+.obup{cursor:pointer}.obup.dis{opacity:.6;cursor:progress}
+.fintab{width:100%}.fintab td{vertical-align:top}.fintab td.num{font-family:inherit;white-space:nowrap}.fintab td{overflow-wrap:anywhere}
+.fininc{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:18px;align-items:start}@media (max-width:900px){.fininc{grid-template-columns:1fr}}
+.findel{color:var(--bad)}
 .logbox{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface)}
 table.jlog{width:100%;border-collapse:collapse;font-size:13px}table.jlog th{font-size:11px;text-align:left;padding:4px}table.jlog td{padding:3px 4px;border-bottom:1px solid var(--line)}
 table.jlog input{padding:5px 7px;font-size:13px;min-width:90px}table.jlog input.nin{width:70px;min-width:60px;text-align:right}
@@ -1588,6 +1626,9 @@ mail=async(kind,o)=>{if(!TID||!navigator.onLine)return;if(!(o.users||[]).length&
   try{await saveQ.catch(()=>{});const d=await notifyCall({action:"send",kind,...o});
     if(d.sent)mailToast(`E-mail odoslaný (${d.sent} ${pl(d.sent,"príjemca","príjemcovia","príjemcov")})`)}
   catch(e){console.error(e);mailToast("E-mail sa nepodarilo odoslať: "+(e.message||e))}};
+/* cenová ponuka / objednávka e-mailom s PDF v prílohe (Firma → Obchod) */
+window.obMailLive=async p=>{if(!TID)return {error:"Nie si prihlásený do firmy."};if(!navigator.onLine)return {error:"Si offline."};
+  try{await saveQ.catch(()=>{});const d=await notifyCall({action:"doc",...p});return d}catch(e){console.error(e);return {error:e.message||String(e)}}};
 async function sendInvite(id,email){try{const d=await notifyCall({action:"invite",invite_id:id});
     mailToast(d.existing?`${email} už má účet – poslali sme mu e-mail, že ho pridávaš`:`Pozvánka odoslaná na ${email}`)}
   catch(e){console.error(e);mailToast("Pozvánku sa nepodarilo odoslať e-mailom: "+(e.message||e))}}
@@ -4823,8 +4864,14 @@ function navHTML(){if(!me||view.screen==="setup"||needsProfile())return "";
   return `<nav class="topnav" role="tablist" aria-label="Hlavné menu">${items.map(k=>{const locked=k!=="firma"&&!hasMod(SEC_MOD[k]);const n=0;const [full,short]=NAV_LABELS[k];
     return `<button class="ntab ${locked?"locked":""}" role="tab" aria-selected="${cur===k}" data-a="${locked?"secLocked":"sec"}" data-sec="${k}" ${locked?`title="Modul ${full} nie je v predplatnom"`:""}>${icon(locked?"lock":k)}<span class="l-full">${full}</span><span class="l-short">${short}</span>${n?`<span class="badge">${n}</span>`:""}</button>`}).join("")}</nav>`}
 function setupHTML(){return `<div class="stack"><div><div class="eyebrow">Vitaj v aplikácii, ${esc(me.name)}</div><h1>Nastavenie firmy</h1></div>${firmFormHTML("setup")}</div>`}
-function firmTabs(){return [["nastenka","Nástenka"],["udaje","Údaje o firme"],...(isCompanyRole(me)?[["zam","Zamestnanci"],["park","Strojový a vozový park"]]:[]),["moduly","Moduly"],["role","Používatelia a prístupy"],["ponuka","Ponuka strojov"]]}
-function firmTabCur(){const t=view.firmTab||"nastenka";return firmTabs().some(x=>x[0]===t)?t:"nastenka"}
+function firmTabs(){return [["nastenka","Nástenka"],["udaje","Údaje o firme"],...(isAdmin(me)?[["fin","Obchod"]]:[]),["moduly","Moduly"],["role","Používatelia a prístupy"],["ponuka","Ponuka strojov"]]}
+/* podkarty karty „Údaje o firme“ */
+function firmSubTabs(){return [["udaje","Základné údaje"],...(isCompanyRole(me)?[["zam","Zamestnanci"],["park","Strojový a vozový park"]]:[])]}
+/* podkarty karty „Obchod“ (len admin) */
+function obchodSubTabs(){return isAdmin(me)?[["fin","Financie"],["cennik","Cenník"],["sklad","Sklad"],["ponuky","Cenové ponuky"],["obj","Objednávky"]]:[]}
+const firmGroups=()=>({udaje:firmSubTabs(),fin:obchodSubTabs()});
+function firmTabCur(){const t=view.firmTab||"nastenka";return firmTabs().some(x=>x[0]===t)||Object.values(firmGroups()).some(g=>g.some(x=>x[0]===t))?t:"nastenka"}
+const firmTabTop=()=>{const t=firmTabCur(),G=firmGroups();return Object.keys(G).find(k=>G[k].some(x=>x[0]===t))||t};
 /* ---------- Nástenka: prehľad zo všetkých modulov ---------- */
 function dashFleetHTML(){
   if(!(hasMod("doprava")&&canSee("doprava")))return "";
@@ -4843,10 +4890,754 @@ function nastenkaHTML(){
   const bubbles=nbBubbles();
   return `<div class="stack"><div class="muted">Prehľad aktuálnych udalostí v Tvojej firme. Nastavenie nástenky zmeníš v karte „Údaje o firme“.</div>
     <div class="dash nbdash">${bubbles.join("")||`<div class="card muted">Pre tvoju rolu tu zatiaľ nie sú žiadne prehľady.</div>`}</div></div>`}
+/* ---------- Firma → Financie: výdavky a príjmy firmy (len administrátor) ----------
+   S.finExp – výdavky firmy {id,date,docNo,supplier,cat,area,machineId,desc,amount(bez DPH),vat,recurring,until,file}
+   S.finInc – príjmy {id,date,type:"fa"|"vrp",docNo,client,projectId,desc,amount(bez DPH),vat,due,paid}
+   Prehľad výdavkov spája výdavky firmy, náklady zo stavieb (Stavba → Ekonomika) a servis/termíny strojov (Doprava). */
+const FIN_AREAS=[["stroje","Stroje a vozový park"],["pers","Personalistika"],["rezia","Režijné náklady"],["stavba","Stavby"],["sklad","Nákup na sklad"]];
+const FIN_CATS=[["phm","PHM","stroje"],["servis","Servis a opravy","stroje"],["leasing","Leasing a splátky","stroje"],["poist","Poistenie","stroje"],["mzdy","Mzdy a odvody","pers"],["ooppc","Pracovné odevy a OOPP","pers"],["skol","Školenia a lekárske prehliadky","pers"],
+  ["najom","Nájom","rezia"],["energie","Energie","rezia"],["tel","Telefón a internet","rezia"],["kanc","Kancelária a softvér","rezia"],["uct","Účtovníctvo a služby","rezia"],["mat","Materiál","rezia"],["ine","Iné","rezia"]];
+const FIN_VAT=[23,19,5,0];
+const finArea=k=>(FIN_AREAS.find(a=>a[0]===k)||[,"Iné"])[1];
+const finCat=k=>(FIN_CATS.find(c=>c[0]===k)||[,k||"Iné"])[1];
+const finYear=()=>view.finYear||todayIso().slice(0,4);
+const withVat=(a,v)=>Math.round(numIn(a)*(1+(+v||0)/100)*100)/100;
+/* mesiace pravidelného výdavku v danom roku (od mesiaca začiatku, najviac po aktuálny mesiac a po „do“) */
+function finMonths(x,y){const nowYm=todayIso().slice(0,7),start=(x.date||"").slice(0,7),end=[nowYm,x.until?x.until.slice(0,7):"9999-99"].sort()[0];const out=[];
+  for(let m=1;m<=12;m++){const ym=`${y}-${String(m).padStart(2,"0")}`;if(ym>=start&&ym<=end)out.push(ym)}return out}
+/* všetky výdavky firmy za rok – jeden riadok = jeden doklad (pravidelný výdavok = riadok za každý mesiac) */
+function finAllExp(y){const out=[],inY=d=>(d||"").startsWith(y);
+  (S.finExp||[]).forEach(x=>{if(x.recurring){finMonths(x,y).forEach(ym=>out.push({key:x.id+"|"+ym,id:x.id,date:ym+"-"+(x.date||"").slice(8,10),src:"firma",area:x.area,cat:finCat(x.cat),desc:x.desc,supplier:x.supplier,docNo:x.docNo,amount:numIn(x.amount),vat:x.vat,recurring:true,machineId:x.machineId}))}
+    else if(inY(x.date))out.push({key:x.id,id:x.id,date:x.date,src:"firma",area:x.area,cat:finCat(x.cat),desc:x.desc,supplier:x.supplier,docNo:x.docNo,amount:numIn(x.amount),vat:x.vat,machineId:x.machineId,file:x.file})});
+  (S.costs||[]).forEach(c=>{if(!inY(c.date)||c.fromStock)return;   /* výdaj zo skladu: nákup už je vo výdavkoch (Nákup na sklad) */const p=S.projects.find(q=>q.id===c.projectId);
+    out.push({key:"c|"+c.id,date:c.date,src:"stavba",area:"stavba",cat:costCat(c.cat),desc:c.desc,supplier:c.supplier,docNo:c.docNo,amount:numIn(c.amount),proj:p?p.name:"",projectId:c.projectId})});
+  (S.machines||[]).forEach(m=>(m.log||[]).forEach(l=>{if(!inY(l.date)||!numIn(l.cost))return;
+    out.push({key:"m|"+m.id+"|"+l.id,date:l.date,src:"stroj",area:"stroje",cat:l.term?"Termíny a poplatky":"Servis a opravy",desc:l.desc,amount:numIn(l.cost),machine:[m.name,m.ecv].filter(Boolean).join(" · "),machineId:m.id})}));
+  return out.sort((a,b)=>(b.date||"").localeCompare(a.date||""))}
+function finExpFormHTML(){const D=view.finEdit&&view.finEdit!=="__new"?(S.finExp||[]).find(x=>x.id===view.finEdit)||{}:{date:todayIso(),cat:"phm",area:"stroje",vat:23};
+  const K=view.finKeep||{},mode=K.feMode||(D.area==="sklad"?"sklad":"spot"),skl=mode==="sklad",area=skl?"sklad":(K.feArea&&K.feArea!=="sklad"?K.feArea:D.area&&D.area!=="sklad"?D.area:"stroje"),mach=(S.machines||[]).filter(m=>!m.archived),stv=area==="stavba";
+  const mats=(S.cennik||[]).filter(i=>i.type==="mat"),dIt=D.itemId&&cenItem(D.itemId);
+  const projs=S.projects.filter(p=>!p.closed||p.id===K.feProj);
+  const R=view.feRead;
+  return `<form class="card stack finbox" id="finExpForm"><div class="entry-head"><h3>${view.finEdit&&view.finEdit!=="__new"?"Upraviť výdavok":"Nový výdavok"}</h3>${view.finEdit&&view.finEdit!=="__new"?`<button type="button" class="btn small ghost" data-a="finCancel">Zrušiť</button>`:""}</div>
+    <label class="btn feread${view.feBusy?" dis":""}"><input type="file" id="feFile" accept="image/*,application/pdf" hidden ${view.feBusy?"disabled":""}>${view.feBusy?"Čítam doklad…":"📷 Načítať z bločku alebo faktúry"}</label>
+    ${R?`<div class="okmsg stack" style="gap:4px"><div>${esc(R.msg)}</div>${(R.items||[]).length?`<table class="fintab feritems"><tbody>${R.items.map(i=>`<tr><td>${esc(i.nazov||"")}</td><td class="num r">${i.mnozstvo!=null&&i.mnozstvo!==""?`${nf(+i.mnozstvo)} ${esc(i.mj||"")}`:""}</td><td class="num r">${i.spolu_bez_dph!=null&&i.spolu_bez_dph!==""?eur(+i.spolu_bez_dph):""}</td></tr>`).join("")}</tbody></table>`:""}<button type="button" class="btn small ghost" data-a="feReadX" style="align-self:flex-start">Skryť</button></div>`:""}
+    <div class="grid2"><label>Dátum dokladu<input type="date" id="feDate" value="${esc(D.date||"")}" required></label><label>Číslo dokladu<input id="feNo" value="${esc(D.docNo||"")}" placeholder="faktúra, bloček"></label></div>
+    ${view.finEdit&&view.finEdit!=="__new"?"":`<label class="chk"><input type="checkbox" id="feMulti" ${view.feRows?"checked":""}> Viac položiek z jedného dokladu</label>`}
+    ${view.feRows&&!(view.finEdit&&view.finEdit!=="__new")?feRowsHTML():`<div class="seg" role="radiogroup" aria-label="Spôsob nákupu"><label><input type="radio" name="feMode" value="spot" ${!skl?"checked":""}><span>Okamžitá spotreba</span></label><label><input type="radio" name="feMode" value="sklad" ${skl?"checked":""}><span>Nákup na sklad</span></label></div>
+    ${skl?`<div class="grid3"><label style="grid-column:span 2">Materiál<input id="feItem" data-ac="mat" autocomplete="off" value="${esc(K.feItem??(dIt?dIt.name:""))}" required placeholder="vyber z cenníka alebo napíš nový"></label><label>MJ<input id="feMj" value="${esc(K.feMj??(dIt?dIt.mj:""))}" list="obMjs" placeholder="ks, m3…"></label></div>
+      <datalist id="feItems">${mats.map(i=>`<option value="${esc(i.name)}">${esc([i.code,i.mj].filter(Boolean).join(" · "))}</option>`).join("")}</datalist><datalist id="obMjs">${["ks","m","m2","m3","t","kg","bm","l","bal","vrece"].map(x=>`<option value="${x}">`).join("")}</datalist>
+      <label>Množstvo<input id="feQty" inputmode="decimal" value="${esc(K.feQty??(D.qty?String(D.qty).replace(".",","):""))}" required></label>
+      <div class="muted" style="font-size:12.5px;margin-top:-6px">Materiál sa pripíše na sklad. Do nákladov stavby sa dostane až pri výdaji zo skladu (karta Sklad). Nový materiál sa sám založí v cenníku.</div>`:`
+    <div class="grid2"><label>Patrí do<select id="feArea">${FIN_AREAS.filter(a=>a[0]!=="sklad").map(([k,l])=>`<option value="${k}" ${area===k?"selected":""}>${k==="stavba"?"Stavba (náklad stavby)":l}</option>`).join("")}</select></label>
+      <label>Kategória<select id="feCat">${(stv?COST_CATS:FIN_CATS).map(([k,l])=>`<option value="${k}" ${D.cat===k?"selected":""}>${l}</option>`).join("")}</select></label></div>
+    ${stv?(projs.length?`<label>Stavba<select id="feProj" required><option value="">– vyber stavbu –</option>${projs.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select></label><div class="muted" style="font-size:12.5px;margin-top:-6px">Uloží sa ako náklad stavby (Stavba → Ekonomika) a zobrazí sa aj vo všetkých výdavkoch.</div>`:`<div class="muted">Zatiaľ nemáš žiadnu stavbu.</div>`):""}
+    ${area==="stroje"&&mach.length?`<label>Stroj alebo vozidlo (nepovinné)<select id="feMach"><option value="">–</option>${mach.map(m=>`<option value="${m.id}" ${D.machineId===m.id?"selected":""}>${esc([m.name,m.ecv].filter(Boolean).join(" · "))}</option>`).join("")}</select></label>`:""}`}
+    <div class="grid2"><label>Dodávateľ<input id="feSup" value="${esc(D.supplier||"")}" list="feSups" placeholder="napr. Slovnaft"></label><label>Popis<input id="feDesc" value="${esc(D.desc||"")}" placeholder="napr. nafta 60 l"></label></div>
+    <datalist id="feSups">${[...new Set([...(S.finExp||[]),...(S.costs||[])].map(c=>c.supplier).filter(Boolean))].sort().map(s=>`<option value="${esc(s)}">`).join("")}</datalist>
+    <div class="grid2"><label>Suma bez DPH (€)<input id="feAmt" inputmode="decimal" value="${esc(D.amount!=null?String(D.amount).replace(".",","):"")}" placeholder="0,00" required></label>
+      <label>DPH<select id="feVat">${FIN_VAT.map(v=>`<option value="${v}" ${+D.vat===v?"selected":""}>${v} %</option>`).join("")}</select></label></div>
+    ${stv||skl?"":`<div><label class="chk"><input type="checkbox" id="feRec" ${D.recurring?"checked":""}> Pravidelný mesačný výdavok</label><div class="muted" style="font-size:12.5px;margin:2px 0 0 24px">leasing, nájom, mzdy… – zadáš raz, počíta sa každý mesiac</div></div>`}
+    ${!stv&&!skl&&D.recurring?`<label>Platí do (nepovinné)<input type="date" id="feUntil" value="${esc(D.until||"")}"></label>`:""}`}
+    <div class="row"><button class="btn primary" type="submit">${view.finEdit&&view.finEdit!=="__new"?"Uložiť":view.feRows?"+ Pridať položky dokladu":"+ Pridať výdavok"}</button>${view.finEdit&&view.finEdit!=="__new"?`<button type="button" class="btn ghost findel" data-a="finDel">Odstrániť</button>`:""}</div></form>`}
+/* výdavok rozpísaný na viac položiek z jedného dokladu – každá položka môže ísť inam (sklad, stavba, stroje, personalistika, réžia) */
+const feRowNew=o=>({name:"",qty:"",mj:"",amt:"",vat:23,dest:"rezia",cat:"",...o});
+const feDestCats=d=>d==="sklad"?[]:d.startsWith("p:")?COST_CATS:FIN_CATS.filter(c=>c[2]===d);
+function feRowsHTML(){const R=view.feRows,projs=S.projects.filter(p=>!p.closed);
+  const tot=R.reduce((s,r)=>s+numIn(r.amt),0),totv=R.reduce((s,r)=>s+numIn(r.amt)*(1+(+r.vat||0)/100),0);
+  return `<div class="grid2"><label>Dodávateľ<input id="feSup" value="${esc(view.feSup||"")}" list="feSups" placeholder="napr. Stavebniny Javor"></label><div></div></div>
+    <datalist id="feSups">${[...new Set([...(S.finExp||[]),...(S.costs||[])].map(c=>c.supplier).filter(Boolean))].sort().map(s=>`<option value="${esc(s)}">`).join("")}</datalist>
+    <datalist id="feItems">${(S.cennik||[]).filter(i=>i.type==="mat").map(i=>`<option value="${esc(i.name)}">`).join("")}</datalist><datalist id="obMjs">${["ks","m","m2","m3","t","kg","bm","l","bal","vrece","hod"].map(x=>`<option value="${x}">`).join("")}</datalist>
+    <div class="eyebrow">Položky dokladu</div>
+    <div class="ferows">${R.map((r,i)=>{const cats=feDestCats(r.dest);return `<div class="ferow" data-i="${i}">
+      <label class="fr-name"><span>Položka ${i+1}</span><input class="feR" data-f="name" value="${esc(r.name)}" ${r.dest==="sklad"?'data-ac="mat" autocomplete="off"':""} placeholder="${r.dest==="sklad"?"materiál z cenníka alebo nový":"napr. lepiaca páska"}"></label>
+      <label class="fr-amt"><span>Bez DPH (€)</span><input class="feR" data-f="amt" inputmode="decimal" value="${esc(String(r.amt??"").replace(".",","))}" placeholder="0,00"></label>
+      <button type="button" class="btn small ghost fr-del" data-a="feRowDel" data-i="${i}" aria-label="Odstrániť položku ${i+1}" ${R.length<2?"disabled":""}>×</button>
+      <label><span>Množstvo</span><input class="feR" data-f="qty" inputmode="decimal" value="${esc(String(r.qty??"").replace(".",","))}"></label>
+      <label><span>MJ</span><input class="feR" data-f="mj" value="${esc(r.mj||"")}" list="obMjs"></label>
+      <label><span>DPH</span><select class="feR" data-f="vat">${FIN_VAT.map(v=>`<option value="${v}" ${+r.vat===v?"selected":""}>${v} %</option>`).join("")}</select></label>
+      <label class="fr-dest"><span>Zaradiť</span><select class="feR" data-f="dest"><option value="sklad" ${r.dest==="sklad"?"selected":""}>Nákup na sklad</option>${FIN_AREAS.filter(a=>a[0]!=="sklad"&&a[0]!=="stavba").map(([k,l])=>`<option value="${k}" ${r.dest===k?"selected":""}>${l}</option>`).join("")}
+        ${projs.length?`<optgroup label="Na stavbu (okamžitá spotreba)">${projs.map(p=>`<option value="p:${p.id}" ${r.dest==="p:"+p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</optgroup>`:""}</select></label>
+      ${cats.length?`<label class="fr-cat"><span>Kategória</span><select class="feR" data-f="cat">${cats.map(([k,l])=>`<option value="${k}" ${r.cat===k?"selected":""}>${l}</option>`).join("")}</select></label>`:`<div class="fr-cat muted" style="font-size:12px;align-self:center">${r.dest==="sklad"?"pripíše sa na sklad":""}</div>`}
+    </div>`}).join("")}</div>
+    <div class="row" style="justify-content:space-between"><button type="button" class="btn small" data-a="feRowAdd">+ Pridať položku</button><span>Spolu bez DPH <b id="feRowsTot">${eur(Math.round(tot*100)/100)}</b> <span class="muted" id="feRowsTotV">· s DPH ${eur(Math.round(totv*100)/100)}</span></span></div>`}
+function feRowsSync(){const R=view.feRows;if(!R)return;document.querySelectorAll(".ferow").forEach(el=>{const r=R[+el.dataset.i];if(!r)return;el.querySelectorAll(".feR").forEach(e=>{const f=e.dataset.f;r[f]=f==="vat"?+e.value:e.value})});
+  const s=$("#feSup");if(s)view.feSup=s.value;
+  const tot=R.reduce((s,r)=>s+numIn(r.amt),0),totv=R.reduce((s,r)=>s+numIn(r.amt)*(1+(+r.vat||0)/100),0);const a=$("#feRowsTot"),b=$("#feRowsTotV");if(a)a.textContent=eur(Math.round(tot*100)/100);if(b)b.textContent="· s DPH "+eur(Math.round(totv*100)/100)}
+function feRowsRerender(){const keep=finFormKeep();view.finKeep=keep;render();finFormRestore()}
+document.addEventListener("input",ev=>{if(ev.target.closest&&ev.target.closest("#finExpForm")&&view.feRows)feRowsSync()});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me)return;
+  if(t.id==="feMulti"){if(t.checked){const v=id=>($("#"+id)?.value||"").trim();view.feSup=v("feSup");
+      const m=document.querySelector('input[name="feMode"]:checked')?.value==="sklad",ar=$("#feArea")?.value||"rezia",pj=$("#feProj")?.value;
+      view.feRows=[feRowNew({name:m?v("feItem"):v("feDesc"),qty:v("feQty"),mj:v("feMj"),amt:v("feAmt"),vat:+(v("feVat")||23),dest:m?"sklad":ar==="stavba"?(pj?"p:"+pj:"rezia"):ar,cat:$("#feCat")?.value||""}),feRowNew({dest:m?"sklad":ar==="stavba"&&pj?"p:"+pj:ar==="stavba"?"rezia":ar})]}
+    else{const r=(view.feRows||[])[0];view.feRows=null;const k=finFormKeep();if(r){k.feDesc=r.name;k.feAmt=r.amt;k.feVat=String(r.vat)}k.feSup=view.feSup||k.feSup;view.finKeep=k;render();finFormRestore();return}
+    feRowsRerender()}
+  else if(t.classList&&t.classList.contains("feR")){feRowsSync();if(t.dataset.f==="dest"){const r=view.feRows[+t.closest(".ferow").dataset.i];const c=feDestCats(r.dest);r.cat=c.length?c[0][0]:"";feRowsRerender()}}});
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me||!view.feRows)return;const a=b.dataset.a;
+  if(a==="feRowAdd"){feRowsSync();const l=view.feRows[view.feRows.length-1];view.feRows.push(feRowNew({dest:l?l.dest:"rezia",cat:l?l.cat:"",vat:l?l.vat:23}));feRowsRerender();const r=document.querySelectorAll(".ferow");r[r.length-1]?.querySelector("input")?.focus()}
+  else if(a==="feRowDel"){feRowsSync();view.feRows.splice(+b.dataset.i,1);feRowsRerender()}});
+/* uloženie dokladu s viacerými položkami: každá položka sa zapíše tam, kam patrí */
+function feRowsSave(){feRowsSync();const v=id=>($("#"+id)?.value||"").trim(),date=v("feDate"),docNo=v("feNo"),supplier=v("feSup"),grp=uid("dk");
+  const R=view.feRows.filter(r=>r.name||numIn(r.amt));if(!R.length){toast("Pridaj aspoň jednu položku");return false}
+  for(const r of R){const a=String(r.amt||"").replace(/\s|€/g,"").replace(",",".");if(!/^\d+(\.\d{1,2})?$/.test(a)){toast(`Položka „${r.name||"?"}“: suma má mať tvar napr. 12 alebo 12,50`);return false}
+    if(r.dest==="sklad"&&(!r.name||!(numIn(r.qty)>0))){toast(`Položka na sklad „${r.name||"?"}“: doplň názov a množstvo`);return false}}
+  let n=0,pdoc=null;R.forEach(r=>{const amt=String(+String(r.amt).replace(/\s|€/g,"").replace(",",".")),qty=numIn(r.qty),desc=[r.name,qty?`${nf(qty)} ${r.mj||""}`.trim():""].filter(Boolean).join(" – ");
+    if(r.dest==="sklad"){let it=(S.cennik||[]).find(i=>i.type==="mat"&&acNorm(i.name)===acNorm(r.name));const unit=String(Math.round(+amt/qty*10000)/10000);
+      if(!it){it={id:uid("cn"),type:"mat",code:"",name:r.name,sub:"",mj:r.mj||"ks",price:"",cost:unit,vat:+r.vat,stock:true};(S.cennik=S.cennik||[]).push(it)}
+      const x={id:uid("fe"),date,docNo,supplier,cat:"mat",area:"sklad",itemId:it.id,qty:String(qty),desc,amount:amt,vat:+r.vat,grp};
+      x.stockMove=stockIn({date,itemId:it.id,qty:String(qty),price:unit,docNo,supplier,expId:x.id,doc:pdoc||(pdoc=stockDocNo("in",date))}).id;(S.finExp=S.finExp||[]).push(x)}
+    else if(r.dest.startsWith("p:"))(S.costs=S.costs||[]).push({id:uid("nk"),projectId:r.dest.slice(2),cat:r.cat||"mat",date,supplier,docNo,desc,amount:amt,grp,by:me.id,at:nowIso()});
+    else (S.finExp=S.finExp||[]).push({id:uid("fe"),date,docNo,supplier,cat:r.cat||"ine",area:r.dest,machineId:"",desc,amount:amt,vat:+r.vat,recurring:false,until:"",grp});
+    n++});
+  view.feRows=null;view.feSup="";view.feRead=null;view.finKeep=null;save();toast(`Z dokladu pridaných ${n} ${pl(n,"položka","položky","položiek")}`);render();return true}
+/* vyčítanie výdavku z fotky bločku alebo z faktúry (PDF) cez Claude */
+async function feFromFile(file){const isPdf=/pdf$/i.test(file.type)||/\.pdf$/i.test(file.name);
+  if(!isPdf&&!/^image\//.test(file.type)){toast("Nahraj fotku (JPG, PNG) alebo PDF.");return}
+  view.finKeep=finFormKeep();view.feBusy=true;view.feRead=null;render();finFormRestore();
+  const fin=(msg,K)=>{view.finKeep={...finFormKeep(),...(K||{})};view.feBusy=false;view.feRead=msg;render();finFormRestore()};
+  let src;try{src=isPdf?await obReadPdf(file):{text:"",imgs:[(await oevImage(file)).blob]}}catch(e){return fin({msg:"Doklad sa nepodarilo otvoriť. Údaje zadaj ručne."})}
+  let sample=null;
+  const lim=sample?await sample.limits().catch(()=>null):null,imgs=lim&&lim.images?src.imgs.slice(0,2):[];
+  if(!sample)return fin({msg:"Automatické čítanie dokladov tu zatiaľ nie je dostupné. Údaje zadaj ručne."});
+  if(!imgs.length&&src.text.length<20)return fin({msg:"Z dokladu sa nedal prečítať text. Údaje zadaj ručne."});
+  const cats=FIN_CATS.map(([k,l])=>`${k} = ${l}`).join("; ");
+  const prompt=`Toto je slovenský daňový doklad – pokladničný bloček (eKasa) alebo faktúra – za nákup stavebnej firmy.
+${src.text?`Text dokladu (z PDF):\n<<<\n${src.text.slice(0,12000)}\n>>>\n`:""}${imgs.length?"Doklad je na obrázku.\n":""}
+Vráť IBA jeden JSON objekt:
+{"typ":"blocek|faktura","dodavatel":"","ico":"","cislo_dokladu":"","datum":"RRRR-MM-DD","polozky":[{"nazov":"","mnozstvo":0,"mj":"","spolu_bez_dph":0,"dph":23,"kategoria":"","material":false}],"spolu_bez_dph":0,"dph_spolu":0,"spolu_s_dph":0,"hlavna_sadzba_dph":23,"kategoria":"","popis":"","material":false}
+Pravidlá: dodávateľ je predajca, ktorý doklad vystavil. Pri bločku je číslo dokladu číslo bločku alebo ID dokladu (nie kód pokladnice). Ak sú na doklade len ceny s DPH, dopočítaj sumy bez DPH podľa sadzby. Čísla vráť ako čísla s desatinnou bodkou. "kategoria" (pri doklade aj pri každej položke) vyber jeden kľúč z: ${cats}. "material" pri položke je true, ak je to stavebný materiál (cement, tvárnice, piesok, lepidlo…). "popis" je krátky popis nákupu (napr. "nafta 62 l" alebo "cement, malta"). "material" je true, ak ide hlavne o stavebný materiál. Ak údaj chýba, daj prázdny reťazec alebo null. Nič si nedomýšľaj.`;
+  try{const d=await sample.json(prompt,{...(imgs.length?{images:imgs}:{}),modelTier:"default"})||{};
+    const n=v=>v==null||v===""||isNaN(+v)?null:+v,its=Array.isArray(d.polozky)?d.polozky.filter(i=>i&&i.nazov):[];
+    let base=n(d.spolu_bez_dph);if(base==null&&n(d.spolu_s_dph)!=null)base=Math.round(n(d.spolu_s_dph)/(1+(n(d.hlavna_sadzba_dph)??23)/100)*100)/100;
+    const K={};if(/^\d{4}-\d{2}-\d{2}$/.test(d.datum||""))K.feDate=d.datum;if(d.cislo_dokladu)K.feNo=String(d.cislo_dokladu);if(d.dodavatel)K.feSup=String(d.dodavatel);
+    K.feDesc=String(d.popis||its.slice(0,3).map(i=>i.nazov).join(", ")).slice(0,120);if(base!=null)K.feAmt=base.toFixed(2).replace(".",",");
+    const vr=n(d.hlavna_sadzba_dph);if(vr!=null&&FIN_VAT.includes(vr))K.feVat=String(vr);
+    const c=FIN_CATS.find(x=>x[0]===d.kategoria),curMode=document.querySelector('input[name="feMode"]:checked')?.value||"spot";
+    if(its.length>1&&!(view.finEdit&&view.finEdit!=="__new")){const ar=$("#feArea")?.value,pj=$("#feProj")?.value;
+      view.feRows=its.map(i=>{const ic=FIN_CATS.find(x=>x[0]===i.kategoria)||c;const dest=curMode==="sklad"||i.material?"sklad":ar==="stavba"&&pj?"p:"+pj:ic?ic[2]:"rezia";
+        return feRowNew({name:String(i.nazov),qty:n(i.mnozstvo)!=null?String(n(i.mnozstvo)).replace(".",","):"",mj:String(i.mj||""),amt:n(i.spolu_bez_dph)!=null?n(i.spolu_bez_dph).toFixed(2).replace(".",","):"",vat:FIN_VAT.includes(n(i.dph))?n(i.dph):23,dest,cat:dest.startsWith("p:")?(i.material?"mat":"ine"):dest==="sklad"?"":(ic&&ic[2]===dest?ic[0]:(feDestCats(dest)[0]||[""])[0])})});
+      view.feSup=d.dodavatel?String(d.dodavatel):"";
+      return fin({items:[],msg:`Vyčítané z dokladu${d.dodavatel?` ${d.dodavatel}`:""}: ${its.length} ${pl(its.length,"položka","položky","položiek")}${base!=null?`, spolu bez DPH ${eur(base)}`:""}. Každú položku zaraď (na sklad, na stavbu, stroje, réžia…), skontroluj a ulož.`},K)}
+    if(curMode==="sklad"){if(its[0]){K.feItem=String(its[0].nazov);if(n(its[0].mnozstvo)!=null)K.feQty=String(n(its[0].mnozstvo)).replace(".",",");if(its[0].mj)K.feMj=String(its[0].mj)}}
+    else if(c&&$("#feArea")?.value!=="stavba"){K.feCat=c[0];K.feArea=c[2]}
+    const rates=[...new Set(its.map(i=>n(i.dph)).filter(v=>v!=null))];
+    fin({items:its,msg:`Vyčítané z dokladu${d.dodavatel?` ${d.dodavatel}`:""}: ${its.length} ${pl(its.length,"položka","položky","položiek")}${base!=null?`, spolu bez DPH ${eur(base)}`:""}${n(d.spolu_s_dph)!=null?` (s DPH ${eur(n(d.spolu_s_dph))})`:""}.${rates.length>1?" Doklad má viac sadzieb DPH – suma bez DPH je spolu za všetky.":""}${curMode==="sklad"&&its.length>1?" Na sklad sa zapíše prvá položka – ostatné pridaj ako ďalší nákup.":""} Skontroluj údaje a ulož.`},K)}
+  catch(e){fin({msg:(OEV_ERR[e&&e.code]||"Údaje sa nepodarilo vyčítať.")+" Údaje zadaj ručne."})}}
+document.addEventListener("change",ev=>{const t=ev.target;if(t.id==="feFile"&&t.files&&t.files[0]&&me&&isAdmin(me)){const f=t.files[0];t.value="";feFromFile(f)}});
+document.addEventListener("click",ev=>{const b=ev.target.closest('[data-a="feReadX"]');if(b&&me){view.finKeep=finFormKeep();view.feRead=null;render();finFormRestore()}});
+function finSumHTML(all,y){const sum=a=>all.filter(x=>!a||x.area===a).reduce((s,x)=>s+x.amount,0),tot=sum();
+  const rec=(S.finExp||[]).filter(x=>x.recurring&&(!x.until||x.until>=todayIso()));
+  const col=a=>{const L=rec.filter(x=>x.area===a),s=L.reduce((t,x)=>t+numIn(x.amount),0);
+    return `<div class="fincol"><div class="eyebrow">${finArea(a)}</div><div><div class="finbig">${eur(s)}</div><div class="muted" style="font-size:12px">mesačne</div></div>
+      ${L.length?`<ul class="finrec">${L.map(x=>`<li><span>${esc(x.desc||finCat(x.cat))}</span><b>${eur(numIn(x.amount))}</b></li>`).join("")}</ul>`:`<div class="muted" style="font-size:13px">Žiadne pravidelné výdavky.</div>`}</div>`};
+  return `<div class="card stack finbox"><div class="entry-head"><h3>Priebežný stav</h3><select id="finYear" aria-label="Rok">${[...new Set([todayIso().slice(0,4),y,...(S.finExp||[]).map(x=>(x.date||"").slice(0,4)),...(S.costs||[]).map(c=>(c.date||"").slice(0,4))].filter(Boolean))].sort().reverse().map(v=>`<option ${v===y?"selected":""}>${v}</option>`).join("")}</select></div>
+    <div><div class="muted" style="font-size:13px">Výdavky za rok ${y} spolu bez DPH</div><div class="finbig fintot">${eur(tot)}</div></div>
+    <div class="finsplit">${FIN_AREAS.map(([k,l])=>`<div><span class="muted">${l}</span><b>${eur(sum(k))}</b></div>`).join("")}</div>
+    <div class="eyebrow" style="margin-top:6px">Pravidelné mesačné výdavky</div>
+    <div class="fincols">${["stroje","pers","rezia"].map(col).join("")}</div></div>`}
+function finListHTML(all){const F=view.finF||{},lim=F.lim!=null?F.lim:10;
+  const L=all.filter(x=>(!F.area||x.area===F.area)&&(!F.src||x.src===F.src)&&(!F.q||[x.desc,x.supplier,x.docNo,x.cat,x.proj,x.machine].join(" ").toLowerCase().includes(F.q.toLowerCase())));
+  const shown=lim?L.slice(0,lim):L,src={firma:"Firma",stavba:"Stavba",stroj:"Stroj"};
+  const rows=shown.map(x=>`<tr${x.src==="firma"?` class="clickrow" data-a="finOpen" data-id="${x.id}"`:x.src==="stavba"?` class="clickrow" data-a="finProj" data-id="${x.projectId}"`:""}><td class="num">${d2(x.date)}</td><td>${esc(x.cat)}${x.recurring?` <span class="pill">mesačne</span>`:""}<div class="muted" style="font-size:12px">${finArea(x.area)}</div></td>
+    <td>${esc(x.desc||"")}${x.supplier?`<div class="muted" style="font-size:12px">${esc(x.supplier)}${x.docNo?" · "+esc(x.docNo):""}</div>`:x.docNo?`<div class="muted" style="font-size:12px">${esc(x.docNo)}</div>`:""}</td>
+    <td><span class="muted">${src[x.src]}</span>${x.proj?`<div style="font-size:12px">${esc(x.proj)}</div>`:x.machine?`<div style="font-size:12px">${esc(x.machine)}</div>`:x.machineId?`<div style="font-size:12px">${esc(((S.machines||[]).find(m=>m.id===x.machineId)||{}).name||"")}</div>`:""}</td>
+    <td class="num r">${eur(x.amount)}</td></tr>`).join("");
+  return `<div class="card stack"><div class="entry-head ecdh"><h3>Všetky výdavky</h3><div class="ecdh-r">
+      <input id="finQ" type="search" placeholder="Hľadať…" value="${esc(F.q||"")}" style="max-width:180px">
+      <select id="finFArea"><option value="">všetky oblasti</option>${FIN_AREAS.map(([k,l])=>`<option value="${k}" ${F.area===k?"selected":""}>${l}</option>`).join("")}</select>
+      <select id="finFSrc"><option value="">všetky zdroje</option><option value="firma" ${F.src==="firma"?"selected":""}>Firma</option><option value="stavba" ${F.src==="stavba"?"selected":""}>Stavby</option><option value="stroj" ${F.src==="stroj"?"selected":""}>Servis strojov</option></select>
+      <select id="finLim">${[[10,"posledných 10"],[50,"posledných 50"],[100,"posledných 100"],[0,"všetky"]].map(([n,l])=>`<option value="${n}" ${lim===n?"selected":""}>${l}</option>`).join("")}</select></div></div>
+    ${L.length?`<div class="tablewrap"><table class="fintab"><thead><tr><th>Dátum</th><th>Kategória / oblasť</th><th>Popis</th><th>Zdroj</th><th class="r">Bez DPH</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="4"><b>Spolu ${L.length} ${pl(L.length,"položka","položky","položiek")}</b>${shown.length<L.length?`<span class="muted" style="font-size:12px"> · v zozname zobrazených ${shown.length}</span>`:""}</td><td class="num r"><b>${eur(L.reduce((s,x)=>s+x.amount,0))}</b></td></tr></tfoot></table></div>`
+      :`<div class="muted">Žiadne výdavky${F.area||F.src||F.q?" pre zvolený filter":" za tento rok"}.</div>`}
+    <div class="muted" style="font-size:13px">Okrem výdavkov firmy sa tu automaticky zobrazujú náklady zadané v stavbách (Stavba → Ekonomika) a zapísané servisy a termíny strojov (Doprava a logistika).</div></div>`}
+function finIncHTML(y){const L=(S.finInc||[]).filter(x=>(x.date||"").startsWith(y)).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const D=view.finIncEdit&&view.finIncEdit!=="__new"?(S.finInc||[]).find(x=>x.id===view.finIncEdit)||{}:{date:todayIso(),type:"fa",vat:23};
+  const tot=L.reduce((s,x)=>s+numIn(x.amount),0),unpaid=L.filter(x=>!x.paid).reduce((s,x)=>s+withVat(x.amount,x.vat),0),ed=view.finIncEdit&&view.finIncEdit!=="__new";
+  return `<div class="card stack"><div class="entry-head"><h3>Príjmy</h3><div class="row" style="gap:16px"><span>Za rok ${y} bez DPH <b>${eur(tot)}</b></span>${unpaid?`<span class="bad">Neuhradené s DPH <b>${eur(unpaid)}</b></span>`:""}</div></div>
+    <div class="fininc">
+    <form class="stack" id="finIncForm"><div class="eyebrow">${ed?"Upraviť príjem":"Nový príjem"}</div>
+      <div class="seg" role="radiogroup" aria-label="Druh dokladu"><label><input type="radio" name="fiType" value="fa" ${D.type!=="vrp"?"checked":""}><span>Faktúra</span></label><label><input type="radio" name="fiType" value="vrp" ${D.type==="vrp"?"checked":""}><span>Bloček z VRP</span></label></div>
+      <div class="grid2"><label>Dátum<input type="date" id="fiDate" value="${esc(D.date||"")}" required></label><label>Číslo dokladu<input id="fiNo" value="${esc(D.docNo||"")}" placeholder="napr. 2026015"></label></div>
+      <div class="grid2"><label>Odberateľ<input id="fiClient" value="${esc(D.client||"")}" list="fiClients" placeholder="názov firmy alebo meno"></label>
+        <label>Stavba (nepovinné)<select id="fiProj"><option value="">–</option>${S.projects.map(p=>`<option value="${p.id}" ${D.projectId===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></label></div>
+      <datalist id="fiClients">${[...new Set([...(S.finInc||[]).map(x=>x.client),...S.projects.map(p=>p.client)].filter(Boolean))].sort().map(s=>`<option value="${esc(s)}">`).join("")}</datalist>
+      <label>Popis<input id="fiDesc" value="${esc(D.desc||"")}" placeholder="napr. 2. čiastková faktúra"></label>
+      <div class="grid3"><label>Suma bez DPH (€)<input id="fiAmt" inputmode="decimal" value="${esc(D.amount!=null?String(D.amount).replace(".",","):"")}" placeholder="0,00" required></label>
+        <label>DPH<select id="fiVat">${FIN_VAT.map(v=>`<option value="${v}" ${+D.vat===v?"selected":""}>${v} %</option>`).join("")}</select></label>
+        <label>Splatnosť<input type="date" id="fiDue" value="${esc(D.due||"")}"></label></div>
+      <label class="chk"><input type="checkbox" id="fiPaid" ${D.paid||D.type==="vrp"?"checked":""}> Uhradené</label>
+      <div class="row"><button class="btn primary" type="submit">${ed?"Uložiť":"+ Pridať príjem"}</button>${ed?`<button type="button" class="btn ghost" data-a="finIncCancel">Zrušiť</button><button type="button" class="btn ghost findel" data-a="finIncDel">Odstrániť</button>`:""}</div></form>
+    <div class="stack" style="min-width:0">${L.length?`<div class="tablewrap"><table class="fintab"><thead><tr><th>Dátum</th><th>Doklad a odberateľ</th><th class="r">Suma</th></tr></thead><tbody>
+      ${L.map(x=>{const late=!x.paid&&x.due&&x.due<todayIso();return `<tr class="clickrow" data-a="finIncOpen" data-id="${x.id}"><td class="num">${d2(x.date)}</td><td>${x.type==="vrp"?"Bloček VRP":"Faktúra"}${x.docNo?` ${esc(x.docNo)}`:""}${x.client?`<div>${esc(x.client)}</div>`:""}<div class="muted" style="font-size:12px">${[x.desc,x.projectId?(S.projects.find(p=>p.id===x.projectId)||{}).name:""].filter(Boolean).map(esc).join(" · ")}</div></td><td class="num r"><b>${eur(numIn(x.amount))}</b><div class="muted" style="font-size:12px">s DPH ${eur(withVat(x.amount,x.vat))}</div>
+        <div style="margin-top:3px">${x.paid?`<span class="pill s-ok">uhradená</span>`:`<span class="pill ${late?"s-lock":"s-open"}">${late?"po splatnosti":"neuhradená"}</span>`}</div></td></tr>`}).join("")}</tbody></table></div>`:`<div class="muted">Za rok ${y} zatiaľ žiadne príjmy.</div>`}
+      <div class="muted" style="font-size:13px">Zatiaľ sa príjmy zapisujú ručne. Prepojenie s fakturáciou v KROS-e doplníme neskôr.</div></div></div></div>`}
+function financeHTML(){const y=finYear(),all=finAllExp(y);
+  return `<div class="stack"><div class="fingrid">${finExpFormHTML()}${finSumHTML(all,y)}</div>${finListHTML(all)}${finIncHTML(y)}</div>`}
+document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(!/^fin/.test(a)||!isAdmin(me))return;
+  if(a==="finOpen"){view.finEdit=b.dataset.id;view.feRows=null;render();window.scrollTo({top:0,behavior:"smooth"})}
+  else if(a==="finCancel"){view.finEdit=null;view.feRead=null;view.feRows=null;render()}
+  else if(a==="finDel"){const x=(S.finExp||[]).find(e=>e.id===view.finEdit);if(!x)return;S.finExp=S.finExp.filter(e=>e!==x);if(x.stockMove)S.stock=(S.stock||[]).filter(m=>m.id!==x.stockMove);view.finEdit=null;save();toast("Výdavok odstránený");render()}
+  else if(a==="finProj"){view={screen:"project",projectId:b.dataset.id,tab:"ekonomika"};render()}
+  else if(a==="finIncOpen"){view.finIncEdit=b.dataset.id;render()}
+  else if(a==="finIncCancel"){view.finIncEdit=null;render()}
+  else if(a==="finIncDel"){const x=(S.finInc||[]).find(e=>e.id===view.finIncEdit);if(!x)return;S.finInc=S.finInc.filter(e=>e!==x);view.finIncEdit=null;save();toast("Príjem odstránený");render()}});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me||!isAdmin(me))return;
+  if(t.id==="finYear"){view.finYear=t.value;render()}
+  else if(t.id==="finFArea"||t.id==="finFSrc"||t.id==="finLim"){view.finF={...(view.finF||{}),[{finFArea:"area",finFSrc:"src",finLim:"lim"}[t.id]]:t.id==="finLim"?+t.value:t.value};render()}
+  else if(t.id==="feCat"){const c=FIN_CATS.find(x=>x[0]===t.value);if(c&&$("#feArea")&&$("#feArea").value!=="stavba"){$("#feArea").value=c[2];$("#feArea").dispatchEvent(new Event("change",{bubbles:true}))}}
+  else if(t.name==="feMode"){const keep=finFormKeep();keep.feMode=t.value;view.finKeep=keep;render();finFormRestore()}
+  else if(t.id==="feItem"){const it=(S.cennik||[]).find(i=>i.type==="mat"&&acNorm(i.name)===acNorm(t.value));if(it&&$("#feMj"))$("#feMj").value=it.mj||""}
+  else if(t.id==="feArea"||t.id==="feRec"){const keep=finFormKeep();view.finKeep=keep;render();finFormRestore()}});
+document.addEventListener("input",ev=>{const t=ev.target;if(t.id!=="finQ")return;view.finF={...(view.finF||{}),q:t.value};clearTimeout(view.__finQ);view.__finQ=setTimeout(()=>{const pos=t.selectionStart;render();const n=$("#finQ");if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}},250)});
+/* pri zmene „Patrí do“ / „Pravidelný“ sa formulár prekreslí – rozpísané hodnoty sa zachovajú */
+function finFormKeep(){const o={};["feDate","feNo","feCat","feArea","feMach","feProj","feSup","feDesc","feAmt","feVat","feUntil","feItem","feMj","feQty"].forEach(k=>{const e=$("#"+k);if(e)o[k]=e.value});o.feMode=document.querySelector('input[name="feMode"]:checked')?.value||"spot";o.feRec=!!$("#feRec")?.checked;if($("#feArea")?.value==="stavba"&&!COST_CATS.some(c=>c[0]===o.feCat))o.feCat="mat";if($("#feArea")?.value!=="stavba"&&!FIN_CATS.some(c=>c[0]===o.feCat))o.feCat="ine";return o}
+function finFormRestore(){const o=view.finKeep;if(!o)return;Object.entries(o).forEach(([k,v])=>{const e=$("#"+k);if(!e)return;if(k==="feMode")return;if(k==="feRec")e.checked=v;else e.value=v});view.finKeep=null;
+  if(o.feRec&&$("#feRec")&&!$("#feUntil")){/* doplní pole „Platí do“ */const f=$("#feRec").closest("label").parentElement;f.insertAdjacentHTML("afterend",`<label>Platí do (nepovinné)<input type="date" id="feUntil" value=""></label>`)}
+  if(!o.feRec)$("#feUntil")?.closest("label")?.remove()}
+document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||(id!=="finExpForm"&&id!=="finIncForm"))return;ev.preventDefault();if(!isAdmin(me))return;
+  const v=k=>($("#"+k)?.value||"").trim();
+  if(id==="finExpForm"&&view.feRows&&!(view.finEdit&&view.finEdit!=="__new")){feRowsSave();return}
+  if(id==="finExpForm"){const amt=moneyVal("feAmt");if(!amt){toast("Suma má mať tvar napr. 90 alebo 89,50");return}
+    if(document.querySelector('input[name="feMode"]:checked')?.value==="sklad"){const nm=v("feItem"),qty=numIn(v("feQty"));if(!nm){toast("Zadaj materiál");return}if(!(qty>0)){toast("Zadaj množstvo");return}
+      let it=(S.cennik||[]).find(i=>i.type==="mat"&&acNorm(i.name)===acNorm(nm));const unit=String(Math.round(+amt/qty*10000)/10000);
+      if(!it){it={id:uid("cn"),type:"mat",code:"",name:nm,sub:"",mj:v("feMj")||"ks",price:"",cost:unit,vat:+v("feVat"),stock:true};(S.cennik=S.cennik||[]).push(it)}
+      const isNew=!view.finEdit||view.finEdit==="__new",x=isNew?{id:uid("fe")}:(S.finExp||[]).find(e=>e.id===view.finEdit);if(!x)return;
+      Object.assign(x,{date:v("feDate"),docNo:v("feNo"),cat:"mat",area:"sklad",itemId:it.id,qty:String(qty),machineId:"",supplier:v("feSup"),desc:v("feDesc")||`${it.name} – ${nf(qty)} ${it.mj||""}`.trim(),amount:amt,vat:+v("feVat"),recurring:false,until:""});
+      let m=x.stockMove&&(S.stock||[]).find(z=>z.id===x.stockMove);if(m)Object.assign(m,{date:x.date,itemId:it.id,qty:String(qty),price:unit,docNo:x.docNo,supplier:x.supplier});else{m=stockIn({date:x.date,itemId:it.id,qty:String(qty),price:unit,docNo:x.docNo,supplier:x.supplier,expId:x.id});x.stockMove=m.id}
+      if(isNew)(S.finExp=S.finExp||[]).push(x);view.finEdit=null;view.feRead=null;view.finKeep=null;save();toast(`Nákup na sklad: ${nf(qty)} ${it.mj||""} ${it.name}`);render();return}
+    if(v("feArea")==="stavba"){const pid=v("feProj");if(!pid){toast("Vyber stavbu");return}
+      (S.costs=S.costs||[]).push({id:uid("nk"),projectId:pid,cat:v("feCat")||"ine",date:v("feDate"),supplier:v("feSup"),docNo:v("feNo"),desc:v("feDesc"),amount:amt,by:me.id,at:nowIso()});
+      view.finEdit=null;view.feRead=null;view.finKeep=null;save();toast("Náklad pridaný do stavby");render();return}
+    const isNew=!view.finEdit||view.finEdit==="__new",x=isNew?{id:uid("fe")}:(S.finExp||[]).find(e=>e.id===view.finEdit);if(!x)return;
+    if(x.stockMove){S.stock=(S.stock||[]).filter(m=>m.id!==x.stockMove);delete x.stockMove;delete x.itemId;delete x.qty}
+    Object.assign(x,{date:v("feDate"),docNo:v("feNo"),cat:v("feCat"),area:v("feArea"),machineId:v("feArea")==="stroje"?v("feMach"):"",supplier:v("feSup"),desc:v("feDesc"),amount:amt,vat:+v("feVat"),recurring:!!$("#feRec").checked,until:$("#feRec").checked?v("feUntil"):""});
+    if(isNew)(S.finExp=S.finExp||[]).push(x);view.finEdit=null;view.feRead=null;save();toast(isNew?"Výdavok pridaný":"Výdavok uložený");render()}
+  else{const amt=moneyVal("fiAmt");if(!amt){toast("Suma má mať tvar napr. 1200 alebo 1199,90");return}
+    const isNew=!view.finIncEdit||view.finIncEdit==="__new",x=isNew?{id:uid("fi")}:(S.finInc||[]).find(e=>e.id===view.finIncEdit);if(!x)return;
+    Object.assign(x,{type:document.querySelector('input[name="fiType"]:checked').value,date:v("fiDate"),docNo:v("fiNo"),client:v("fiClient"),projectId:v("fiProj"),desc:v("fiDesc"),amount:amt,vat:+v("fiVat"),due:v("fiDue"),paid:!!$("#fiPaid").checked});
+    if(isNew)(S.finInc=S.finInc||[]).push(x);view.finIncEdit=null;save();toast(isNew?"Príjem pridaný":"Príjem uložený");render()}});
+/* ===================== Firma → Obchod: cenník a sklad ===================== */
+/* S.cennik = položky {id,code,type:"praca"|"mat"|"zdruz",name,sub,mj,price (predajná bez DPH),cost (nákupná),vat,stock (skladová),parts:[{itemId,qty}]}
+   S.stock = pohyby {id,date,itemId,type:"in"|"out",qty,price (cena/MJ),docNo,supplier,projectId,note,expId,costId} – sklad sa oceňuje váženým priemerom */
+const CEN_T=[["praca","Práca"],["mat","Materiál"],["zdruz","Združená položka"]];
+const cenT=k=>(CEN_T.find(x=>x[0]===k)||[,""])[1];
+const cenItem=id=>(S.cennik||[]).find(x=>x.id===id);
+const cenLabel=i=>[i.code,i.name].filter(Boolean).join(" – ")+(i.mj?` (${i.mj})`:"");
+function cenPartsSum(i,key){return Math.round((i.parts||[]).reduce((s,p)=>{const c=cenItem(p.itemId);return s+(c?numIn(c[key||"price"])*numIn(p.qty):0)},0)*100)/100}
+function stockOf(itemId,upto){let q=0,v=0;(S.stock||[]).filter(m=>m.itemId===itemId&&(!upto||m.date<=upto)).sort((a,b)=>(a.date||"").localeCompare(b.date||"")||(a.type==="in"?-1:1)).forEach(m=>{
+    const avg=q>0?v/q:0;if(m.type==="in"){q+=numIn(m.qty);v+=numIn(m.qty)*numIn(m.price)}
+    else if(m.type==="kor"){const d=numIn(m.qty);q+=d;v+=d*(d>0?numIn(m.price)||avg:avg)}   /* korekcia: rozdiel +/− v priemernej cene */
+    else{q-=numIn(m.qty);v-=numIn(m.qty)*avg}});
+  if(Math.abs(q)<1e-9){q=0;v=0}return {qty:Math.round(q*1000)/1000,avg:q>0?v/q:0,value:Math.round(v*100)/100}}
+const stockItems=()=>(S.cennik||[]).filter(i=>i.type==="mat"&&i.stock!==false);
+
+/* --- cenník --- */
+function cenFormHTML(){const D=view.cenDraft,t=D.type,Pp=D.parts||[];
+  const opts=(S.cennik||[]).filter(i=>i.type!=="zdruz"&&i.id!==D.id);
+  return `<form class="card stack" id="cenForm" autocomplete="off"><div class="entry-head"><h3>${D.id?"Upraviť položku cenníka":"Nová položka cenníka"}</h3><button type="button" class="btn small ghost" data-a="cenClose">Zavrieť</button></div>
+    <div class="seg" role="radiogroup" aria-label="Druh položky">${CEN_T.map(([k,l])=>`<label><input type="radio" name="cenType" value="${k}" ${t===k?"checked":""}><span>${l}</span></label>`).join("")}</div>
+    <div class="grid3"><label>Kód (nepovinné)<input id="cenCode" value="${esc(D.code||"")}" placeholder="napr. M-012"></label><label style="grid-column:span 2">Názov<input id="cenName" value="${esc(D.name||"")}" required placeholder="${t==="praca"?"napr. Murárske práce":t==="mat"?"napr. Tvárnica 30 P+D":"napr. Murivo z tvárnic hr. 30 cm"}"></label></div>
+    <label>Doplňujúci text (vytlačí sa v ponuke pod názvom)<input id="cenSub" value="${esc(D.sub||"")}"></label>
+    <div class="grid3"><label>MJ<input id="cenMj" value="${esc(D.mj||"")}" list="obMjs" required placeholder="ks, m2, hod…"></label>
+      <label>Predajná cena bez DPH (€)<input id="cenPrice" inputmode="decimal" value="${esc(String(D.price??"").replace(".",","))}" placeholder="0,00"></label>
+      <label>DPH<select id="cenVat">${FIN_VAT.map(v=>`<option value="${v}" ${+D.vat===v?"selected":""}>${v} %</option>`).join("")}</select></label></div>
+    <datalist id="obMjs">${["ks","m","m2","m3","t","kg","hod","deň","km","kpl","bm","l","bal","vrece"].map(x=>`<option value="${x}">`).join("")}</datalist>
+    ${t==="mat"?`<div class="grid2"><label>Nákupná cena bez DPH (€, orientačná)<input id="cenCost" inputmode="decimal" value="${esc(String(D.cost??"").replace(".",","))}" placeholder="0,00"></label>
+      <label class="chk" style="align-self:end;padding-bottom:10px"><input type="checkbox" id="cenStock" ${D.stock!==false?"checked":""}> Skladová položka (sleduje sa na sklade)</label></div>`:""}
+    ${t==="zdruz"?`<div class="stack" style="gap:6px"><div class="eyebrow">Zložky položky (na 1 ${esc(D.mj||"MJ")})</div>
+      ${Pp.map((p,n)=>{const c=cenItem(p.itemId);return `<div class="cenpart" data-n="${n}"><select class="cenP" data-f="itemId"><option value="">– vyber z cenníka –</option>${opts.map(o=>`<option value="${o.id}" ${o.id===p.itemId?"selected":""}>${esc(cenT(o.type))}: ${esc(cenLabel(o))}</option>`).join("")}</select>
+        <input class="cenP" data-f="qty" inputmode="decimal" value="${esc(String(p.qty??"").replace(".",","))}" aria-label="Množstvo"><span class="muted">${c?esc(c.mj||""):""}</span><span class="num r">${c?eur(Math.round(numIn(c.price)*numIn(p.qty)*100)/100):""}</span>
+        <button type="button" class="btn small ghost" data-a="cenPartDel" data-n="${n}" aria-label="Odstrániť zložku">×</button></div>`}).join("")}
+      <div class="row"><button type="button" class="btn small" data-a="cenPartAdd">+ Pridať zložku</button>${Pp.length?`<span class="muted">Súčet zložiek: <b>${eur(cenPartsSum(D))}</b></span><button type="button" class="btn small ghost" data-a="cenPartPrice">Použiť ako predajnú cenu</button>`:""}</div></div>`:""}
+    <div class="row"><button class="btn primary" type="submit">Uložiť položku</button>${D.id?`<button type="button" class="btn ghost findel" data-a="cenDel">Odstrániť</button>`:""}</div></form>`}
+function cenRead(){const D=view.cenDraft;if(!D||!$("#cenForm"))return D;const v=id=>($("#"+id)?.value??"").trim(),n=id=>v(id).replace(/\s/g,"").replace(",",".");
+  D.type=document.querySelector('input[name="cenType"]:checked')?.value||D.type;Object.assign(D,{code:v("cenCode"),name:v("cenName"),sub:v("cenSub"),mj:v("cenMj"),price:n("cenPrice"),vat:+v("cenVat")});
+  if($("#cenCost"))D.cost=n("cenCost");if($("#cenStock"))D.stock=$("#cenStock").checked;
+  document.querySelectorAll(".cenpart").forEach(r=>{const p=(D.parts||[])[+r.dataset.n];if(!p)return;r.querySelectorAll(".cenP").forEach(e=>{p[e.dataset.f]=e.dataset.f==="qty"?e.value.trim().replace(",","."):e.value})});return D}
+function cenListHTML(){const F=view.cenF||{},q=(F.q||"").toLowerCase();
+  const L=(S.cennik||[]).filter(i=>(!F.t||i.type===F.t)&&(!q||[i.code,i.name,i.sub].join(" ").toLowerCase().includes(q))).sort((a,b)=>(a.type+a.name).localeCompare(b.type+b.name,"sk"));
+  const pill={praca:"s-open",mat:"s-ok",zdruz:""};
+  return `<div class="card stack"><div class="entry-head ecdh"><h3>Cenník</h3><div class="ecdh-r"><input id="cenQ" type="search" placeholder="Hľadať…" value="${esc(F.q||"")}" style="max-width:180px">
+      <select id="cenFT"><option value="">všetky druhy</option>${CEN_T.map(([k,l])=>`<option value="${k}" ${F.t===k?"selected":""}>${l}</option>`).join("")}</select><button class="btn primary" data-a="cenNew">+ Nová položka</button></div></div>
+    <div class="muted" style="font-size:13px">Položky z cenníka vyberáš pri tvorbe cenovej ponuky. Materiálové položky označené ako skladové sa sledujú v karte Sklad.</div>
+    ${L.length?`<div class="tablewrap"><table class="fintab"><thead><tr><th>Položka</th><th>Druh</th><th class="r">Predajná cena</th><th class="r">Na sklade</th></tr></thead><tbody>${L.map(i=>{const st=i.type==="mat"&&i.stock!==false?stockOf(i.id):null;
+      return `<tr class="clickrow" data-a="cenOpen" data-id="${i.id}"><td>${i.code?`<span class="muted num">${esc(i.code)}</span> `:""}<b>${esc(i.name)}</b>${i.sub?`<div class="muted" style="font-size:12px">${esc(i.sub)}</div>`:""}${i.type==="zdruz"&&(i.parts||[]).length?`<div class="muted" style="font-size:12px">${(i.parts||[]).map(p=>{const c=cenItem(p.itemId);return c?`${esc(c.name)} ${nf(numIn(p.qty))} ${esc(c.mj||"")}`:""}).filter(Boolean).join(" + ")}</div>`:""}</td>
+      <td><span class="pill ${pill[i.type]}">${cenT(i.type)}</span></td><td class="num r"><b>${i.price!==""&&i.price!=null?eur(numIn(i.price)):"–"}</b><div class="muted" style="font-size:12px">za ${esc(i.mj||"MJ")}${i.type==="mat"&&i.cost?` · nákup ${eur(numIn(i.cost))}`:""}</div></td>
+      <td class="num r">${st?`${nf(st.qty)} ${esc(i.mj||"")}`:"–"}</td></tr>`}).join("")}</tbody></table></div>`:`<div class="muted">${q||F.t?"Nič sa nenašlo.":"Cenník je zatiaľ prázdny. Pridaj prvú položku."}</div>`}</div>`}
+function cenHTML(){return `<div class="stack">${view.cenDraft?cenFormHTML():""}${cenListHTML()}</div>`}
+
+
+/* našepkávač: pri písaní ukáže zhodné položky (bez ohľadu na diakritiku a veľkosť písmen), funguje aj na mobile */
+const AC_SRC={sklad:()=>stockItems().map(i=>({v:cenLabel(i),t:i.name,c:i.code,d:(()=>{const s=stockOf(i.id);return `na sklade ${nf(s.qty)} ${i.mj||""}`})()})),
+  mat:()=>(S.cennik||[]).filter(i=>i.type==="mat").map(i=>({v:i.name,t:i.name,c:i.code,d:i.mj||""})),
+  cen:()=>(S.cennik||[]).map(i=>({v:cenLabel(i),t:i.name,c:i.code,d:`${cenT(i.type)} · ${eur(numIn(i.price))}`}))};
+let acEl=null,acIn=null,acL=[],acI=-1;
+function acHide(){if(acEl)acEl.remove();acEl=null;acIn=null;acL=[];acI=-1}
+function acCands(kind,val){const src=AC_SRC[kind];if(!src)return [];const q=acNorm(val),ws=q.split(" ").filter(Boolean);if(!ws.length)return src().slice(0,0);
+  return src().filter(o=>{const h=acNorm((o.c||"")+" "+o.t+" "+o.v);return ws.every(w=>h.includes(w))}).sort((a,b)=>(acNorm(a.t).startsWith(q)?0:1)-(acNorm(b.t).startsWith(q)?0:1)||a.t.localeCompare(b.t,"sk"))}
+function acShow(inp){if(!AC_SRC[inp.dataset.ac])return;const q=acNorm(inp.value);acL=(q?acCands(inp.dataset.ac,inp.value):AC_SRC[inp.dataset.ac]()).slice(0,8);
+  if(!acL.length||(acL.length===1&&acNorm(acL[0].v)===q)){if(acEl){acEl.remove();acEl=null}acIn=inp;return}
+  if(!acEl){acEl=document.createElement("div");acEl.className="acpop";acEl.setAttribute("role","listbox");document.body.appendChild(acEl)}
+  acIn=inp;acI=Math.min(acI,acL.length-1);acEl.innerHTML=acL.map((o,i)=>`<div class="acopt${i===acI?" on":""}" role="option" data-i="${i}">${o.c?`<span class="muted">${esc(o.c)}</span> `:""}<b>${esc(o.t)}</b>${o.d?`<span class="muted"> · ${esc(o.d)}</span>`:""}</div>`).join("");acPos()}
+function acPos(){if(!acEl||!acIn||!document.body.contains(acIn)){acHide();return}const r=acIn.getBoundingClientRect();
+  Object.assign(acEl.style,{left:(r.left+window.scrollX)+"px",top:(r.bottom+window.scrollY+2)+"px",width:Math.max(r.width,260)+"px"})}
+function acPick(i){const o=acL[i],inp=acIn;if(!o||!inp)return;inp.value=o.v;acHide();inp.dispatchEvent(new Event("input",{bubbles:true}));inp.dispatchEvent(new Event("change",{bubbles:true}))}
+document.addEventListener("input",ev=>{const t=ev.target;if(t&&t.dataset&&t.dataset.ac&&ev.isTrusted!==false){acI=-1;acShow(t)}});
+document.addEventListener("focusin",ev=>{const t=ev.target;if(t&&t.dataset&&t.dataset.ac){acI=-1;acShow(t)}else if(acEl&&!(t&&t.closest&&t.closest(".acpop")))acHide()});
+document.addEventListener("mousedown",ev=>{const o=ev.target.closest&&ev.target.closest(".acopt");if(o){ev.preventDefault();acPick(+o.dataset.i);return}if(acEl&&ev.target!==acIn)acHide()});
+document.addEventListener("keydown",ev=>{if(!acEl||ev.target!==acIn)return;
+  if(ev.key==="ArrowDown"||ev.key==="ArrowUp"){ev.preventDefault();acI=(acI+(ev.key==="ArrowDown"?1:-1)+acL.length)%acL.length;acShow(acIn)}
+  else if(ev.key==="Enter"&&acI>=0){ev.preventDefault();acPick(acI)}else if(ev.key==="Escape")acHide()});
+/* pri opustení poľa: ak písanému textu zodpovedá práve jedna položka, doplní sa sama */
+document.addEventListener("change",ev=>{const t=ev.target;if(!t||!t.dataset||!t.dataset.ac||t.dataset.ac==="cen"||!ev.isTrusted)return;const c=acCands(t.dataset.ac,t.value);
+  if(c.length===1&&acNorm(c[0].v)!==acNorm(t.value)){t.value=c[0].v;t.dispatchEvent(new Event("input",{bubbles:true}))}},true);
+window.addEventListener("scroll",()=>{if(acEl)acPos()},{passive:true});window.addEventListener("resize",()=>{if(acEl)acPos()});
+/* --- sklad --- */
+/* skladové doklady: príjemka PR-RRRR/001, výdajka VY-RRRR/001, korekcia (inventúrny rozdiel) KO-RRRR/001; jeden doklad = viac pohybov s rovnakým m.doc */
+const SK_PFX={in:"PR",out:"VY",kor:"KO"},SK_NAME={in:"Príjemka",out:"Výdajka",kor:"Korekcia"};
+function stockDocNo(type,date){const y=(date||todayIso()).slice(0,4),p=`${SK_PFX[type]}-${y}/`;let mx=0;(S.stock||[]).forEach(m=>{if(m.doc&&m.doc.startsWith(p))mx=Math.max(mx,+m.doc.slice(p.length)||0)});return p+String(mx+1).padStart(3,"0")}
+function stockMigrate(){/* staršie pohyby bez čísla dokladu: zoskupiť podľa dátumu, druhu a dodávateľa / stavby */
+  const L=(S.stock||[]).filter(m=>!m.doc).sort((a,b)=>(a.date||"").localeCompare(b.date||""));if(!L.length)return;const map={};
+  L.forEach(m=>{const k=[m.type,m.date,m.type==="in"?m.supplier+"|"+(m.docNo||""):m.projectId||"",m.expId?m.expId:""].join("#");if(!map[k])map[k]=stockDocNo(m.type,m.date);m.doc=map[k]});save()}
+function stockIn(o){/* o: {date,itemId,qty,price,docNo,supplier,expId,note,doc} */const m={id:uid("sk"),type:"in",...o};if(!m.doc)m.doc=stockDocNo("in",m.date);(S.stock=S.stock||[]).push(m);return m}
+function stockOutCost(m){/* výdaj na stavbu = náklad stavby v priemernej skladovej cene */const it=cenItem(m.itemId);if(!m.projectId||!it)return;
+  const c={id:uid("nk"),projectId:m.projectId,cat:"mat",date:m.date,supplier:"Sklad",docNo:m.doc||"",desc:`${it.name} – ${nf(numIn(m.qty))} ${it.mj||""} zo skladu`.trim(),amount:String(Math.round(numIn(m.qty)*numIn(m.price)*100)/100),fromStock:m.id,by:me.id,at:nowIso()};
+  (S.costs=S.costs||[]).push(c);m.costId=c.id}
+const skDocs=()=>{const g={};(S.stock||[]).forEach(m=>{const k=m.doc||m.id;(g[k]=g[k]||[]).push(m)});return Object.entries(g).map(([doc,ms])=>({doc,ms,type:ms[0].type,date:ms[0].date}))};
+const skVal=m=>Math.round(numIn(m.qty)*numIn(m.price)*100)/100;
+const acNorm=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
+function skMatch(text){const t=acNorm(text);if(!t)return null;return stockItems().find(x=>acNorm(cenLabel(x))===t||acNorm(x.name)===t||(x.code&&acNorm(x.code)===t))||null}
+const skItemsDL=()=>`<datalist id="skItems">${stockItems().map(x=>`<option value="${esc(cenLabel(x))}">`).join("")}</datalist>`;
+function skRowsHTML(typ){const R=view.skRows;
+  return `${skItemsDL()}<datalist id="obMjs">${["ks","m","m2","m3","t","kg","bm","l","bal","vrece"].map(x=>`<option value="${x}">`).join("")}</datalist><div class="skrows">${R.map((r,i)=>{const it=cenItem(r.itemId);return `<div class="skrow${typ==="in"?" in":""}" data-i="${i}">
+    <label class="sk-it"><span>Materiál ${i+1}</span><input class="skR" data-f="text" data-ac="sklad" value="${esc(r.text??(it?cenLabel(it):""))}" placeholder="začni písať názov alebo kód" autocomplete="off"></label>
+    <label><span>Množstvo</span><input class="skR" data-f="qty" inputmode="decimal" value="${esc(r.qty||"")}"></label>
+    ${typ==="in"?`<label><span>MJ</span><input class="skR" data-f="mj" list="obMjs" value="${esc(r.mj||(it?it.mj:""))}" ${it?"readonly":""}></label><label><span>Cena/MJ bez DPH</span><input class="skR" data-f="price" inputmode="decimal" value="${esc(r.price||"")}" placeholder="0,00"></label>`:""}
+    <button type="button" class="btn small ghost sk-del" data-a="skRowDel" data-i="${i}" aria-label="Odstrániť riadok ${i+1}" ${R.length<2?"disabled":""}>×</button>
+    <div class="sk-info muted"></div></div>`}).join("")}</div>
+    <button type="button" class="btn small" data-a="skRowAdd" style="align-self:flex-start">+ Pridať materiál</button>`}
+function skKorInfo(){const K=view.skKor,it=K.itemId&&cenItem(K.itemId);if(!it)return K.text?`<div class="err">Materiál „${esc(K.text)}“ nie je v cenníku medzi skladovými položkami.</div>`:"";
+  const st=stockOf(it.id,K.date||todayIso()),act=String(K.qty??"").trim()!==""?numIn(K.qty):null,diff=act!=null?Math.round((act-st.qty)*1000)/1000:null;
+  return `<div class="okmsg">Podľa evidencie: <b>${nf(st.qty)} ${esc(it.mj||"")}</b> · ø ${eur(st.avg)}${diff!=null?` · rozdiel <b class="${diff<0?"bad":""}">${diff>0?"+":""}${nf(diff)} ${esc(it.mj||"")}</b> (${eur(Math.round(diff*st.avg*100)/100)})`:""}</div>`}
+function skKorHTML(){const K=view.skKor,it=K.itemId&&cenItem(K.itemId);
+  return `<form class="card stack finbox" id="skKorForm" autocomplete="off"><div class="entry-head"><h3>Korekcia stavu</h3><button type="button" class="btn small ghost" data-a="skKorNo">Zrušiť</button></div>
+    <div class="muted" style="font-size:13px">Napr. pri inventúre: vyber položku a zadaj skutočný stav. Rozdiel sa zapíše ako korekcia v priemernej skladovej cene.</div>
+    ${skItemsDL()}<label>Materiál<input id="skkText" data-ac="sklad" autocomplete="off" value="${esc(K.text??(it?cenLabel(it):""))}" placeholder="začni písať názov alebo kód" required></label>
+    <div class="grid2"><label>Dátum<input type="date" id="skkDate" value="${esc(K.date||todayIso())}"></label><label>Skutočný stav<input id="skkQty" inputmode="decimal" value="${esc(K.qty??"")}" required></label></div>
+    <div id="skkInfo">${skKorInfo()}</div>
+    <label>Komentár (dôvod korekcie)<textarea id="skkNote" rows="2" required placeholder="napr. inventúra 31. 12. – rozbité tvárnice">${esc(K.note||"")}</textarea></label>
+    <div class="row"><button class="btn primary" type="submit">Uložiť korekciu</button></div></form>`}
+function skladHTML(){stockMigrate();setTimeout(()=>{if($("#skForm"))skInfoUpdate()},0);const items=stockItems(),K=view.skKeep||{},typ=K.skType||"out",asOf=view.skAsOf||todayIso(),tot=items.reduce((s,i)=>s+stockOf(i.id,asOf).value,0);
+  if(!view.skRows)view.skRows=[{itemId:"",qty:"",price:""}];
+  const F=view.skF||{},lim=F.lim!=null?F.lim:20;
+  const docs=skDocs().filter(d=>!F.item||d.ms.some(m=>m.itemId===F.item)).sort((a,b)=>(b.date||"").localeCompare(a.date||"")||b.doc.localeCompare(a.doc));
+  const form=view.skKor?skKorHTML():`<form class="card stack finbox" id="skForm" autocomplete="off"><div class="entry-head"><h3>${typ==="in"?"Nová príjemka":"Nová výdajka"}</h3>${items.length?`<button type="button" class="btn small ghost" data-a="skKor">Zadať korekciu</button>`:""}</div>
+    <div class="seg" role="radiogroup" aria-label="Druh pohybu"><label><input type="radio" name="skType" value="out" ${typ==="out"?"checked":""}><span>Výdaj</span></label><label><input type="radio" name="skType" value="in" ${typ==="in"?"checked":""}><span>Príjem</span></label></div>
+    ${items.length?`<div class="grid2"><label>Dátum<input type="date" id="skDate" value="${esc(K.skDate||todayIso())}" required></label>
+      ${typ==="in"?`<label>Číslo dokladu dodávateľa<input id="skDoc" value="${esc(K.skDoc||"")}" placeholder="dodací list, faktúra"></label>`:`<label>Na stavbu<select id="skProj"><option value="">– bez stavby (iná spotreba) –</option>${S.projects.filter(p=>!p.closed).map(p=>`<option value="${p.id}" ${K.skProj===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></label>`}</div>
+    ${typ==="in"?`<label>Dodávateľ<input id="skSup" value="${esc(K.skSup||"")}" list="feSups2"></label><datalist id="feSups2">${[...new Set([...(S.finExp||[]),...(S.costs||[])].map(c=>c.supplier).filter(Boolean))].sort().map(s=>`<option value="${esc(s)}">`).join("")}</datalist>`:""}
+    ${skRowsHTML(typ)}
+    <label>${typ==="in"?"Poznámka":"Účel výdaja / poznámka"}<input id="skNote" value="${esc(K.skNote||"")}"></label>
+    ${typ==="in"?`<label class="chk"><input type="checkbox" id="skExp" ${K.skExp!==false?"checked":""}> Zapísať aj ako výdavok firmy (nákup na sklad)</label>
+      <div class="muted" style="font-size:12.5px;margin-top:-6px">Vypni pri zadávaní počiatočného stavu skladu. Nákup na sklad môžeš zadať aj vo Financiách.</div>`
+      :`<div class="muted" style="font-size:12.5px">Výdaj na stavbu sa zapíše ako náklad stavby (Stavba → Ekonomika) v priemernej skladovej cene.</div>`}
+    <div class="row"><button class="btn primary" type="submit">${typ==="in"?"+ Prijať na sklad":"− Vydať zo skladu"}</button></div>`
+    :`<div class="muted">Na sklade sa sledujú materiálové položky z cenníka. Najprv pridaj materiál v karte Cenník.</div><button type="button" class="btn" data-a="firmTab" data-tab="cennik" style="align-self:flex-start">Otvoriť cenník</button>`}</form>`;
+  const sum=`<div class="card stack finbox"><div class="entry-head"><h3>Stav skladu</h3><label class="row" style="gap:6px;font-weight:500;font-size:13px">k dátumu<input type="date" id="skAsOf" value="${esc(asOf)}" style="width:auto"></label></div>
+    <div><div class="muted" style="font-size:13px">Hodnota skladu bez DPH</div><div class="finbig fintot">${eur(tot)}</div></div>
+    ${items.length?`<div class="row"><button class="btn small" data-a="skStPdf">Stav skladu – PDF</button><button class="btn small" data-a="skStXls">Stav skladu – Excel</button></div>
+      <div class="tablewrap"><table class="fintab"><thead><tr><th>Materiál</th><th class="r">Na sklade</th><th class="r">Hodnota</th></tr></thead><tbody>${items.map(i=>{const s=stockOf(i.id,asOf);
+      return `<tr class="clickrow" data-a="skPick" data-id="${i.id}"><td><b>${esc(i.name)}</b>${i.code?`<div class="muted" style="font-size:12px">${esc(i.code)}</div>`:""}</td><td class="num r${s.qty<0?" bad":""}">${nf(s.qty)} ${esc(i.mj||"")}<div class="muted" style="font-size:12px">ø ${eur(s.avg)}</div></td><td class="num r"><b>${eur(s.value)}</b></td></tr>`}).join("")}</tbody></table></div>`:""}</div>`;
+  const rows=(lim?docs.slice(0,lim):docs).map(d=>{const m0=d.ms[0],p=S.projects.find(z=>z.id===m0.projectId),val=d.ms.reduce((s,m)=>s+skVal(m),0),hasExp=d.ms.some(m=>m.expId);
+    const names=d.ms.map(m=>{const i=cenItem(m.itemId)||{};return `${esc(i.name||"?")} ${d.type==="kor"&&numIn(m.qty)>0?"+":""}${nf(numIn(m.qty))} ${esc(i.mj||"")}`});
+    return `<tr><td class="num">${d.date?d2(d.date):""}<div class="muted" style="font-size:12px">${esc(m0.doc||"")}</div></td><td><span class="pill ${d.type==="in"?"s-ok":d.type==="out"?"s-open":""}">${d.type==="in"?"príjem":d.type==="out"?"výdaj":"korekcia"}</span></td>
+      <td>${names.slice(0,3).join("<br>")}${names.length>3?`<div class="muted" style="font-size:12px">+ ďalšie ${names.length-3}</div>`:""}<div class="muted" style="font-size:12px">${[d.type==="in"?m0.supplier:d.type==="out"?p&&p.name:"",m0.docNo,m0.note,hasExp?"z výdavkov":""].filter(Boolean).map(esc).join(" · ")}</div></td>
+      <td class="num r">${eur(Math.round(val*100)/100)}</td>
+      <td class="r" style="white-space:nowrap"><button class="btn small" data-a="skDocPdf" data-doc="${esc(d.doc)}">${SK_NAME[d.type]}</button>${hasExp?"":` <button class="btn small ghost findel" data-a="skDel" data-doc="${esc(d.doc)}" aria-label="Zmazať doklad">×</button>`}</td></tr>`}).join("");
+  return `<div class="stack"><div class="fingrid">${form}${sum}</div>
+    <div class="card stack"><div class="entry-head ecdh"><h3>Pohyby na sklade</h3><div class="ecdh-r"><select id="skFItem"><option value="">všetok materiál</option>${items.map(i=>`<option value="${i.id}" ${F.item===i.id?"selected":""}>${esc(i.name)}</option>`).join("")}</select>
+      <select id="skLim">${[[20,"posledných 20"],[50,"posledných 50"],[100,"posledných 100"],[0,"všetky"]].map(([n,l])=>`<option value="${n}" ${lim===n?"selected":""}>${l}</option>`).join("")}</select></div></div>
+      ${docs.length?`<div class="tablewrap"><table class="fintab"><thead><tr><th>Dátum / doklad</th><th>Pohyb</th><th>Materiál</th><th class="r">Hodnota</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="muted">Zatiaľ žiadne pohyby.</div>`}
+      <div class="muted" style="font-size:12.5px">Príjem z výdavkov sa upravuje alebo maže vo Financiách pri danom výdavku.</div></div></div>`}
+function skKeepRead(){const o={...(view.skKeep||{})};["skDate","skDoc","skSup","skProj","skNote"].forEach(k=>{const e=$("#"+k);if(e)o[k]=e.value});const t=document.querySelector('input[name="skType"]:checked');if(t)o.skType=t.value;const x=$("#skExp");if(x)o.skExp=x.checked;return o}
+function skRowsSync(){const R=view.skRows;if(!R)return;document.querySelectorAll(".skrow").forEach(el=>{const r=R[+el.dataset.i];if(!r)return;el.querySelectorAll(".skR").forEach(e=>{r[e.dataset.f]=e.value});const m=skMatch(r.text);r.itemId=m?m.id:""})}
+function skKorSync(){const K=view.skKor;if(!K||!$("#skKorForm"))return;K.text=$("#skkText").value;const m=skMatch(K.text);K.itemId=m?m.id:"";K.date=$("#skkDate").value;K.qty=$("#skkQty").value;K.note=$("#skkNote").value;const i=$("#skkInfo");if(i)i.innerHTML=skKorInfo()}
+function skRe(){view.skKeep=skKeepRead();render()}
+
+/* PDF príjemky / výdajky: A5 dvakrát pod sebou na A4 (originál a kópia) */
+function skDocPdf(docNo){const ms=(S.stock||[]).filter(m=>(m.doc||m.id)===docNo);if(!ms.length)return;const doc=newPdf("portrait");if(!doc)return;
+  const F=S.firm||{},t=ms[0].type,m0=ms[0],p=S.projects.find(z=>z.id===m0.projectId),INK=[28,28,27],MU=[107,107,104],LN=[200,200,196],GR=[237,237,235];
+  const title={in:"PRÍJEMKA MATERIÁLU",out:"VÝDAJKA MATERIÁLU",kor:"INVENTÚRNY ROZDIEL – KOREKCIA STAVU"}[t];
+  const body=ms.map((m,i)=>{const it=cenItem(m.itemId)||{};return [String(i+1),plain(it.code||""),plain(it.name||"?"),plain(it.mj||""),plain((t==="kor"&&numIn(m.qty)>0?"+":"")+obQty(m.qty)),obMoney(m.price),obMoney(skVal(m))]});
+  const tot=ms.reduce((s,m)=>s+skVal(m),0),many=ms.length>14;
+  const half=(y0,label)=>{const L=10,R=200;let y=y0+9;doc.setFont("DVC","bold");doc.setFontSize(9.5);doc.setTextColor(...INK);doc.text(plain(F.name||S.company||""),L,y);
+    doc.setFont("DVC","normal");doc.setFontSize(7.5);doc.setTextColor(...MU);doc.text([firmAddress(F),[F.ico&&"IČO: "+F.ico,F.dic&&"DIČ: "+F.dic].filter(Boolean).join("  ")].filter(Boolean).map(plain),L,y+4);
+    doc.setFont("DVC","bold");doc.setFontSize(12);doc.setTextColor(...INK);doc.text(title,R,y+0.5,{align:"right"});doc.setFontSize(10);doc.text(plain("č. "+(m0.doc||"")),R,y+5.5,{align:"right"});
+    doc.setFont("DVC","bold");doc.setFontSize(6.8);doc.setTextColor(...MU);doc.setCharSpace(0.6);doc.text(label,R,y0+4.5,{align:"right"});doc.setCharSpace(0);
+    y+=11;doc.setDrawColor(...LN);doc.setLineWidth(0.2);doc.line(L,y,R,y);y+=4.5;
+    const info=[["Dátum:",obDate(m0.date)],["Sklad:","Hlavný sklad"],...(t==="in"?[["Dodávateľ:",m0.supplier||"–"],["Doklad dodávateľa:",m0.docNo||"–"]]:t==="out"?[["Odberateľ / stavba:",p?p.name:"iná spotreba"],["Účel výdaja:",m0.note||"–"]]:[["Dôvod:",m0.note||"–"]])];
+    doc.setFontSize(8);info.forEach(([a,b],k)=>{const x=k%2?L+95:L,yy=y+Math.floor(k/2)*4.6;doc.setFont("DVC","normal");doc.setTextColor(...MU);doc.text(a,x,yy);doc.setFont("DVC","bold");doc.setTextColor(...INK);doc.text(doc.splitTextToSize(plain(b),k%2?62:58)[0],x+(k%2?28:27),yy)});
+    y+=Math.ceil(info.length/2)*4.6+1;
+    doc.autoTable({startY:y,head:[["P. č.","Kód","Názov materiálu","MJ","Množstvo","Cena/MJ €","Spolu €"]],body,foot:[[{content:"Spolu bez DPH",colSpan:6,styles:{halign:"right"}},{content:obMoney(tot),styles:{halign:"right"}}]],
+      margin:{left:L,right:210-R,top:12,bottom:many?14:297-(y0+148.5)+30},theme:"grid",
+      styles:{font:"DVC",fontSize:7.4,cellPadding:0.9,textColor:INK,lineColor:LN,lineWidth:0.15},headStyles:{font:"DVC",fontStyle:"bold",fillColor:GR,textColor:[60,60,58],fontSize:6.8},footStyles:{font:"DVC",fontStyle:"bold",fillColor:GR,textColor:INK},
+      columnStyles:{0:{cellWidth:9,halign:"center"},1:{cellWidth:18},2:{cellWidth:"auto"},3:{cellWidth:12,halign:"center"},4:{cellWidth:20,halign:"right"},5:{cellWidth:20,halign:"right"},6:{cellWidth:24,halign:"right"}}});
+    let sy=many?doc.lastAutoTable.finalY+14:y0+148.5-14;if(many&&sy>285){doc.addPage();sy=30}
+    const sg=t==="in"?["Vystavil","Prevzal (skladník)","Schválil"]:t==="out"?["Vydal (skladník)","Prevzal","Schválil"]:["Vystavil","Inventúrna komisia","Schválil"],w=(R-L-12)/3;
+    doc.setFont("DVC","normal");doc.setFontSize(7);doc.setTextColor(...MU);sg.forEach((s,k)=>{const x=L+k*(w+6);doc.setDrawColor(150,150,146);doc.line(x,sy,x+w,sy);doc.text(`${s} – dátum, podpis`,x,sy+3.5)})};
+  if(many){half(0,"ORIGINÁL");doc.addPage();half(0,"KÓPIA")}
+  else{half(0,"ORIGINÁL");doc.setLineDashPattern([1.5,1.5],0);doc.setDrawColor(160,160,156);doc.line(4,148.5,206,148.5);doc.setLineDashPattern([],0);doc.setFontSize(6);doc.setTextColor(150,150,146);doc.text("odstrihnúť",206,147,{align:"right"});half(148.5,"KÓPIA")}
+  offerFile(`${SK_NAME[t]}_${String(m0.doc||"").replace(/[^\w-]+/g,"-")}.pdf`.normalize("NFD").replace(/[̀-ͯ]/g,""),doc.output("arraybuffer"))}
+/* stav skladu – podklad k inventúre */
+function skStateRows(asOf){return stockItems().map(i=>{const s=stockOf(i.id,asOf);return {i,s}})}
+function skStPdf(){const asOf=view.skAsOf||todayIso(),doc=newPdf("portrait");if(!doc)return;const R=skStateRows(asOf),tot=R.reduce((t,r)=>t+r.s.value,0);
+  pdfFirmHeader(doc,"Stav skladu – podklad k inventúre",`k dátumu ${obDate(asOf)} · Hlavný sklad`);
+  doc.autoTable({startY:28,head:[["Kód","Názov materiálu","MJ","Stav podľa evidencie","Priem. cena €","Hodnota €","Skutočný stav","Rozdiel"]],
+    body:R.map(({i,s})=>[plain(i.code||""),plain(i.name),plain(i.mj||""),obQty(s.qty),obMoney(s.avg),obMoney(s.value),"",""]),foot:[[{content:"Spolu",colSpan:5},obMoney(tot),"",""]],
+    margin:{left:14,right:14,bottom:30},theme:"grid",styles:{font:"DVC",fontSize:8,cellPadding:1.4,lineColor:[200,200,196],lineWidth:0.15,textColor:[28,28,27],minCellHeight:7,valign:"middle"},
+    headStyles:{font:"DVC",fontStyle:"bold",fillColor:[237,237,235],textColor:[60,60,58],fontSize:7.4},footStyles:{font:"DVC",fontStyle:"bold",fillColor:[237,237,235],textColor:[28,28,27],halign:"right"},
+    columnStyles:{0:{cellWidth:16},1:{cellWidth:"auto"},2:{cellWidth:12,halign:"center"},3:{cellWidth:24,halign:"right"},4:{cellWidth:20,halign:"right"},5:{cellWidth:22,halign:"right"},6:{cellWidth:22},7:{cellWidth:18}}});
+  let y=doc.lastAutoTable.finalY+18;if(y>270){doc.addPage();y=30}
+  doc.setFont("DVC","normal");doc.setFontSize(8);doc.setTextColor(107,107,104);["Inventúru vykonal","Inventúrna komisia","Schválil"].forEach((s,k)=>{const x=14+k*62;doc.line(x,y,x+54,y);doc.text(`${s} – dátum, podpis`,x,y+4)});
+  const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(7);doc.text(`Strana ${i}/${n}`,196,290,{align:"right"})}
+  offerFile(`Stav_skladu_${asOf}.pdf`,doc.output("arraybuffer"))}
+function skStXls(){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.");return}const asOf=view.skAsOf||todayIso(),R=skStateRows(asOf);
+  const rows=[[`Stav skladu k ${obDate(asOf)} – ${S.firm&&S.firm.name||S.company||""}`],[],["Kód","Názov materiálu","MJ","Stav podľa evidencie","Priemerná cena €","Hodnota €","Skutočný stav","Rozdiel","Poznámka"]];
+  R.forEach(({i,s},k)=>{const r=rows.length+1;rows.push([i.code||"",i.name,i.mj||"",s.qty,Math.round(s.avg*10000)/10000,s.value,null,{f:`IF(G${r}="","",G${r}-D${r})`},""])});
+  rows.push(["","Spolu","","","",{f:`SUM(F4:F${rows.length})`}]);
+  const ws=XLSX.utils.aoa_to_sheet(rows);ws["!cols"]=[{wch:10},{wch:38},{wch:7},{wch:14},{wch:14},{wch:13},{wch:13},{wch:10},{wch:24}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Stav skladu");offerFile(`Stav_skladu_${asOf}.xlsx`,XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
+
+/* rozpísané formuláre sa priebežne prepisujú do konceptu, aby ich prekreslenie stránky nezmazalo */
+["input","change"].forEach(t=>document.addEventListener(t,ev=>{const f=ev.target&&ev.target.closest&&ev.target.closest("form");if(!f||!me)return;
+  if(f.id==="obForm"&&view.obDraft)obRead();else if(f.id==="cenForm"&&view.cenDraft)cenRead();else if(f.id==="obSendForm"&&view.obSend)obSendRead();
+  else if(f.id==="skForm"){view.skKeep=skKeepRead();skRowsSync()}else if(f.id==="skKorForm")skKorSync()},true));
+/* udalosti cenníka a skladu */
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me||!isAdmin(me))return;const a=b.dataset.a;
+  if(a==="cenNew"){view.cenDraft={type:"praca",vat:(S.firm&&S.firm.vatPayer===false)?0:23,mj:"",parts:[]};render();window.scrollTo({top:0,behavior:"smooth"})}
+  else if(a==="cenOpen"){const i=cenItem(b.dataset.id);if(!i)return;view.cenDraft=JSON.parse(JSON.stringify({parts:[],...i}));render();window.scrollTo({top:0,behavior:"smooth"})}
+  else if(a==="cenClose"){view.cenDraft=null;render()}
+  else if(a==="cenPartAdd"){cenRead();(view.cenDraft.parts=view.cenDraft.parts||[]).push({itemId:"",qty:"1"});render()}
+  else if(a==="cenPartDel"){cenRead();view.cenDraft.parts.splice(+b.dataset.n,1);render()}
+  else if(a==="cenPartPrice"){const D=cenRead();D.price=String(cenPartsSum(D));render()}
+  else if(a==="cenDel"){const D=view.cenDraft;if(!D||!D.id)return;
+    if((S.stock||[]).some(m=>m.itemId===D.id)){toast("Položka má pohyby na sklade – nedá sa odstrániť.");return}
+    if(!b.dataset.sure){b.dataset.sure="1";b.textContent="Naozaj odstrániť?";return}
+    S.cennik=S.cennik.filter(x=>x.id!==D.id);(S.cennik||[]).forEach(x=>{if(x.parts)x.parts=x.parts.filter(p=>p.itemId!==D.id)});view.cenDraft=null;save();toast("Položka odstránená");render()}
+  else if(a==="skPick"){const pit=cenItem(b.dataset.id);if(!pit)return;if(view.skKor){skKorSync();view.skKor.itemId=pit.id;view.skKor.text=cenLabel(pit);render();$("#skkQty")?.focus();return}
+    skRowsSync();view.skKeep=skKeepRead();const R=view.skRows;const e=R.find(r=>!r.itemId&&!r.text);if(e){e.itemId=pit.id;e.text=cenLabel(pit)}else R.push({itemId:pit.id,text:cenLabel(pit),qty:"",price:""});
+    const r=R.find(x=>x.itemId===b.dataset.id),it=cenItem(b.dataset.id);if(r&&!r.price&&it&&it.cost)r.price=String(it.cost).replace(".",",");render();
+    const el=[...document.querySelectorAll(".skrow")].find(x=>x.querySelector('[data-f="text"]').value===cenLabel(pit));el?.querySelector('[data-f="qty"]')?.focus()}
+  else if(a==="skRowAdd"){skRowsSync();view.skRows.push({itemId:"",qty:"",price:""});skRe()}
+  else if(a==="skRowDel"){skRowsSync();view.skRows.splice(+b.dataset.i,1);skRe()}
+  else if(a==="skKor"){view.skKeep=skKeepRead();skRowsSync();view.skKor={itemId:"",date:todayIso(),qty:"",note:""};render()}
+  else if(a==="skKorNo"){view.skKor=null;render()}
+  else if(a==="skDocPdf")skDocPdf(b.dataset.doc);
+  else if(a==="skStPdf")skStPdf();else if(a==="skStXls")skStXls();
+  else if(a==="skDel"){const ms=(S.stock||[]).filter(m=>(m.doc||m.id)===b.dataset.doc);if(!ms.length||ms.some(m=>m.expId))return;if(!b.dataset.sure){b.dataset.sure="1";b.textContent="Zmazať doklad?";return}
+    const ids=new Set(ms.map(m=>m.id)),cids=new Set(ms.map(m=>m.costId).filter(Boolean));S.stock=S.stock.filter(x=>!ids.has(x.id));if(cids.size)S.costs=(S.costs||[]).filter(c=>!cids.has(c.id));save();toast("Doklad zmazaný");render()}});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me)return;
+  if(t.classList&&t.classList.contains("skR")){skRowsSync();skInfoUpdate()}
+  else if(t.closest&&t.closest("#skKorForm"))skKorSync();
+  else if(t.name==="cenType"){cenRead();if(t.value==="zdruz"&&!(view.cenDraft.parts||[]).length)view.cenDraft.parts=[{itemId:"",qty:"1"}];render()}
+  else if(t.classList&&t.classList.contains("cenP")&&t.dataset.f==="itemId"){cenRead();render()}
+  else if(t.id==="cenFT"){(view.cenF=view.cenF||{}).t=t.value;render()}
+  else if(t.name==="skType"){view.skKeep=skKeepRead();skRowsSync();render()}
+  else if(t.id==="skAsOf"){view.skAsOf=t.value||todayIso();skRe()}
+  else if(t.id==="skFItem"){(view.skF=view.skF||{}).item=t.value;skRe()}
+  else if(t.id==="skLim"){(view.skF=view.skF||{}).lim=+t.value;skRe()}});
+/* nedostatok na sklade sa ukáže hneď pri písaní množstva (bez prekreslenia stránky) */
+function skInfoUpdate(){const R=view.skRows;if(!R)return;const inn=(view.skKeep||{}).skType==="in",need={};R.forEach(r=>{if(r.itemId)need[r.itemId]=(need[r.itemId]||0)+numIn(r.qty)});
+  document.querySelectorAll(".skrow").forEach(el=>{const r=R[+el.dataset.i],inf=el.querySelector(".sk-info");if(!r||!inf)return;const it=cenItem(r.itemId);
+    const mj=el.querySelector('[data-f="mj"]'),pr=el.querySelector('[data-f="price"]');
+    if(mj){if(it){mj.value=it.mj||"";mj.readOnly=true}else mj.readOnly=false}
+    if(it&&pr&&!pr.value&&it.cost){pr.value=String(it.cost).replace(".",",");r.price=pr.value}
+    if(!it){const n=acCands("sklad",r.text).length;inf.className="sk-info "+(r.text&&!inn&&!n?"bad":"muted");
+      inf.textContent=!r.text?"":n?"vyber materiál zo zoznamu":inn?"nový materiál – pri uložení sa založí v cenníku (doplň MJ)":"taký materiál na sklade nie je";return}
+    const st=stockOf(it.id),over=!inn&&need[it.id]>st.qty+1e-9;
+    inf.className="sk-info "+(over?"bad":"muted");inf.textContent=`${it.code?it.code+" · ":""}na sklade ${nf(st.qty)} ${it.mj||""} · ø ${eur(st.avg)}${over?" – nedostatok na sklade":""}`})}
+document.addEventListener("input",ev=>{const t=ev.target;if(!me)return;
+  if(t.classList&&t.classList.contains("skR")){skRowsSync();skInfoUpdate();return}
+  if(t.closest&&t.closest("#skKorForm")){skKorSync();return}
+  if(t.id==="cenQ"){(view.cenF=view.cenF||{}).q=t.value;const pos=t.selectionStart;render();const e=$("#cenQ");if(e){e.focus();try{e.setSelectionRange(pos,pos)}catch(x){}}}});
+document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||!["cenForm","skForm","skKorForm"].includes(id))return;ev.preventDefault();if(!isAdmin(me))return;
+  if(id==="cenForm"){const D=cenRead();if(!D.name||!D.mj){toast("Doplň názov a MJ");return}
+    if(D.price!==""&&!/^\d+(\.\d+)?$/.test(D.price)||(D.cost&&!/^\d+(\.\d+)?$/.test(D.cost))){toast("Cena má mať tvar napr. 12 alebo 12,50");return}
+    if(D.type==="zdruz")D.parts=(D.parts||[]).filter(p=>p.itemId&&numIn(p.qty));else delete D.parts;if(D.type!=="mat"){delete D.cost;delete D.stock}
+    S.cennik=S.cennik||[];const isNew=!D.id;if(isNew)D.id=uid("cn");const i=S.cennik.findIndex(x=>x.id===D.id);if(i>=0)S.cennik[i]=D;else S.cennik.push(D);
+    view.cenDraft=null;save();toast(isNew?"Položka pridaná do cenníka":"Položka uložená");render()}
+  else if(id==="skKorForm"){skKorSync();const K=view.skKor,it=cenItem(K.itemId);if(!it){toast("Vyber materiál");return}
+    const q=String(K.qty||"").replace(/\s/g,"").replace(",",".");if(!/^\d+(\.\d+)?$/.test(q)){toast("Zadaj skutočný stav, napr. 120 alebo 12,5");return}
+    if(!String(K.note||"").trim()){toast("Doplň komentár – dôvod korekcie");$("#skkNote")?.focus();return}
+    const st=stockOf(it.id,K.date),d=Math.round((+q-st.qty)*1000)/1000;if(!d){toast("Skutočný stav sa zhoduje s evidenciou – korekcia netreba");return}
+    (S.stock=S.stock||[]).push({id:uid("sk"),type:"kor",date:K.date||todayIso(),itemId:it.id,qty:String(d),price:String(Math.round(st.avg*10000)/10000),note:K.note.trim(),doc:stockDocNo("kor",K.date),by:me.id});
+    view.skKor=null;save();toast(`Korekcia uložená: ${d>0?"+":""}${nf(d)} ${it.mj||""}`);render()}
+  else{const K=skKeepRead();skRowsSync();const typ=K.skType||"out",date=K.skDate||todayIso();
+    const R=view.skRows.filter(r=>r.itemId||r.text||r.qty);if(!R.length){toast("Pridaj aspoň jeden materiál");return}
+    if(typ==="in")for(const r of R){if(!r.itemId&&String(r.text||"").trim()){if(!(r.mj||"").trim()){toast(`Nový materiál „${r.text}“: doplň MJ`);return}}}
+    const need={};for(const r of R){const it=cenItem(r.itemId)||(typ==="in"&&String(r.text||"").trim()?{id:"",name:r.text.trim(),mj:r.mj}:null);if(!it){toast(r.text?`„${r.text}“ nie je v cenníku medzi skladovými položkami`:"Vyplň materiál v každom riadku");return}const q=numIn(r.qty);if(!(q>0)){toast(`${it.name}: zadaj množstvo`);return}
+      if(typ==="in"&&!/^\d+(\.\d+)?$/.test(String(r.price||"").replace(/\s/g,"").replace(",","."))){toast(`${it.name}: zadaj nákupnú cenu za MJ`);return}need[it.id]=(need[it.id]||0)+q}
+    if(typ==="out")for(const [iid,q] of Object.entries(need)){if(!iid)continue;const s=stockOf(iid),it=cenItem(iid);if(q>s.qty+1e-9){toast(`${it.name}: na sklade je len ${nf(s.qty)} ${it.mj||""}`);return}}
+    const dn=stockDocNo(typ,date),grp=uid("dk");
+    R.forEach(r=>{if(!r.itemId){const pr0=String(r.price).replace(/\s/g,"").replace(",",".");const ni={id:uid("cn"),type:"mat",code:"",name:r.text.trim(),sub:"",mj:r.mj.trim(),price:"",cost:pr0,vat:23,stock:true};(S.cennik=S.cennik||[]).push(ni);r.itemId=ni.id}
+      const it=cenItem(r.itemId),q=numIn(r.qty);
+      if(typ==="in"){const pr=String(r.price).replace(/\s/g,"").replace(",",".");let expId="";
+        if(K.skExp!==false){const e={id:uid("fe"),date,docNo:K.skDoc,supplier:K.skSup,cat:"mat",area:"sklad",itemId:it.id,qty:String(q),desc:`${it.name} – ${nf(q)} ${it.mj||""}`.trim(),amount:String(Math.round(q*+pr*100)/100),vat:+it.vat||23,grp};(S.finExp=S.finExp||[]).push(e);expId=e.id}
+        const m=stockIn({date,itemId:it.id,qty:String(q),price:pr,docNo:K.skDoc,supplier:K.skSup,note:K.skNote,expId,doc:dn});if(expId)S.finExp.find(e=>e.id===expId).stockMove=m.id;if(!it.cost)it.cost=pr}
+      else{const m={id:uid("sk"),type:"out",date,itemId:it.id,qty:String(q),price:String(Math.round((stockOf(it.id,date).avg||stockOf(it.id).avg)*10000)/10000),projectId:K.skProj,note:K.skNote,doc:dn};(S.stock=S.stock||[]).push(m);stockOutCost(m)}});
+    view.skRows=[{itemId:"",qty:"",price:""}];view.skKeep={skType:typ,skDate:date,skProj:K.skProj,skExp:K.skExp};save();
+    toast(`${typ==="in"?"Príjemka":"Výdajka"} ${dn}: ${R.length} ${pl(R.length,"položka","položky","položiek")}${typ==="out"&&K.skProj?" – zapísané do nákladov stavby":""}`);render()}});
+/* ===================== Firma → Obchod: cenové ponuky a objednávky ===================== */
+/* S.partners = zapamätaní odberatelia a dodávatelia; S.quotes = naše cenové ponuky; S.orders = naše objednávky */
+const OB={
+  q:{key:"quotes",title:"Cenová ponuka",plural:"Cenové ponuky",party:"Odberateľ",me:"Dodávateľ",add:"+ Nová cenová ponuka",
+    intro:()=>"Na základe Vášho dopytu Vám predkladáme cenovú ponuku na:",sign:"Pečiatka a podpis",
+    st:[["koncept","koncept",""],["odoslana","odoslaná","s-open"],["prijata","prijatá","s-ok"],["zamietnuta","zamietnutá","s-lock"]]},
+  o:{key:"orders",title:"Objednávka",plural:"Objednávky",party:"Dodávateľ",me:"Objednávateľ",add:"+ Nová objednávka",
+    intro:D=>D.refNo?`Na základe Vašej cenovej ponuky č. ${D.refNo}${D.refDate?` zo dňa ${obDate(D.refDate)}`:""} u Vás záväzne objednávame:`:"Záväzne u Vás objednávame:",sign:"Pečiatka a podpis objednávateľa",
+    st:[["koncept","koncept",""],["odoslana","odoslaná","s-open"],["potvrdena","potvrdená","s-ok"],["dodana","dodaná","s-ok"]]}};
+const OB_P=[["name","Obchodné meno"],["street","Ulica a číslo"],["zip","PSČ"],["city","Obec"],["country","Štát"],["ico","IČO"],["dic","DIČ"],["icdph","IČ DPH"],["contact","Kontaktná osoba"],["phone","Telefón"],["email","E-mail"]];
+const obDate=d=>{if(!d)return "";const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(d);return m?`${m[3]}.${m[2]}.${m[1]}`:d};
+const obMoney=n=>plain((Math.round((+n||0)*100)/100).toLocaleString("sk-SK",{minimumFractionDigits:2,maximumFractionDigits:2}));
+const obQty=n=>plain((+n||0).toLocaleString("sk-SK",{minimumFractionDigits:2,maximumFractionDigits:3}));
+const obList=k=>S[OB[k].key]||(S[OB[k].key]=[]);
+function obTotals(D){let b=0,v=0;(D.items||[]).forEach(i=>{const s=Math.round(numIn(i.qty)*numIn(i.price)*100)/100;b+=s;v+=s*(+i.vat||0)/100});b=Math.round(b*100)/100;v=Math.round(v*100)/100;return {b,v,s:Math.round((b+v)*100)/100}}
+function obNextNo(k,date){const base=(date||todayIso()).replace(/-/g,""),used=new Set(obList(k).map(x=>x.no));if(!used.has(base))return base;let n=2;while(used.has(base+"-"+n))n++;return base+"-"+n}
+const obItem=o=>({id:uid("it"),name:"",sub:"",qty:"1",mj:"ks",price:"",vat:(S.firm&&S.firm.vatPayer===false)?0:23,...o});
+function obBlank(k){const t=todayIso();return {k,no:obNextNo(k,t),date:t,valid:k==="q"?addDays(t,30):"",due:k==="o"?"podľa dohody":"",partner:{country:"Slovenská republika"},projectId:"",subject:"",intro:"",refNo:"",refDate:"",place:"",items:[obItem()],note:"",status:"koncept",showVat:false}}
+const obFindPartner=(name,ico)=>{const n=String(name||"").trim().toLowerCase(),i=String(ico||"").replace(/\s/g,"");return (S.partners||[]).find(p=>(i&&p.ico&&p.ico.replace(/\s/g,"")===i)||(n&&(p.name||"").trim().toLowerCase()===n))};
+function obSavePartner(P){if(!P||!P.name)return;S.partners=S.partners||[];const ex=obFindPartner(P.name,P.ico);
+  if(ex){OB_P.forEach(([f])=>{if(P[f])ex[f]=P[f]})}else S.partners.push({id:uid("pa"),...P})}
+
+/* zoznam */
+function obListHTML(k){const C=OB[k],F=view.obF||{},q=(F.q||"").toLowerCase();
+  const L=obList(k).filter(x=>!q||[x.no,x.partner&&x.partner.name,x.subject].join(" ").toLowerCase().includes(q)).sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.no||"").localeCompare(a.no||""));
+  const st=x=>{const s=C.st.find(z=>z[0]===x.status)||C.st[0];return `<span class="pill ${s[2]}">${s[1]}</span>`};
+  const rows=L.map(x=>{const T=obTotals(x),p=S.projects.find(z=>z.id===x.projectId);return `<tr class="clickrow" data-a="obOpen" data-k="${k}" data-id="${x.id}"><td class="num"><b>${esc(x.no)}</b><div class="muted" style="font-size:12px">${x.date?d2(x.date):""}</div></td>
+    <td>${esc(x.partner&&x.partner.name||"–")}<div class="muted" style="font-size:12px">${[x.subject,p&&p.name].filter(Boolean).map(esc).join(" · ")}</div></td>
+    <td class="num r"><b>${eur(T.b)}</b><div style="margin-top:3px">${st(x)}</div>${(x.sent||[]).length?`<div class="muted" style="font-size:11.5px">odoslaná ${d2(x.sent[x.sent.length-1].at.slice(0,10))}</div>`:""}</td></tr>`}).join("");
+  const up=k==="o"?`<label class="btn obup${view.obBusy?" dis":""}"><input type="file" id="obSrc" accept="application/pdf,image/*" hidden ${view.obBusy?"disabled":""}>${view.obBusy?"Čítam ponuku…":"Vytvoriť objednávku z cenovej ponuky"}</label>`:"";
+  return `<div class="card stack"><div class="entry-head ecdh"><h3>${C.plural}</h3><div class="ecdh-r">${L.length>5||F.q?`<input id="obQ" type="search" placeholder="Hľadať…" value="${esc(F.q||"")}" style="max-width:180px">`:""}${up}<button class="btn primary" data-a="obNew" data-k="${k}">${C.add}</button></div></div>
+    ${k==="o"?`<div class="muted" style="font-size:13px">Nahraj cenovú ponuku, ktorú si dostal od dodávateľa (PDF alebo fotku). Údaje dodávateľa a položky sa z nej vyčítajú a pripraví sa objednávka na odoslanie.</div>`:""}
+    ${view.obMsg&&view.obMsg.k===k?`<div class="${view.obMsg.bad?"err":"okmsg"}">${esc(view.obMsg.t)}</div>`:""}
+    ${L.length?`<div class="tablewrap"><table class="fintab"><thead><tr><th>Číslo</th><th>${C.party} a predmet</th><th class="r">Bez DPH</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="muted">${F.q?"Nič sa nenašlo.":k==="q"?"Zatiaľ žiadne cenové ponuky.":"Zatiaľ žiadne objednávky."}</div>`}</div>`}
+
+/* formulár */
+function obFormHTML(){const D=view.obDraft,k=D.k,C=OB[k],P=D.partner||{},T=obTotals(D),ex=!!D.id&&obList(k).some(x=>x.id===D.id);
+  const pv=f=>esc(P[f]||""),pin=(f,l,ph,extra)=>`<label>${l}<input id="obP_${f}" value="${pv(f)}"${ph?` placeholder="${ph}"`:""}${extra||""}></label>`;
+  const items=D.items.map((i,n)=>`<div class="obrow" data-i="${n}"><div class="obn">${n+1}.</div>
+      <div class="obname"><input class="obI" data-f="name" value="${esc(i.name)}" placeholder="Názov položky" aria-label="Názov položky ${n+1}"><input class="obI obsub" data-f="sub" value="${esc(i.sub||"")}" placeholder="doplňujúci text (nepovinné)" aria-label="Doplňujúci text ${n+1}"></div>
+      <label class="obc"><span>Množstvo</span><input class="obI" data-f="qty" inputmode="decimal" value="${esc(String(i.qty??"").replace(".",","))}"></label>
+      <label class="obc"><span>MJ</span><input class="obI" data-f="mj" value="${esc(i.mj||"")}" list="obMjs"></label>
+      <label class="obc"><span>Cena/MJ bez DPH</span><input class="obI" data-f="price" inputmode="decimal" value="${esc(String(i.price??"").replace(".",","))}" placeholder="0,00"></label>
+      <label class="obc"><span>DPH %</span><select class="obI" data-f="vat">${FIN_VAT.map(v=>`<option value="${v}" ${+i.vat===v?"selected":""}>${v}</option>`).join("")}</select></label>
+      <div class="obc obsum"><span>Spolu</span><b data-sum="${n}">${eur(Math.round(numIn(i.qty)*numIn(i.price)*100)/100)}</b></div>
+      <button type="button" class="btn small ghost obdel" data-a="obItemDel" data-i="${n}" aria-label="Odstrániť položku ${n+1}" ${D.items.length<2?"disabled":""}>×</button></div>`).join("");
+  return `<form class="card stack obform" id="obForm" autocomplete="off"><div class="entry-head"><h3>${ex?`${C.title} č. ${esc(D.no)}`:k==="q"?"Nová cenová ponuka":"Nová objednávka"}</h3><button type="button" class="btn small ghost" data-a="obClose">Zavrieť</button></div>
+    ${D.srcName?`<div class="okmsg">Z ponuky <b>${esc(D.srcName)}</b>${D.srcNote?` – ${esc(D.srcNote)}`:""} Údaje skontroluj a prípadne oprav.</div>`:""}
+    <div class="obgrid"><fieldset class="modes"><legend>${C.party}</legend>
+      <label>Obchodné meno<input id="obP_name" value="${pv("name")}" list="obPartners" placeholder="začni písať – známe firmy sa doplnia" required></label>
+      <datalist id="obPartners">${(S.partners||[]).slice().sort((a,b)=>(a.name||"").localeCompare(b.name||"","sk")).map(p=>`<option value="${esc(p.name)}">${esc([p.city,p.ico&&"IČO "+p.ico].filter(Boolean).join(" · "))}</option>`).join("")}</datalist>
+      ${pin("street","Ulica a číslo")}
+      <div class="grid3">${pin("zip","PSČ","","inputmode=\"numeric\"")}${pin("city","Obec")}${pin("country","Štát")}</div>
+      <div class="grid3">${pin("ico","IČO","","inputmode=\"numeric\"")}${pin("dic","DIČ")}${pin("icdph","IČ DPH")}</div>
+      <div class="grid3">${pin("contact","Kontaktná osoba")}${pin("phone","Telefón")}${pin("email","E-mail")}</div>
+      <div class="muted" style="font-size:12.5px">${k==="q"?"Odberatelia":"Dodávatelia"} sa pamätajú – keď nabudúce napíšeš názov, ostatné údaje sa doplnia samé.</div></fieldset>
+    <fieldset class="modes"><legend>${C.title}</legend>
+      <div class="grid3"><label>Číslo<input id="obNo" value="${esc(D.no)}" required></label><label>Dátum vystavenia<input type="date" id="obDate" value="${esc(D.date)}" required></label>
+        ${k==="q"?`<label>Platnosť do<input type="date" id="obValid" value="${esc(D.valid||"")}"></label>`:`<label>Termín plnenia<input id="obDue" value="${esc(D.due||"")}" placeholder="podľa dohody"></label>`}</div>
+      ${k==="o"?`<div class="grid3"><label>K cenovej ponuke č.<input id="obRefNo" value="${esc(D.refNo||"")}"></label><label>zo dňa<input type="date" id="obRefDate" value="${esc(D.refDate||"")}"></label><label>Miesto dodania<input id="obPlace" value="${esc(D.place||"")}" placeholder="napr. stavba, sklad"></label></div>`:""}
+      <div class="grid2"><label>Stavba (nepovinné)<select id="obProj"><option value="">–</option>${S.projects.map(p=>`<option value="${p.id}" ${D.projectId===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></label>
+        <label>Predmet<input id="obSubj" value="${esc(D.subject||"")}" placeholder="${k==="q"?"napr. zateplenie fasády":"napr. betón C25/30"}"></label></div>
+      <label>Úvodný text<input id="obIntro" value="${esc(D.intro||"")}" placeholder="${esc(C.intro(D))}"></label>
+      <label>Stav<select id="obStatus">${C.st.map(([v,l])=>`<option value="${v}" ${D.status===v?"selected":""}>${l}</option>`).join("")}</select></label></fieldset></div>
+    <div class="stack" style="gap:6px"><div class="eyebrow">Položky</div><div class="obitems">${items}</div><datalist id="obMjs">${["ks","m","m2","m3","t","kg","hod","deň","km","kpl","bm","l"].map(x=>`<option value="${x}">`).join("")}</datalist>
+      <div class="row obpick">${(S.cennik||[]).length?`<input id="obPick" data-ac="cen" autocomplete="off" placeholder="+ Pridať z cenníka – začni písať názov alebo kód" aria-label="Pridať položku z cenníka"><datalist id="obCen">${S.cennik.slice().sort((a,b)=>(a.type+a.name).localeCompare(b.type+b.name,"sk")).map(i=>`<option value="${esc(cenLabel(i))}">${cenT(i.type)} · ${eur(numIn(k==="o"&&i.cost?i.cost:i.price))}</option>`).join("")}</datalist>`:""}
+      <button type="button" class="btn small" data-a="obItemAdd">+ Prázdna položka</button></div></div>
+    <div class="obtot"><div><span>Spolu bez DPH</span><b id="obTB">${eur(T.b)}</b></div><div><span>DPH</span><span id="obTV">${eur(T.v)}</span></div><div><span>Spolu s DPH</span><span id="obTS">${eur(T.s)}</span></div></div>
+    <label>Poznámka a podmienky (vytlačí sa pod položkami)<textarea id="obNote" rows="3" placeholder="${k==="q"?"napr. Ceny sú platné pri objednaní do konca mesiaca. Doprava v cene.":"napr. Dodanie na stavbu, vykládka hydraulickou rukou."}">${esc(D.note||"")}</textarea></label>
+    <label class="chk"><input type="checkbox" id="obShowVat" ${D.showVat?"checked":""}> V PDF uviesť aj DPH a sumu s DPH</label>
+    ${(D.sent||[]).length?`<div class="muted" style="font-size:13px">Odoslané: ${D.sent.map(x=>`${d2(x.at.slice(0,10))} na ${esc(x.to)}`).join(" · ")}</div>`:""}
+    <div class="row"><button class="btn primary" type="submit">Uložiť</button><button type="button" class="btn" data-a="obPdf">Uložiť a stiahnuť PDF</button><button type="button" class="btn" data-a="obSend">Odoslať e-mailom</button>${ex?`<button type="button" class="btn ghost findel" data-a="obDel">Odstrániť</button>`:""}</div></form>`}
+function obHTML(k){return `<div class="stack">${view.obDraft&&view.obDraft.k===k?obSendHTML()+obFormHTML():""}${obListHTML(k)}</div>`}
+
+/* načítanie formulára do konceptu */
+function obRead(){const D=view.obDraft,f=$("#obForm");if(!D||!f)return D;const v=id=>($("#"+id)?.value??"").trim();
+  OB_P.forEach(([p])=>{const e=$("#obP_"+p);if(e)D.partner[p]=e.value.trim()});
+  Object.assign(D,{no:v("obNo"),date:v("obDate"),projectId:v("obProj"),subject:v("obSubj"),intro:v("obIntro"),status:v("obStatus"),note:($("#obNote")?.value||"").trim(),showVat:!!$("#obShowVat")?.checked});
+  if(D.k==="q")D.valid=v("obValid");else Object.assign(D,{due:v("obDue"),refNo:v("obRefNo"),refDate:v("obRefDate"),place:v("obPlace")});
+  f.querySelectorAll(".obrow").forEach(r=>{const it=D.items[+r.dataset.i];if(!it)return;r.querySelectorAll(".obI").forEach(e=>{const fl=e.dataset.f;it[fl]=fl==="vat"?+e.value:fl==="qty"||fl==="price"?e.value.trim().replace(/\s/g,"").replace(",","."):e.value.trim()})});
+  return D}
+function obCommit(){const D=obRead();if(!D)return null;
+  if(!D.partner.name){toast(`Doplň názov – ${OB[D.k].party.toLowerCase()}a`);$("#obP_name")?.focus();return null}
+  if(!D.no||!D.date){toast("Doplň číslo a dátum");return null}
+  D.items=D.items.filter(i=>i.name||numIn(i.price));if(!D.items.length){D.items=[obItem()];toast("Pridaj aspoň jednu položku");render();return null}
+  if(D.items.some(i=>i.price!==""&&!/^-?\d+(\.\d+)?$/.test(String(i.price))||!/^\d+(\.\d+)?$/.test(String(i.qty||0)))){toast("Množstvo a cena majú byť čísla, napr. 12 alebo 12,50");return null}
+  const L=obList(D.k);if(L.some(x=>x.no===D.no&&x.id!==D.id)){toast(`${OB[D.k].title} č. ${D.no} už existuje`);return null}
+  const isNew=!D.id;if(isNew){D.id=uid(D.k==="q"?"cp":"ob");D.by=me.id;D.at=nowIso()}
+  const rec=JSON.parse(JSON.stringify(D));delete rec.k;delete rec.srcNote;
+  const i=L.findIndex(x=>x.id===D.id);if(i>=0)L[i]=rec;else L.push(rec);
+  obSavePartner(D.partner);save();return rec}
+
+/* PDF – vzhľad podľa cenových ponúk Kalimis: svetlosivá A4, logo vľavo hore, pečiatka vpravo dole */
+function obPdf(k,D,asData){const doc=newPdf("portrait");if(!doc)return null;const C=OB[k],F=S.firm||{},P=D.partner||{},T=obTotals(D);
+  const W=210,H=297,L=16,R=W-16,INK=[28,28,27],MU=[107,107,104],LN=[220,220,217],GR=[237,237,235];
+  const col=c=>doc.setTextColor(...c),font=(st,sz)=>{doc.setFont("DVC",st);doc.setFontSize(sz)};
+  const cap=(t,x,y,al)=>{font("bold",7.2);col(MU);doc.setCharSpace(0.5);doc.text(t.toUpperCase(),x,y,al?{align:al}:undefined);doc.setCharSpace(0)};
+  let y=16;
+  if(F.logo&&F.logo.w){const bh=19,bw=45,s=Math.min(bw/F.logo.w,bh/F.logo.h);try{doc.addImage(F.logo.data,"PNG",L,y-2,F.logo.w*s,F.logo.h*s)}catch(e){}}
+  else{font("bold",14);col(INK);doc.text(plain(F.name||S.company||""),L,y+6)}
+  cap(C.title,R,y+2,"right");font("bold",17);col(INK);doc.text(plain("č. "+D.no),R,y+10,{align:"right"});
+  y=40;doc.setDrawColor(...LN);doc.setLineWidth(0.25);doc.line(L,y-4,R,y-4);
+  const party=(lab,X,x)=>{let yy=y+4;cap(lab,x,yy);yy+=6;font("bold",11);col(INK);const nm=doc.splitTextToSize(plain(X.name||""),82);doc.text(nm,x,yy);yy+=nm.length*4.8;
+    font("normal",9);const ad=[X.street,[X.zip,X.city].filter(Boolean).join(" "),X.country].filter(Boolean).map(plain);doc.text(ad,x,yy);yy+=ad.length*4.2+1.2;
+    col([74,74,72]);const ids=[X.ico&&"IČO: "+X.ico,X.dic&&"DIČ: "+X.dic,X.icdph&&"IČ DPH: "+X.icdph].filter(Boolean);doc.text(ids,x,yy);yy+=ids.length*4.2+1.2;
+    const ct=[X.contact&&"Kontakt: "+X.contact,X.phone&&"Tel.: "+X.phone,X.email&&"E-mail: "+X.email].filter(Boolean).map(plain);if(ct.length){doc.text(ct,x,yy);yy+=ct.length*4.2}return yy};
+  const meF={name:F.name||S.company,street:F.street,zip:F.zip,city:F.city,country:"Slovenská republika",ico:F.ico,dic:F.dic,icdph:F.vatPayer===false?"":F.icdph,phone:F.phone,email:F.email};
+  y=Math.max(party(C.me,meF,L),party(C.party,P,L+92))+5;
+  /* dátumy a súhrn */
+  const rows=[["Dátum vystavenia:",obDate(D.date)],...(k==="q"&&D.valid?[["Platnosť ponuky:",obDate(D.valid)]]:[]),...(k==="o"&&D.refNo?[["K cenovej ponuke:",`č. ${D.refNo}${D.refDate?" zo dňa "+obDate(D.refDate):""}`]]:[]),
+    ...(k==="o"&&D.due?[["Termín plnenia:",D.due]]:[]),...(k==="o"&&D.place?[["Miesto dodania:",D.place]]:[]),...(D.subject?[["Predmet:",D.subject]]:[])];
+  const p=S.projects.find(z=>z.id===D.projectId);if(p)rows.push(["Stavba:",p.name]);
+  const bx=R-64,bh=Math.max(20,rows.length*5+6);doc.setFillColor(...GR);doc.roundedRect(bx,y,64,20,1.8,1.8,"F");cap("Spolu bez DPH",R-5,y+7,"right");font("bold",16);col(INK);doc.text(obMoney(T.b)+" EUR",R-5,y+15.5,{align:"right"});
+  let yy=y+4.5;rows.forEach(([a,b])=>{font("normal",9);col(MU);doc.text(a,L,yy);font("bold",9);col(INK);const t=doc.splitTextToSize(plain(b),bx-L-40);doc.text(t,L+34,yy);yy+=t.length*4.4+0.8});
+  y=Math.max(y+bh-6,yy)+7;
+  font("normal",9.5);col(INK);const it=doc.splitTextToSize(plain(D.intro||C.intro(D)),R-L);doc.text(it,L,y);y+=it.length*4.6+1.5;
+  /* položky */
+  const subs={};const body=D.items.map((i,n)=>{if(i.sub)subs[n]=plain(i.sub);return [(n+1)+".",plain(i.name)+(i.sub?"\n"+plain(i.sub):""),`${obQty(i.qty)} ${plain(i.mj||"")}`.trim(),obMoney(i.price),String(i.vat??""),obMoney(Math.round(numIn(i.qty)*numIn(i.price)*100)/100)]});
+  doc.autoTable({startY:y,head:[["Č.","Názov","Množstvo","Cena bez DPH","DPH %","Spolu bez DPH"]],body,margin:{left:L,right:W-R,top:18,bottom:22},theme:"plain",
+    styles:{font:"DVC",fontSize:8.8,textColor:INK,cellPadding:{top:2.4,bottom:2.4,left:2,right:2},valign:"top",lineColor:LN,lineWidth:{bottom:0.25,top:0,left:0,right:0}},
+    headStyles:{font:"DVC",fontStyle:"bold",fontSize:7,textColor:[74,74,72],fillColor:GR,lineWidth:0,cellPadding:{top:2.8,bottom:2.8,left:2,right:2}},
+    columnStyles:{0:{cellWidth:9},1:{cellWidth:"auto",fontStyle:"bold"},2:{cellWidth:24,halign:"right"},3:{cellWidth:26,halign:"right"},4:{cellWidth:14,halign:"right"},5:{cellWidth:28,halign:"right",fontStyle:"bold"}},
+    didParseCell:d=>{if(d.section==="head"&&d.column.index>=2)d.cell.styles.halign="right"},
+    willDrawCell:d=>{if(d.section==="body"&&d.column.index===1&&subs[d.row.index]!=null){d.cell._ob=d.cell.text.slice();d.cell.text=[]}},
+    didDrawCell:d=>{if(d.section==="body"&&d.column.index===1&&d.cell._ob){const c=d.cell,pd=c.padding("left"),lh=8.8*0.3528*1.15,w=c.width-pd-c.padding("right");let ty=c.y+c.padding("top")+lh*0.8;
+      font("bold",8.8);col(INK);const nm=doc.splitTextToSize(plain(D.items[d.row.index].name),w);doc.text(nm,c.x+pd,ty);ty+=nm.length*lh;
+      font("normal",8);col(MU);doc.text(doc.splitTextToSize(subs[d.row.index],w),c.x+pd,ty)}}});
+  y=doc.lastAutoTable.finalY+6;
+  /* súčty */
+  const need=(D.showVat?26:14)+(D.note?14:0)+46;if(y+need>H-22){doc.addPage();y=22}
+  const tw=78,tx=R-tw;let ly=y;
+  if(D.showVat){font("normal",9);col(INK);[["Spolu bez DPH",T.b],["DPH",T.v]].forEach(([a,b])=>{doc.text(a,tx+4,ly+4);doc.text(obMoney(b)+" EUR",R-4,ly+4,{align:"right"});ly+=6});ly+=1}
+  doc.setFillColor(...GR);doc.roundedRect(tx,ly,tw,10,1.6,1.6,"F");font("bold",11);col(INK);doc.text(D.showVat?"Spolu s DPH":"Spolu bez DPH",tx+4,ly+6.6);doc.text(obMoney(D.showVat?T.s:T.b)+" EUR",R-4,ly+6.6,{align:"right"});
+  let ny=y+4;font("normal",8.5);col([74,74,72]);
+  const notes=[...(D.note?[D.note]:[]),...(k==="o"?["Číslo objednávky prosíme uviesť na faktúre."]:[])];
+  notes.forEach(t=>{const ls=doc.splitTextToSize(plain(t),tx-L-8);doc.text(ls,L,ny);ny+=ls.length*4+2});
+  y=Math.max(ly+10,ny)+10;
+  /* pečiatka a podpis */
+  if(y+40>H-20){doc.addPage();y=30}
+  const sw=62,sx=R-sw,st=firmStamp();let lineY=y+30;
+  if(st&&st.w){let h=27,w=h*st.w/st.h;if(w>sw-4){w=sw-4;h=w*st.h/st.w}try{doc.addImage(st.data,"PNG",sx+(sw-w)/2,lineY-1-h,w,h)}catch(e){}}
+  doc.setDrawColor(138,138,135);doc.setLineWidth(0.25);doc.line(sx,lineY,R,lineY);font("normal",8.5);col(MU);doc.text(C.sign,sx+sw/2,lineY+4.5,{align:"center"});
+  /* päta */
+  const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setDrawColor(...LN);doc.line(L,H-15,R,H-15);font("normal",7.2);col(MU);
+    if(F.orsr)doc.text(doc.splitTextToSize(plain(/^spoločnosť/i.test(F.orsr)?F.orsr:"Zápis: "+F.orsr),R-L-25),L,H-11);doc.text(`Strana ${i}/${n}`,R,H-11,{align:"right"})}
+  const nm=`${k==="q"?"Cenova_ponuka":"Objednavka"}_${D.no}_${P.name||""}`.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w.-]+/g,"_").slice(0,80).replace(/[_.]+$/,"");
+  if(asData)return {filename:nm+".pdf",data:doc.output("arraybuffer")};
+  offerFile(nm+".pdf",doc.output("arraybuffer"))}
+/* odoslanie e-mailom: v skúšobnej verzii sa len zaznamená; ostrá verzia (live.js) posiela cez server */
+const obMail=async p=>typeof window.obMailLive==='function'?window.obMailLive(p):{demo:true};
+function obMailText(k,D){const F=S.firm||{},sig=[me.name,F.name||S.company,F.phone,F.email].filter(Boolean).join("\n");
+  return k==="q"?`Dobrý deň,\n\nv prílohe Vám posielame cenovú ponuku č. ${D.no}${D.subject?` – ${D.subject}`:""}.\nV prípade otázok nás neváhajte kontaktovať.\n\nS pozdravom\n${sig}`
+    :`Dobrý deň,\n\n${D.refNo?`na základe Vašej cenovej ponuky č. ${D.refNo} `:""}Vám v prílohe posielame objednávku č. ${D.no}${D.subject?` – ${D.subject}`:""}.\nProsíme o potvrdenie jej prijatia${D.due&&D.due!=="podľa dohody"?` a dodržanie termínu plnenia ${D.due}`:""}.\n\nS pozdravom\n${sig}`}
+function obSendHTML(){const M=view.obSend,D=view.obDraft;if(!M||!D)return "";const C=OB[D.k];
+  return `<form class="card stack obsend" id="obSendForm"><div class="entry-head"><h3>Odoslať ${D.k==="q"?"cenovú ponuku":"objednávku"} č. ${esc(D.no)}</h3><button type="button" class="btn small ghost" data-a="obSendNo">Zrušiť</button></div>
+    <div class="grid2"><label>Komu<input type="email" id="osTo" value="${esc(M.to)}" required placeholder="e-mail ${C.party.toLowerCase()}a" multiple></label><label>Kópia (nepovinné)<input type="email" id="osCc" value="${esc(M.cc)}" multiple></label></div>
+    <label>Predmet<input id="osSubj" value="${esc(M.subj)}" required></label>
+    <label>Správa<textarea id="osBody" rows="9">${esc(M.body)}</textarea></label>
+    <div class="muted" style="font-size:13px">Príloha: <b>${esc(M.file)}</b> · Odpovede prídu na ${esc((S.firm&&S.firm.email)||me.email||"e-mail firmy")}.</div>
+    <div class="row"><button class="btn primary" type="submit" ${view.obSending?"disabled":""}>${view.obSending?"Odosielam…":"Odoslať"}</button><button type="button" class="btn ghost" data-a="obPdf">Stiahnuť PDF</button></div></form>`}
+
+/* vyčítanie cudzej cenovej ponuky (PDF alebo fotka) cez Claude */
+const PDFJS_V="4.10.38";
+async function obPdfJs(){if(window.__pdfjs)return window.__pdfjs;const base=`https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_V}/legacy/build/`;
+  const lib=await import(base+"pdf.min.mjs");try{globalThis.pdfjsWorker=await import(base+"pdf.worker.min.mjs")}catch(e){}lib.GlobalWorkerOptions.workerSrc=base+"pdf.worker.min.mjs";return window.__pdfjs=lib}
+async function obReadPdf(file){const lib=await obPdfJs(),pdf=await lib.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
+  let text="";const imgs=[];const n=Math.min(pdf.numPages,4);
+  for(let i=1;i<=n;i++){const pg=await pdf.getPage(i);const tc=await pg.getTextContent();let line="",lastY=null;
+    tc.items.forEach(it=>{const yy=Math.round(it.transform[5]);if(lastY!==null&&Math.abs(yy-lastY)>2){text+=line.trim()+"\n";line=""}line+=it.str+(it.hasEOL?" ":" ");lastY=yy});text+=line.trim()+"\n\n";
+    if(i<=2){const vp0=pg.getViewport({scale:1}),sc=Math.min(2,1600/Math.max(vp0.width,vp0.height)),vp=pg.getViewport({scale:sc});const c=document.createElement("canvas");c.width=Math.round(vp.width);c.height=Math.round(vp.height);
+      const cx=c.getContext("2d");cx.fillStyle="#fff";cx.fillRect(0,0,c.width,c.height);await pg.render({canvasContext:cx,canvas:c,viewport:vp}).promise;imgs.push(await new Promise(r=>c.toBlob(r,"image/jpeg",0.85)))}}
+  return {text:text.replace(/[ \t]+/g," ").trim(),imgs:imgs.filter(Boolean)}}
+async function obFromFile(file){if(!file)return;const isPdf=/pdf$/i.test(file.type)||/\.pdf$/i.test(file.name);
+  if(!isPdf&&!/^image\//.test(file.type)){toast("Nahraj ponuku vo formáte PDF, JPG alebo PNG.");return}
+  view.obBusy=true;view.obMsg=null;render();
+  const D=obBlank("o");D.srcName=file.name;
+  const done=(msg,bad)=>{view.obBusy=false;view.obDraft=D;view.obMsg=msg?{k:"o",t:msg,bad}:null;render();window.scrollTo({top:0,behavior:"smooth"})};
+  let src;try{src=isPdf?await obReadPdf(file):{text:"",imgs:[(await oevImage(file)).blob]}}catch(e){D.srcNote="súbor sa nepodarilo otvoriť, údaje doplň ručne.";return done("Súbor sa nepodarilo otvoriť. Objednávku vyplň ručne.",true)}
+  let sample=null;
+  const lim=sample?await sample.limits().catch(()=>null):null;
+  if(!sample){D.srcNote="automatické čítanie tu zatiaľ nie je dostupné, údaje prepíš z ponuky.";return done("")}
+  const useImgs=lim&&lim.images?src.imgs.slice(0,2):[];
+  if(!useImgs.length&&src.text.length<40){D.srcNote="z ponuky sa nedal prečítať text, údaje prepíš ručne.";return done("")}
+  const prompt=`Toto je cenová ponuka, ktorú slovenská stavebná firma dostala od svojho dodávateľa. Pripravujeme z nej objednávku.
+${src.text?`Text ponuky (vyčítaný z PDF, poradie riadkov môže byť nepresné):\n"""\n${src.text.slice(0,14000)}\n"""\n`:""}${useImgs.length?`Na ${useImgs.length>1?"obrázkoch sú strany":"obrázku je strana"} tej istej ponuky – podľa nich over položky a sumy.\n`:""}
+Vráť IBA jeden JSON objekt v tvare:
+{"dodavatel":{"name":"","street":"","zip":"","city":"","country":"","ico":"","dic":"","icdph":"","contact":"","phone":"","email":""},
+ "cislo_ponuky":"","datum_ponuky":"RRRR-MM-DD","predmet":"",
+ "polozky":[{"nazov":"","podtext":"","mnozstvo":0,"mj":"","cena_bez_dph":0,"dph":23}],
+ "spolu_bez_dph":0}
+Pravidlá: dodávateľ je firma, ktorá ponuku VYSTAVILA (nie odberateľ, ktorému je určená). Položky prepíš všetky a presne ako v ponuke; cena_bez_dph je jednotková cena bez DPH (ak je uvedená len cena s DPH, prepočítaj ju). Čísla vráť ako čísla s desatinnou bodkou, bez medzier a mien. Ak údaj chýba, daj prázdny reťazec alebo null. Nič si nedomýšľaj.`;
+  try{const r=await sample.json(prompt,{...(useImgs.length?{images:useImgs}:{}),modelTier:"default"});
+    const d=(r&&r.dodavatel)||{},Pn={};OB_P.forEach(([f])=>{if(d[f]!=null&&d[f]!=="")Pn[f]=String(d[f]).trim()});
+    const ex=obFindPartner(Pn.name,Pn.ico);D.partner={country:"Slovenská republika",...(ex?Object.fromEntries(OB_P.map(([f])=>[f,ex[f]||""])):{}),...Pn};
+    D.refNo=r.cislo_ponuky?String(r.cislo_ponuky):"";D.refDate=/^\d{4}-\d{2}-\d{2}$/.test(r.datum_ponuky||"")?r.datum_ponuky:"";D.subject=r.predmet?String(r.predmet):"";
+    const its=(Array.isArray(r.polozky)?r.polozky:[]).filter(i=>i&&(i.nazov||i.cena_bez_dph)).map(i=>obItem({name:String(i.nazov||""),sub:i.podtext?String(i.podtext):"",qty:String(+i.mnozstvo||1),mj:String(i.mj||"ks"),price:i.cena_bez_dph!=null&&i.cena_bez_dph!==""?String(Math.round(+i.cena_bez_dph*10000)/10000):"",vat:FIN_VAT.includes(+i.dph)?+i.dph:23}));
+    if(its.length)D.items=its;
+    const T=obTotals(D),sp=+r.spolu_bez_dph||0;
+    D.srcNote=`vyčítaných ${its.length} ${pl(its.length,"položka","položky","položiek")}${sp&&Math.abs(sp-T.b)>0.05?`. Pozor: súčet položiek ${eur(T.b)} sa líši od súčtu v ponuke ${eur(sp)}`:""}.`;
+    done("")}
+  catch(e){D.srcNote=(OEV_ERR[e&&e.code]||"údaje sa nepodarilo vyčítať.")+" Údaje prepíš z ponuky.";done("")}}
+
+/* udalosti */
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;if(!/^ob/.test(a)||!isAdmin(me))return;
+  if(a==="obNew"){view.obDraft=obBlank(b.dataset.k);view.obMsg=null;view.obSend=null;render();window.scrollTo({top:0,behavior:"smooth"})}
+  else if(a==="obOpen"){const x=obList(b.dataset.k).find(z=>z.id===b.dataset.id);if(!x)return;view.obDraft={...JSON.parse(JSON.stringify(x)),k:b.dataset.k};view.obSend=null;if(!view.obDraft.items.length)view.obDraft.items=[obItem()];view.obMsg=null;render();window.scrollTo({top:0,behavior:"smooth"})}
+  else if(a==="obClose"){view.obDraft=null;view.obSend=null;render()}
+  else if(a==="obSend"){const k=view.obDraft&&view.obDraft.k,rec=obCommit();if(!rec)return;const D=view.obDraft,F=S.firm||{};
+    view.obSend={to:D.partner.email||"",cc:"",subj:`${OB[k].title} č. ${D.no} – ${F.name||S.company||""}`.replace(/ – $/,""),body:obMailText(k,D),file:(obPdf(k,rec,true)||{}).filename||"PDF"};render();window.scrollTo({top:0,behavior:"smooth"});setTimeout(()=>$("#osTo")?.focus(),50)}
+  else if(a==="obSendNo"){view.obSend=null;render()}
+  else if(a==="obItemAdd"){const D=obRead();const last=D.items[D.items.length-1];D.items.push(obItem({vat:last?last.vat:23}));render();const r=document.querySelectorAll(".obrow");r[r.length-1]?.querySelector("input")?.focus()}
+  else if(a==="obItemDel"){const D=obRead();if(D.items.length>1)D.items.splice(+b.dataset.i,1);render()}
+  else if(a==="obPdf"){const k=view.obDraft&&view.obDraft.k,rec=obCommit();if(!rec)return;obPdf(k,rec);toast("Uložené");render()}
+  else if(a==="obDel"){const D=view.obDraft;if(!D||!D.id)return;if(!b.dataset.sure){b.dataset.sure="1";b.textContent="Naozaj odstrániť?";return}
+    S[OB[D.k].key]=obList(D.k).filter(x=>x.id!==D.id);view.obDraft=null;save();toast("Odstránené");render()}});
+function obSendRead(){const M=view.obSend;if(!M||!$("#obSendForm"))return M;M.to=$("#osTo").value.trim();M.cc=$("#osCc").value.trim();M.subj=$("#osSubj").value.trim();M.body=$("#osBody").value;return M}
+document.addEventListener("submit",async ev=>{if(ev.target.id!=="obSendForm"||!me)return;ev.preventDefault();if(!isAdmin(me)||view.obSending)return;
+  const M=obSendRead(),D=view.obDraft;if(!M||!D)return;const k=D.k,ok=e=>e.split(/[,;\s]+/).filter(Boolean).every(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+  if(!M.to||!ok(M.to)||(M.cc&&!ok(M.cc))){toast("Skontroluj e-mailovú adresu");return}
+  const rec=obCommit();if(!rec)return;const pdf=obPdf(k,rec,true);if(!pdf)return;
+  view.obSending=true;render();let res;
+  try{const b=new Uint8Array(pdf.data);let bin="";for(let i=0;i<b.length;i+=8192)bin+=String.fromCharCode.apply(null,b.subarray(i,i+8192));
+    res=await obMail({kind:k==="q"?"quote":"order",to:M.to,cc:M.cc,subject:M.subj,text:M.body,filename:pdf.filename,pdf:btoa(bin),replyTo:(S.firm&&S.firm.email)||me.email||"",fromName:(S.firm&&S.firm.name)||S.company||""})}
+  catch(e){res={error:e&&e.message||"chyba"}}
+  view.obSending=false;
+  if(res&&res.error){toast("E-mail sa nepodarilo odoslať: "+res.error);render();return}
+  const x=obList(k).find(z=>z.id===rec.id);if(x){(x.sent=x.sent||[]).push({at:nowIso(),to:M.to,by:me.id,...(res&&res.demo?{demo:true}:{})});if(x.status==="koncept")x.status="odoslana";save()}
+  view.obSend=null;view.obDraft=null;
+  toast(res&&res.demo?`Skúšobná verzia: e-mail sa reálne neodoslal (v ostrej verzii odíde na ${M.to}). Označené ako odoslané.`:`Odoslané na ${M.to}`);render()});
+document.addEventListener("submit",ev=>{if(ev.target.id!=="obForm"||!me)return;ev.preventDefault();if(!isAdmin(me))return;const D=view.obDraft,rec=obCommit();if(!rec)return;
+  toast(`${OB[D.k].title} uložená`);view.obDraft=null;render()});
+document.addEventListener("input",ev=>{const t=ev.target;if(!me)return;
+  if(t.id==="obQ"){(view.obF=view.obF||{}).q=t.value;const pos=t.selectionStart;render();const e=$("#obQ");if(e){e.focus();try{e.setSelectionRange(pos,pos)}catch(x){}}return}
+  if(t.classList&&t.classList.contains("obI")&&(t.dataset.f==="qty"||t.dataset.f==="price")||t.dataset&&t.dataset.f==="vat"){const D=obRead();if(!D)return;const n=+t.closest(".obrow").dataset.i,i=D.items[n];
+    const s=$(`[data-sum="${n}"]`);if(s)s.textContent=eur(Math.round(numIn(i.qty)*numIn(i.price)*100)/100);const T=obTotals(D);$("#obTB").textContent=eur(T.b);$("#obTV").textContent=eur(T.v);$("#obTS").textContent=eur(T.s)}
+  if(t.id==="obP_name"){const p=obFindPartner(t.value);if(p&&t.dataset.filled!==p.id){t.dataset.filled=p.id;OB_P.forEach(([f])=>{if(f!=="name"){const e=$("#obP_"+f);if(e)e.value=p[f]||""}});toast("Údaje doplnené")}}});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me)return;
+  if(t.id==="obPick"&&t.value){const it=(S.cennik||[]).find(i=>cenLabel(i)===t.value);if(!it)return;const D=obRead();if(!D)return;
+    const pr=view.obDraft.k==="o"&&it.cost?it.cost:it.price,nw=obItem({name:it.name,sub:it.sub||"",mj:it.mj||"",qty:"1",price:pr!=null&&pr!==""?String(pr):"",vat:+it.vat||0,itemId:it.id});
+    const last=D.items[D.items.length-1];if(D.items.length===1&&last&&!last.name&&!numIn(last.price))D.items[0]=nw;else D.items.push(nw);render();
+    const r=document.querySelectorAll(".obrow");r[r.length-1]?.querySelector('[data-f="qty"]')?.select();toast("Pridané z cenníka – doplň množstvo")}
+  else if(t.id==="obSrc"&&t.files&&t.files[0]&&isAdmin(me)){const f=t.files[0];t.value="";obFromFile(f)}
+  else if(t.dataset&&t.dataset.f==="vat"&&t.classList.contains("obI"))t.dispatchEvent(new Event("input",{bubbles:true}))});
 function firmaHTML(){
   const t=firmTabCur(),tabs="";
-  const body=t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():t==="ponuka"?marketHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML()+mailSetHTML()+accDelHTML("firm"));
-  return `<div class="stack"><div><div class="eyebrow">Firma</div><h1>${esc(S.firm.name||"Firma")}</h1></div>${tabs}${t==="udaje"&&!view.firmEditing?firmStartRowHTML():""}${body}</div>`}
+  const body=t==="fin"?financeHTML():t==="cennik"?cenHTML():t==="sklad"?skladHTML():t==="ponuky"?obHTML("q"):t==="obj"?obHTML("o"):t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():t==="ponuka"?marketHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML()+mailSetHTML()+accDelHTML("firm"));
+  const top=firmTabTop(),grp=firmGroups()[top]||[];
+  const sub=grp.length>1?`<div class="tabs firmsub" role="tablist" aria-label="${top==="fin"?"Obchod":"Údaje o firme"}">${grp.map(([k,l])=>`<button class="tab" role="tab" data-a="firmTab" data-tab="${k}" aria-selected="${t===k}">${l}</button>`).join("")}</div>`:"";
+  return `<div class="stack"><div><div class="eyebrow">Firma</div><h1>${esc(S.firm.name||"Firma")}</h1></div>${sub}${t==="udaje"&&!view.firmEditing?firmStartRowHTML():""}${body}</div>`}
 const P_TABS=[["emp","Zamestnanci"],["att","Dochádzka"],["mzdy","Podklady pre mzdy"],["sc","Služobné cesty"],["skol","Školenia"],["ost","Ostatné"]];
 /* služobné cesty sa skladajú z dní "SC" v dochádzke; po sebe idúce dni jedného zamestnanca = jedna cesta */
 /* sadzby: tuzemské stravné od 1. 12. 2025; zahraničné stravné podľa opatrenia MF SR č. 401/2012 Z. z. v znení účinnom od 30. 1. 2026; základná náhrada za 1 km od 1. 1. 2026 */
@@ -5267,7 +6058,7 @@ try{window.matchMedia("(max-width:759px)").addEventListener("change",()=>{if(me&
 /* druhý rad menu: podkarty aktuálnej sekcie */
 function subnavRows(){
   if(!me||view.screen==="setup"||view.screen==="profile")return null;const sc=view.screen;
-  if(sc==="firma")return [firmTabs().map(([k,l])=>({a:"firmTab",tab:k,l,sel:(firmTabCur()===k)}))];
+  if(sc==="firma")return [firmTabs().map(([k,l])=>({a:"firmTab",tab:k,l,sel:(firmTabTop()===k)}))];
   if(sc==="personal"){const t=view.pTab||"emp";return [P_TABS.map(([k,l])=>({a:"pTab",tab:k,l,sel:t===k}))]}
   if(sc==="doprava"){const al=fleetAlerts().length,t=view.dTab||"park";const r=[[{a:"dTab",tab:"park",l:"Stroje a vozidlá",sel:t==="park"},{a:"dTab",tab:"logi",l:"Logistika",sel:t==="logi"},{a:"dTab",tab:"pers",l:"Tímy",sel:t==="pers"},{a:"dTab",tab:"export",l:"Export",sel:t==="export"},{a:"dTab",tab:"gps",l:"Import z GPS",sel:t==="gps"},{a:"dTab",tab:"vazenie",l:"Váženie",sel:t==="vazenie"},{a:"dTab",tab:"terminy",l:"Údržba a servis",sel:t==="terminy",n:al},{a:"dTab",tab:"stat",l:"Štatistika",sel:t==="stat"}]];
     const m=view.vehId&&(S.machines||[]).find(x=>x.id===view.vehId);if(m){r[0].forEach(x=>x.sel=x.tab==="park");const top=[{a:"vehOpen",id:m.id,l:m.name,sel:true,cls:"pnav pname"}];return narrowNav()?[top,r[0]]:[[...top,{sep:true},...r[0]]]}return r}
