@@ -906,9 +906,9 @@ table.dxt{font-size:13.5px}table.dxt td.dxw{white-space:normal;min-width:240px;l
 .obpick{gap:8px}.obpick #obPick{flex:1 1 280px;max-width:520px}
 .skrows{display:flex;flex-direction:column;gap:8px}
 .skrow{display:grid;grid-template-columns:minmax(0,1fr) 110px 34px;gap:4px 8px;align-items:end;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
-.skrow.in{grid-template-columns:minmax(0,1fr) 96px 110px 34px}.skrow label{gap:2px}.skrow label>span{font-size:11.5px;color:var(--muted);font-weight:600}.skrow select,.skrow input{min-width:0}
+.skrow.in{grid-template-columns:minmax(0,1fr) 84px 70px 100px 34px}.skrow label{gap:2px}.skrow label>span{font-size:11.5px;color:var(--muted);font-weight:600}.skrow select,.skrow input{min-width:0}
 .skrow .sk-del{padding:4px 8px;font-size:16px;margin-bottom:4px}.skrow .sk-info{grid-column:1/-1;font-size:12px}
-@media (max-width:560px){.skrow,.skrow.in{grid-template-columns:1fr 1fr 34px}.skrow .sk-it{grid-column:1/-1}.skrow .sk-del{grid-column:3}}
+@media (max-width:560px){.skrow{grid-template-columns:1fr 34px}.skrow.in{grid-template-columns:1fr 1fr 1fr 34px}.skrow .sk-it{grid-column:1/-1}}
 .cenpart{display:grid;grid-template-columns:minmax(0,1fr) 80px 44px 100px 34px;gap:8px;align-items:center}@media (max-width:560px){.cenpart{grid-template-columns:minmax(0,1fr) 70px 34px}.cenpart>span{display:none}}
 .okmsg{background:var(--tint);border-radius:8px;padding:8px 12px;font-size:13.5px}
 .obup{cursor:pointer}.obup.dis{opacity:.6;cursor:progress}
@@ -4801,24 +4801,28 @@ function stockOutCost(m){/* výdaj na stavbu = náklad stavby v priemernej sklad
   (S.costs=S.costs||[]).push(c);m.costId=c.id}
 const skDocs=()=>{const g={};(S.stock||[]).forEach(m=>{const k=m.doc||m.id;(g[k]=g[k]||[]).push(m)});return Object.entries(g).map(([doc,ms])=>({doc,ms,type:ms[0].type,date:ms[0].date}))};
 const skVal=m=>Math.round(numIn(m.qty)*numIn(m.price)*100)/100;
-function skRowsHTML(typ){const R=view.skRows,items=stockItems();const need={};R.forEach(r=>{if(r.itemId)need[r.itemId]=(need[r.itemId]||0)+numIn(r.qty)});
-  return `<div class="skrows">${R.map((r,i)=>{const it=cenItem(r.itemId),st=it?stockOf(it.id):null,over=typ==="out"&&it&&need[it.id]>st.qty+1e-9;return `<div class="skrow${typ==="in"?" in":""}" data-i="${i}">
-    <label class="sk-it"><span>Materiál ${i+1}</span><select class="skR" data-f="itemId"><option value="">– vyber materiál –</option>${items.map(x=>`<option value="${x.id}" ${x.id===r.itemId?"selected":""}>${esc(cenLabel(x))}</option>`).join("")}</select></label>
-    <label><span>Množstvo${it?` (${esc(it.mj||"")})`:""}</span><input class="skR" data-f="qty" inputmode="decimal" value="${esc(r.qty||"")}"></label>
-    ${typ==="in"?`<label><span>Cena/MJ bez DPH</span><input class="skR" data-f="price" inputmode="decimal" value="${esc(r.price||"")}" placeholder="0,00"></label>`:""}
+function skMatch(text){const t=String(text||"").trim().toLowerCase();if(!t)return null;return stockItems().find(x=>cenLabel(x).toLowerCase()===t||x.name.toLowerCase()===t||(x.code&&x.code.toLowerCase()===t))||null}
+const skItemsDL=()=>`<datalist id="skItems">${stockItems().map(x=>`<option value="${esc(cenLabel(x))}">`).join("")}</datalist>`;
+function skRowsHTML(typ){const R=view.skRows;
+  return `${skItemsDL()}<datalist id="obMjs">${["ks","m","m2","m3","t","kg","bm","l","bal","vrece"].map(x=>`<option value="${x}">`).join("")}</datalist><div class="skrows">${R.map((r,i)=>{const it=cenItem(r.itemId);return `<div class="skrow${typ==="in"?" in":""}" data-i="${i}">
+    <label class="sk-it"><span>Materiál ${i+1}</span><input class="skR" data-f="text" list="skItems" value="${esc(r.text??(it?cenLabel(it):""))}" placeholder="začni písať názov alebo kód" autocomplete="off"></label>
+    <label><span>Množstvo</span><input class="skR" data-f="qty" inputmode="decimal" value="${esc(r.qty||"")}"></label>
+    ${typ==="in"?`<label><span>MJ</span><input class="skR" data-f="mj" list="obMjs" value="${esc(r.mj||(it?it.mj:""))}" ${it?"readonly":""}></label><label><span>Cena/MJ bez DPH</span><input class="skR" data-f="price" inputmode="decimal" value="${esc(r.price||"")}" placeholder="0,00"></label>`:""}
     <button type="button" class="btn small ghost sk-del" data-a="skRowDel" data-i="${i}" aria-label="Odstrániť riadok ${i+1}" ${R.length<2?"disabled":""}>×</button>
-    ${it?`<div class="sk-info ${over?"bad":"muted"}">na sklade ${nf(st.qty)} ${esc(it.mj||"")} · ø ${eur(st.avg)}${over?" – nedostatok na sklade":""}</div>`:""}</div>`}).join("")}</div>
+    <div class="sk-info muted"></div></div>`}).join("")}</div>
     <button type="button" class="btn small" data-a="skRowAdd" style="align-self:flex-start">+ Pridať materiál</button>`}
-function skKorHTML(){const K=view.skKor,items=stockItems(),it=K.itemId&&cenItem(K.itemId),st=it?stockOf(it.id,K.date||todayIso()):null;
-  const act=String(K.qty??"").trim()!==""?numIn(K.qty):null,diff=st&&act!=null?Math.round((act-st.qty)*1000)/1000:null;
+function skKorInfo(){const K=view.skKor,it=K.itemId&&cenItem(K.itemId);if(!it)return K.text?`<div class="err">Materiál „${esc(K.text)}“ nie je v cenníku medzi skladovými položkami.</div>`:"";
+  const st=stockOf(it.id,K.date||todayIso()),act=String(K.qty??"").trim()!==""?numIn(K.qty):null,diff=act!=null?Math.round((act-st.qty)*1000)/1000:null;
+  return `<div class="okmsg">Podľa evidencie: <b>${nf(st.qty)} ${esc(it.mj||"")}</b> · ø ${eur(st.avg)}${diff!=null?` · rozdiel <b class="${diff<0?"bad":""}">${diff>0?"+":""}${nf(diff)} ${esc(it.mj||"")}</b> (${eur(Math.round(diff*st.avg*100)/100)})`:""}</div>`}
+function skKorHTML(){const K=view.skKor,it=K.itemId&&cenItem(K.itemId);
   return `<form class="card stack finbox" id="skKorForm" autocomplete="off"><div class="entry-head"><h3>Korekcia stavu</h3><button type="button" class="btn small ghost" data-a="skKorNo">Zrušiť</button></div>
     <div class="muted" style="font-size:13px">Napr. pri inventúre: vyber položku a zadaj skutočný stav. Rozdiel sa zapíše ako korekcia v priemernej skladovej cene.</div>
-    <label>Materiál<select id="skkItem" required><option value="">– vyber materiál –</option>${items.map(x=>`<option value="${x.id}" ${x.id===K.itemId?"selected":""}>${esc(cenLabel(x))}</option>`).join("")}</select></label>
-    <div class="grid2"><label>Dátum<input type="date" id="skkDate" value="${esc(K.date||todayIso())}"></label><label>Skutočný stav${it?` (${esc(it.mj||"")})`:""}<input id="skkQty" inputmode="decimal" value="${esc(K.qty??"")}" required></label></div>
-    ${st?`<div class="okmsg">Podľa evidencie: <b>${nf(st.qty)} ${esc(it.mj||"")}</b> · ø ${eur(st.avg)}${diff!=null?` · rozdiel <b class="${diff<0?"bad":""}">${diff>0?"+":""}${nf(diff)} ${esc(it.mj||"")}</b> (${eur(Math.round(diff*st.avg*100)/100)})`:""}</div>`:""}
+    ${skItemsDL()}<label>Materiál<input id="skkText" list="skItems" value="${esc(K.text??(it?cenLabel(it):""))}" placeholder="začni písať názov alebo kód" required></label>
+    <div class="grid2"><label>Dátum<input type="date" id="skkDate" value="${esc(K.date||todayIso())}"></label><label>Skutočný stav<input id="skkQty" inputmode="decimal" value="${esc(K.qty??"")}" required></label></div>
+    <div id="skkInfo">${skKorInfo()}</div>
     <label>Komentár (dôvod korekcie)<textarea id="skkNote" rows="2" required placeholder="napr. inventúra 31. 12. – rozbité tvárnice">${esc(K.note||"")}</textarea></label>
     <div class="row"><button class="btn primary" type="submit">Uložiť korekciu</button></div></form>`}
-function skladHTML(){stockMigrate();const items=stockItems(),K=view.skKeep||{},typ=K.skType||"out",asOf=view.skAsOf||todayIso(),tot=items.reduce((s,i)=>s+stockOf(i.id,asOf).value,0);
+function skladHTML(){stockMigrate();setTimeout(()=>{if($("#skForm"))skInfoUpdate()},0);const items=stockItems(),K=view.skKeep||{},typ=K.skType||"out",asOf=view.skAsOf||todayIso(),tot=items.reduce((s,i)=>s+stockOf(i.id,asOf).value,0);
   if(!view.skRows)view.skRows=[{itemId:"",qty:"",price:""}];
   const F=view.skF||{},lim=F.lim!=null?F.lim:20;
   const docs=skDocs().filter(d=>!F.item||d.ms.some(m=>m.itemId===F.item)).sort((a,b)=>(b.date||"").localeCompare(a.date||"")||b.doc.localeCompare(a.doc));
@@ -4851,8 +4855,8 @@ function skladHTML(){stockMigrate();const items=stockItems(),K=view.skKeep||{},t
       ${docs.length?`<div class="tablewrap"><table class="fintab"><thead><tr><th>Dátum / doklad</th><th>Pohyb</th><th>Materiál</th><th class="r">Hodnota</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="muted">Zatiaľ žiadne pohyby.</div>`}
       <div class="muted" style="font-size:12.5px">Príjem z výdavkov sa upravuje alebo maže vo Financiách pri danom výdavku.</div></div></div>`}
 function skKeepRead(){const o={...(view.skKeep||{})};["skDate","skDoc","skSup","skProj","skNote"].forEach(k=>{const e=$("#"+k);if(e)o[k]=e.value});const t=document.querySelector('input[name="skType"]:checked');if(t)o.skType=t.value;const x=$("#skExp");if(x)o.skExp=x.checked;return o}
-function skRowsSync(){const R=view.skRows;if(!R)return;document.querySelectorAll(".skrow").forEach(el=>{const r=R[+el.dataset.i];if(!r)return;el.querySelectorAll(".skR").forEach(e=>{r[e.dataset.f]=e.value})})}
-function skKorSync(){const K=view.skKor;if(!K||!$("#skKorForm"))return;K.itemId=$("#skkItem").value;K.date=$("#skkDate").value;K.qty=$("#skkQty").value;K.note=$("#skkNote").value}
+function skRowsSync(){const R=view.skRows;if(!R)return;document.querySelectorAll(".skrow").forEach(el=>{const r=R[+el.dataset.i];if(!r)return;el.querySelectorAll(".skR").forEach(e=>{r[e.dataset.f]=e.value});const m=skMatch(r.text);r.itemId=m?m.id:""})}
+function skKorSync(){const K=view.skKor;if(!K||!$("#skKorForm"))return;K.text=$("#skkText").value;const m=skMatch(K.text);K.itemId=m?m.id:"";K.date=$("#skkDate").value;K.qty=$("#skkQty").value;K.note=$("#skkNote").value;const i=$("#skkInfo");if(i)i.innerHTML=skKorInfo()}
 function skRe(){view.skKeep=skKeepRead();render()}
 
 /* PDF príjemky / výdajky: A5 dvakrát pod sebou na A4 (originál a kópia) */
@@ -4915,10 +4919,10 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
     if((S.stock||[]).some(m=>m.itemId===D.id)){toast("Položka má pohyby na sklade – nedá sa odstrániť.");return}
     if(!b.dataset.sure){b.dataset.sure="1";b.textContent="Naozaj odstrániť?";return}
     S.cennik=S.cennik.filter(x=>x.id!==D.id);(S.cennik||[]).forEach(x=>{if(x.parts)x.parts=x.parts.filter(p=>p.itemId!==D.id)});view.cenDraft=null;save();toast("Položka odstránená");render()}
-  else if(a==="skPick"){if(view.skKor){skKorSync();view.skKor.itemId=b.dataset.id;render();$("#skkQty")?.focus();return}
-    skRowsSync();view.skKeep=skKeepRead();const R=view.skRows;const e=R.find(r=>!r.itemId);if(e)e.itemId=b.dataset.id;else R.push({itemId:b.dataset.id,qty:"",price:""});
+  else if(a==="skPick"){const pit=cenItem(b.dataset.id);if(!pit)return;if(view.skKor){skKorSync();view.skKor.itemId=pit.id;view.skKor.text=cenLabel(pit);render();$("#skkQty")?.focus();return}
+    skRowsSync();view.skKeep=skKeepRead();const R=view.skRows;const e=R.find(r=>!r.itemId&&!r.text);if(e){e.itemId=pit.id;e.text=cenLabel(pit)}else R.push({itemId:pit.id,text:cenLabel(pit),qty:"",price:""});
     const r=R.find(x=>x.itemId===b.dataset.id),it=cenItem(b.dataset.id);if(r&&!r.price&&it&&it.cost)r.price=String(it.cost).replace(".",",");render();
-    const el=[...document.querySelectorAll(".skrow")].find(x=>x.querySelector('[data-f="itemId"]').value===b.dataset.id);el?.querySelector('[data-f="qty"]')?.focus()}
+    const el=[...document.querySelectorAll(".skrow")].find(x=>x.querySelector('[data-f="text"]').value===cenLabel(pit));el?.querySelector('[data-f="qty"]')?.focus()}
   else if(a==="skRowAdd"){skRowsSync();view.skRows.push({itemId:"",qty:"",price:""});skRe()}
   else if(a==="skRowDel"){skRowsSync();view.skRows.splice(+b.dataset.i,1);skRe()}
   else if(a==="skKor"){view.skKeep=skKeepRead();skRowsSync();view.skKor={itemId:"",date:todayIso(),qty:"",note:""};render()}
@@ -4928,21 +4932,27 @@ document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(
   else if(a==="skDel"){const ms=(S.stock||[]).filter(m=>(m.doc||m.id)===b.dataset.doc);if(!ms.length||ms.some(m=>m.expId))return;if(!b.dataset.sure){b.dataset.sure="1";b.textContent="Zmazať doklad?";return}
     const ids=new Set(ms.map(m=>m.id)),cids=new Set(ms.map(m=>m.costId).filter(Boolean));S.stock=S.stock.filter(x=>!ids.has(x.id));if(cids.size)S.costs=(S.costs||[]).filter(c=>!cids.has(c.id));save();toast("Doklad zmazaný");render()}});
 document.addEventListener("change",ev=>{const t=ev.target;if(!me)return;
-  if(t.name==="cenType"){cenRead();if(t.value==="zdruz"&&!(view.cenDraft.parts||[]).length)view.cenDraft.parts=[{itemId:"",qty:"1"}];render()}
+  if(t.classList&&t.classList.contains("skR")){skRowsSync();skInfoUpdate()}
+  else if(t.closest&&t.closest("#skKorForm"))skKorSync();
+  else if(t.name==="cenType"){cenRead();if(t.value==="zdruz"&&!(view.cenDraft.parts||[]).length)view.cenDraft.parts=[{itemId:"",qty:"1"}];render()}
   else if(t.classList&&t.classList.contains("cenP")&&t.dataset.f==="itemId"){cenRead();render()}
   else if(t.id==="cenFT"){(view.cenF=view.cenF||{}).t=t.value;render()}
   else if(t.name==="skType"){view.skKeep=skKeepRead();skRowsSync();render()}
-  else if(t.classList&&t.classList.contains("skR")&&t.dataset.f==="itemId"){skRowsSync();const r=view.skRows[+t.closest(".skrow").dataset.i],it=cenItem(r.itemId);if(r&&it&&!r.price&&it.cost)r.price=String(it.cost).replace(".",",");skRe()}
-  else if(t.id==="skkItem"||t.id==="skkDate"||t.id==="skkQty"){skKorSync();render()}
   else if(t.id==="skAsOf"){view.skAsOf=t.value||todayIso();skRe()}
   else if(t.id==="skFItem"){(view.skF=view.skF||{}).item=t.value;skRe()}
   else if(t.id==="skLim"){(view.skF=view.skF||{}).lim=+t.value;skRe()}});
 /* nedostatok na sklade sa ukáže hneď pri písaní množstva (bez prekreslenia stránky) */
-function skInfoUpdate(){const R=view.skRows;if(!R)return;const out=(view.skKeep||{}).skType!=="in",need={};R.forEach(r=>{if(r.itemId)need[r.itemId]=(need[r.itemId]||0)+numIn(r.qty)});
-  document.querySelectorAll(".skrow").forEach(el=>{const r=R[+el.dataset.i],inf=el.querySelector(".sk-info");if(!r||!inf)return;const it=cenItem(r.itemId);if(!it)return;const st=stockOf(it.id),over=out&&need[it.id]>st.qty+1e-9;
-    inf.className="sk-info "+(over?"bad":"muted");inf.textContent=`na sklade ${nf(st.qty)} ${it.mj||""} · ø ${eur(st.avg)}${over?" – nedostatok na sklade":""}`})}
+function skInfoUpdate(){const R=view.skRows;if(!R)return;const inn=(view.skKeep||{}).skType==="in",need={};R.forEach(r=>{if(r.itemId)need[r.itemId]=(need[r.itemId]||0)+numIn(r.qty)});
+  document.querySelectorAll(".skrow").forEach(el=>{const r=R[+el.dataset.i],inf=el.querySelector(".sk-info");if(!r||!inf)return;const it=cenItem(r.itemId);
+    const mj=el.querySelector('[data-f="mj"]'),pr=el.querySelector('[data-f="price"]');
+    if(mj){if(it){mj.value=it.mj||"";mj.readOnly=true}else mj.readOnly=false}
+    if(it&&pr&&!pr.value&&it.cost){pr.value=String(it.cost).replace(".",",");r.price=pr.value}
+    if(!it){inf.className="sk-info "+(r.text&&!inn?"bad":"muted");inf.textContent=!r.text?"":inn?"nový materiál – pri uložení sa založí v cenníku (doplň MJ)":"materiál nie je v cenníku medzi skladovými položkami";return}
+    const st=stockOf(it.id),over=!inn&&need[it.id]>st.qty+1e-9;
+    inf.className="sk-info "+(over?"bad":"muted");inf.textContent=`${it.code?it.code+" · ":""}na sklade ${nf(st.qty)} ${it.mj||""} · ø ${eur(st.avg)}${over?" – nedostatok na sklade":""}`})}
 document.addEventListener("input",ev=>{const t=ev.target;if(!me)return;
   if(t.classList&&t.classList.contains("skR")){skRowsSync();skInfoUpdate();return}
+  if(t.closest&&t.closest("#skKorForm")){skKorSync();return}
   if(t.id==="cenQ"){(view.cenF=view.cenF||{}).q=t.value;const pos=t.selectionStart;render();const e=$("#cenQ");if(e){e.focus();try{e.setSelectionRange(pos,pos)}catch(x){}}}});
 document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||!["cenForm","skForm","skKorForm"].includes(id))return;ev.preventDefault();if(!isAdmin(me))return;
   if(id==="cenForm"){const D=cenRead();if(!D.name||!D.mj){toast("Doplň názov a MJ");return}
@@ -4957,12 +4967,14 @@ document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||!["cenForm
     (S.stock=S.stock||[]).push({id:uid("sk"),type:"kor",date:K.date||todayIso(),itemId:it.id,qty:String(d),price:String(Math.round(st.avg*10000)/10000),note:K.note.trim(),doc:stockDocNo("kor",K.date),by:me.id});
     view.skKor=null;save();toast(`Korekcia uložená: ${d>0?"+":""}${nf(d)} ${it.mj||""}`);render()}
   else{const K=skKeepRead();skRowsSync();const typ=K.skType||"out",date=K.skDate||todayIso();
-    const R=view.skRows.filter(r=>r.itemId||r.qty);if(!R.length){toast("Pridaj aspoň jeden materiál");return}
-    const need={};for(const r of R){const it=cenItem(r.itemId);if(!it){toast("Vyber materiál v každom riadku");return}const q=numIn(r.qty);if(!(q>0)){toast(`${it.name}: zadaj množstvo`);return}
+    const R=view.skRows.filter(r=>r.itemId||r.text||r.qty);if(!R.length){toast("Pridaj aspoň jeden materiál");return}
+    if(typ==="in")for(const r of R){if(!r.itemId&&String(r.text||"").trim()){if(!(r.mj||"").trim()){toast(`Nový materiál „${r.text}“: doplň MJ`);return}}}
+    const need={};for(const r of R){const it=cenItem(r.itemId)||(typ==="in"&&String(r.text||"").trim()?{id:"",name:r.text.trim(),mj:r.mj}:null);if(!it){toast(r.text?`„${r.text}“ nie je v cenníku medzi skladovými položkami`:"Vyplň materiál v každom riadku");return}const q=numIn(r.qty);if(!(q>0)){toast(`${it.name}: zadaj množstvo`);return}
       if(typ==="in"&&!/^\d+(\.\d+)?$/.test(String(r.price||"").replace(/\s/g,"").replace(",","."))){toast(`${it.name}: zadaj nákupnú cenu za MJ`);return}need[it.id]=(need[it.id]||0)+q}
-    if(typ==="out")for(const [iid,q] of Object.entries(need)){const s=stockOf(iid),it=cenItem(iid);if(q>s.qty+1e-9){toast(`${it.name}: na sklade je len ${nf(s.qty)} ${it.mj||""}`);return}}
+    if(typ==="out")for(const [iid,q] of Object.entries(need)){if(!iid)continue;const s=stockOf(iid),it=cenItem(iid);if(q>s.qty+1e-9){toast(`${it.name}: na sklade je len ${nf(s.qty)} ${it.mj||""}`);return}}
     const dn=stockDocNo(typ,date),grp=uid("dk");
-    R.forEach(r=>{const it=cenItem(r.itemId),q=numIn(r.qty);
+    R.forEach(r=>{if(!r.itemId){const pr0=String(r.price).replace(/\s/g,"").replace(",",".");const ni={id:uid("cn"),type:"mat",code:"",name:r.text.trim(),sub:"",mj:r.mj.trim(),price:"",cost:pr0,vat:23,stock:true};(S.cennik=S.cennik||[]).push(ni);r.itemId=ni.id}
+      const it=cenItem(r.itemId),q=numIn(r.qty);
       if(typ==="in"){const pr=String(r.price).replace(/\s/g,"").replace(",",".");let expId="";
         if(K.skExp!==false){const e={id:uid("fe"),date,docNo:K.skDoc,supplier:K.skSup,cat:"mat",area:"sklad",itemId:it.id,qty:String(q),desc:`${it.name} – ${nf(q)} ${it.mj||""}`.trim(),amount:String(Math.round(q*+pr*100)/100),vat:+it.vat||23,grp};(S.finExp=S.finExp||[]).push(e);expId=e.id}
         const m=stockIn({date,itemId:it.id,qty:String(q),price:pr,docNo:K.skDoc,supplier:K.skSup,note:K.skNote,expId,doc:dn});if(expId)S.finExp.find(e=>e.id===expId).stockMove=m.id;if(!it.cost)it.cost=pr}
