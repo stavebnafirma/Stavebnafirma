@@ -879,6 +879,16 @@ table.dxt{font-size:13.5px}table.dxt td.dxw{white-space:normal;min-width:240px;l
 .jfm{display:grid;grid-template-columns:1.2fr 1fr 110px auto;gap:8px;align-items:end}
 @media (max-width:560px){.jfm{grid-template-columns:1fr auto}.jfm>label:nth-child(2),.jfm>:nth-child(3){grid-column:1}}
 .bad{color:var(--bad)}
+/* Firma → Financie */
+.fingrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch}@media (max-width:900px){.fingrid{grid-template-columns:1fr}}
+.finbig{font-size:24px;font-weight:700;line-height:1.15}.finbig .muted{font-size:13px;font-weight:500}.fintot{font-size:34px;color:var(--accent)}
+.finsplit{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px}.finsplit>div{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding:4px 0;font-size:14px}
+.fincols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}@media (max-width:560px){.fincols,.finsplit{grid-template-columns:1fr}}
+.fincol{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}.fincol .finbig{font-size:20px}
+.finrec{list-style:none;margin:0;padding:0;font-size:13px}.finrec li{display:flex;justify-content:space-between;gap:6px;padding:2px 0}.finrec li{border-top:1px solid var(--line);padding:4px 0;flex-wrap:wrap;column-gap:8px;row-gap:0}.finrec li span{flex:1 1 110px}.finrec li b{margin-left:auto}.finrec li span{min-width:0;overflow-wrap:anywhere}.finrec li b{white-space:nowrap;font-weight:600}
+.fintab{width:100%}.fintab td{vertical-align:top}.fintab td.num{font-family:inherit;white-space:nowrap}.fintab td{overflow-wrap:anywhere}
+.fininc{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:18px;align-items:start}@media (max-width:900px){.fininc{grid-template-columns:1fr}}
+.findel{color:var(--bad)}
 .logbox{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface)}
 table.jlog{width:100%;border-collapse:collapse;font-size:13px}table.jlog th{font-size:11px;text-align:left;padding:4px}table.jlog td{padding:3px 4px;border-bottom:1px solid var(--line)}
 table.jlog input{padding:5px 7px;font-size:13px;min-width:90px}table.jlog input.nin{width:70px;min-width:60px;text-align:right}
@@ -4448,7 +4458,7 @@ function navHTML(){if(!me||view.screen==="setup"||needsProfile())return "";
   return `<nav class="topnav" role="tablist" aria-label="Hlavné menu">${items.map(k=>{const locked=k!=="firma"&&!hasMod(SEC_MOD[k]);const n=0;const [full,short]=NAV_LABELS[k];
     return `<button class="ntab ${locked?"locked":""}" role="tab" aria-selected="${cur===k}" data-a="${locked?"secLocked":"sec"}" data-sec="${k}" ${locked?`title="Modul ${full} nie je v predplatnom"`:""}>${icon(locked?"lock":k)}<span class="l-full">${full}</span><span class="l-short">${short}</span>${n?`<span class="badge">${n}</span>`:""}</button>`}).join("")}</nav>`}
 function setupHTML(){return `<div class="stack"><div><div class="eyebrow">Vitaj v aplikácii, ${esc(me.name)}</div><h1>Nastavenie firmy</h1></div>${firmFormHTML("setup")}</div>`}
-function firmTabs(){return [["nastenka","Nástenka"],["udaje","Údaje o firme"],...(isCompanyRole(me)?[["zam","Zamestnanci"],["park","Strojový a vozový park"]]:[]),["moduly","Moduly"],["role","Používatelia a prístupy"],["ponuka","Ponuka strojov"]]}
+function firmTabs(){return [["nastenka","Nástenka"],["udaje","Údaje o firme"],...(isCompanyRole(me)?[["zam","Zamestnanci"],["park","Strojový a vozový park"]]:[]),...(isAdmin(me)?[["fin","Financie"]]:[]),["moduly","Moduly"],["role","Používatelia a prístupy"],["ponuka","Ponuka strojov"]]}
 function firmTabCur(){const t=view.firmTab||"nastenka";return firmTabs().some(x=>x[0]===t)?t:"nastenka"}
 /* ---------- Nástenka: prehľad zo všetkých modulov ---------- */
 function dashFleetHTML(){
@@ -4468,9 +4478,126 @@ function nastenkaHTML(){
   const bubbles=nbBubbles();
   return `<div class="stack"><div class="muted">Prehľad aktuálnych udalostí v Tvojej firme. Nastavenie nástenky zmeníš v karte „Údaje o firme“.</div>
     <div class="dash nbdash">${bubbles.join("")||`<div class="card muted">Pre tvoju rolu tu zatiaľ nie sú žiadne prehľady.</div>`}</div></div>`}
+/* ---------- Firma → Financie: výdavky a príjmy firmy (len administrátor) ----------
+   S.finExp – výdavky firmy {id,date,docNo,supplier,cat,area,machineId,desc,amount(bez DPH),vat,recurring,until,file}
+   S.finInc – príjmy {id,date,type:"fa"|"vrp",docNo,client,projectId,desc,amount(bez DPH),vat,due,paid}
+   Prehľad výdavkov spája výdavky firmy, náklady zo stavieb (Stavba → Ekonomika) a servis/termíny strojov (Doprava). */
+const FIN_AREAS=[["stroje","Stroje a vozový park"],["pers","Personalistika"],["rezia","Režijné náklady"],["stavba","Stavby"]];
+const FIN_CATS=[["phm","PHM","stroje"],["servis","Servis a opravy","stroje"],["leasing","Leasing a splátky","stroje"],["poist","Poistenie","stroje"],["mzdy","Mzdy a odvody","pers"],["ooppc","Pracovné odevy a OOPP","pers"],["skol","Školenia a lekárske prehliadky","pers"],
+  ["najom","Nájom","rezia"],["energie","Energie","rezia"],["tel","Telefón a internet","rezia"],["kanc","Kancelária a softvér","rezia"],["uct","Účtovníctvo a služby","rezia"],["mat","Materiál","rezia"],["ine","Iné","rezia"]];
+const FIN_VAT=[23,19,5,0];
+const finArea=k=>(FIN_AREAS.find(a=>a[0]===k)||[,"Iné"])[1];
+const finCat=k=>(FIN_CATS.find(c=>c[0]===k)||[,k||"Iné"])[1];
+const finYear=()=>view.finYear||todayIso().slice(0,4);
+const withVat=(a,v)=>Math.round(numIn(a)*(1+(+v||0)/100)*100)/100;
+/* mesiace pravidelného výdavku v danom roku (od mesiaca začiatku, najviac po aktuálny mesiac a po „do“) */
+function finMonths(x,y){const nowYm=todayIso().slice(0,7),start=(x.date||"").slice(0,7),end=[nowYm,x.until?x.until.slice(0,7):"9999-99"].sort()[0];const out=[];
+  for(let m=1;m<=12;m++){const ym=`${y}-${String(m).padStart(2,"0")}`;if(ym>=start&&ym<=end)out.push(ym)}return out}
+/* všetky výdavky firmy za rok – jeden riadok = jeden doklad (pravidelný výdavok = riadok za každý mesiac) */
+function finAllExp(y){const out=[],inY=d=>(d||"").startsWith(y);
+  (S.finExp||[]).forEach(x=>{if(x.recurring){finMonths(x,y).forEach(ym=>out.push({key:x.id+"|"+ym,id:x.id,date:ym+"-"+(x.date||"").slice(8,10),src:"firma",area:x.area,cat:finCat(x.cat),desc:x.desc,supplier:x.supplier,docNo:x.docNo,amount:numIn(x.amount),vat:x.vat,recurring:true,machineId:x.machineId}))}
+    else if(inY(x.date))out.push({key:x.id,id:x.id,date:x.date,src:"firma",area:x.area,cat:finCat(x.cat),desc:x.desc,supplier:x.supplier,docNo:x.docNo,amount:numIn(x.amount),vat:x.vat,machineId:x.machineId,file:x.file})});
+  (S.costs||[]).forEach(c=>{if(!inY(c.date))return;const p=S.projects.find(q=>q.id===c.projectId);
+    out.push({key:"c|"+c.id,date:c.date,src:"stavba",area:"stavba",cat:costCat(c.cat),desc:c.desc,supplier:c.supplier,docNo:c.docNo,amount:numIn(c.amount),proj:p?p.name:"",projectId:c.projectId})});
+  (S.machines||[]).forEach(m=>(m.log||[]).forEach(l=>{if(!inY(l.date)||!numIn(l.cost))return;
+    out.push({key:"m|"+m.id+"|"+l.id,date:l.date,src:"stroj",area:"stroje",cat:l.term?"Termíny a poplatky":"Servis a opravy",desc:l.desc,amount:numIn(l.cost),machine:[m.name,m.ecv].filter(Boolean).join(" · "),machineId:m.id})}));
+  return out.sort((a,b)=>(b.date||"").localeCompare(a.date||""))}
+function finExpFormHTML(){const D=view.finEdit&&view.finEdit!=="__new"?(S.finExp||[]).find(x=>x.id===view.finEdit)||{}:{date:todayIso(),cat:"phm",area:"stroje",vat:23};
+  const area=D.area||"stroje",mach=(S.machines||[]).filter(m=>!m.archived);
+  return `<form class="card stack finbox" id="finExpForm"><div class="entry-head"><h3>${view.finEdit&&view.finEdit!=="__new"?"Upraviť výdavok":"Nový výdavok"}</h3>${view.finEdit&&view.finEdit!=="__new"?`<button type="button" class="btn small ghost" data-a="finCancel">Zrušiť</button>`:""}</div>
+    <div class="grid2"><label>Dátum dokladu<input type="date" id="feDate" value="${esc(D.date||"")}" required></label><label>Číslo dokladu<input id="feNo" value="${esc(D.docNo||"")}" placeholder="faktúra, bloček"></label></div>
+    <div class="grid2"><label>Kategória<select id="feCat">${FIN_CATS.map(([k,l])=>`<option value="${k}" ${D.cat===k?"selected":""}>${l}</option>`).join("")}</select></label>
+      <label>Patrí do<select id="feArea">${FIN_AREAS.filter(a=>a[0]!=="stavba").map(([k,l])=>`<option value="${k}" ${area===k?"selected":""}>${l}</option>`).join("")}</select></label></div>
+    ${area==="stroje"&&mach.length?`<label>Stroj alebo vozidlo (nepovinné)<select id="feMach"><option value="">–</option>${mach.map(m=>`<option value="${m.id}" ${D.machineId===m.id?"selected":""}>${esc([m.name,m.ecv].filter(Boolean).join(" · "))}</option>`).join("")}</select></label>`:""}
+    <div class="grid2"><label>Dodávateľ<input id="feSup" value="${esc(D.supplier||"")}" list="feSups" placeholder="napr. Slovnaft"></label><label>Popis<input id="feDesc" value="${esc(D.desc||"")}" placeholder="napr. nafta 60 l"></label></div>
+    <datalist id="feSups">${[...new Set([...(S.finExp||[]),...(S.costs||[])].map(c=>c.supplier).filter(Boolean))].sort().map(s=>`<option value="${esc(s)}">`).join("")}</datalist>
+    <div class="grid2"><label>Suma bez DPH (€)<input id="feAmt" inputmode="decimal" value="${esc(D.amount!=null?String(D.amount).replace(".",","):"")}" placeholder="0,00" required></label>
+      <label>DPH<select id="feVat">${FIN_VAT.map(v=>`<option value="${v}" ${+D.vat===v?"selected":""}>${v} %</option>`).join("")}</select></label></div>
+    <div><label class="chk"><input type="checkbox" id="feRec" ${D.recurring?"checked":""}> Pravidelný mesačný výdavok</label><div class="muted" style="font-size:12.5px;margin:2px 0 0 24px">leasing, nájom, mzdy… – zadáš raz, počíta sa každý mesiac</div></div>
+    ${D.recurring?`<label>Platí do (nepovinné)<input type="date" id="feUntil" value="${esc(D.until||"")}"></label>`:""}
+    <div class="row"><button class="btn primary" type="submit">${view.finEdit&&view.finEdit!=="__new"?"Uložiť":"+ Pridať výdavok"}</button>${view.finEdit&&view.finEdit!=="__new"?`<button type="button" class="btn ghost findel" data-a="finDel">Odstrániť</button>`:""}</div></form>`}
+function finSumHTML(all,y){const sum=a=>all.filter(x=>!a||x.area===a).reduce((s,x)=>s+x.amount,0),tot=sum();
+  const rec=(S.finExp||[]).filter(x=>x.recurring&&(!x.until||x.until>=todayIso()));
+  const col=a=>{const L=rec.filter(x=>x.area===a),s=L.reduce((t,x)=>t+numIn(x.amount),0);
+    return `<div class="fincol"><div class="eyebrow">${finArea(a)}</div><div><div class="finbig">${eur(s)}</div><div class="muted" style="font-size:12px">mesačne</div></div>
+      ${L.length?`<ul class="finrec">${L.map(x=>`<li><span>${esc(x.desc||finCat(x.cat))}</span><b>${eur(numIn(x.amount))}</b></li>`).join("")}</ul>`:`<div class="muted" style="font-size:13px">Žiadne pravidelné výdavky.</div>`}</div>`};
+  return `<div class="card stack finbox"><div class="entry-head"><h3>Priebežný stav</h3><select id="finYear" aria-label="Rok">${[...new Set([todayIso().slice(0,4),y,...(S.finExp||[]).map(x=>(x.date||"").slice(0,4)),...(S.costs||[]).map(c=>(c.date||"").slice(0,4))].filter(Boolean))].sort().reverse().map(v=>`<option ${v===y?"selected":""}>${v}</option>`).join("")}</select></div>
+    <div><div class="muted" style="font-size:13px">Výdavky za rok ${y} spolu bez DPH</div><div class="finbig fintot">${eur(tot)}</div></div>
+    <div class="finsplit">${FIN_AREAS.map(([k,l])=>`<div><span class="muted">${l}</span><b>${eur(sum(k))}</b></div>`).join("")}</div>
+    <div class="eyebrow" style="margin-top:6px">Pravidelné mesačné výdavky</div>
+    <div class="fincols">${["stroje","pers","rezia"].map(col).join("")}</div></div>`}
+function finListHTML(all){const F=view.finF||{},lim=F.lim!=null?F.lim:10;
+  const L=all.filter(x=>(!F.area||x.area===F.area)&&(!F.src||x.src===F.src)&&(!F.q||[x.desc,x.supplier,x.docNo,x.cat,x.proj,x.machine].join(" ").toLowerCase().includes(F.q.toLowerCase())));
+  const shown=lim?L.slice(0,lim):L,src={firma:"Firma",stavba:"Stavba",stroj:"Stroj"};
+  const rows=shown.map(x=>`<tr${x.src==="firma"?` class="clickrow" data-a="finOpen" data-id="${x.id}"`:x.src==="stavba"?` class="clickrow" data-a="finProj" data-id="${x.projectId}"`:""}><td class="num">${d2(x.date)}</td><td>${esc(x.cat)}${x.recurring?` <span class="pill">mesačne</span>`:""}<div class="muted" style="font-size:12px">${finArea(x.area)}</div></td>
+    <td>${esc(x.desc||"")}${x.supplier?`<div class="muted" style="font-size:12px">${esc(x.supplier)}${x.docNo?" · "+esc(x.docNo):""}</div>`:x.docNo?`<div class="muted" style="font-size:12px">${esc(x.docNo)}</div>`:""}</td>
+    <td><span class="muted">${src[x.src]}</span>${x.proj?`<div style="font-size:12px">${esc(x.proj)}</div>`:x.machine?`<div style="font-size:12px">${esc(x.machine)}</div>`:x.machineId?`<div style="font-size:12px">${esc(((S.machines||[]).find(m=>m.id===x.machineId)||{}).name||"")}</div>`:""}</td>
+    <td class="num r">${eur(x.amount)}</td></tr>`).join("");
+  return `<div class="card stack"><div class="entry-head ecdh"><h3>Všetky výdavky</h3><div class="ecdh-r">
+      <input id="finQ" type="search" placeholder="Hľadať…" value="${esc(F.q||"")}" style="max-width:180px">
+      <select id="finFArea"><option value="">všetky oblasti</option>${FIN_AREAS.map(([k,l])=>`<option value="${k}" ${F.area===k?"selected":""}>${l}</option>`).join("")}</select>
+      <select id="finFSrc"><option value="">všetky zdroje</option><option value="firma" ${F.src==="firma"?"selected":""}>Firma</option><option value="stavba" ${F.src==="stavba"?"selected":""}>Stavby</option><option value="stroj" ${F.src==="stroj"?"selected":""}>Servis strojov</option></select>
+      <select id="finLim">${[[10,"posledných 10"],[50,"posledných 50"],[100,"posledných 100"],[0,"všetky"]].map(([n,l])=>`<option value="${n}" ${lim===n?"selected":""}>${l}</option>`).join("")}</select></div></div>
+    ${L.length?`<div class="tablewrap"><table class="fintab"><thead><tr><th>Dátum</th><th>Kategória / oblasť</th><th>Popis</th><th>Zdroj</th><th class="r">Bez DPH</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="4"><b>Spolu ${L.length} ${pl(L.length,"položka","položky","položiek")}</b>${shown.length<L.length?`<span class="muted" style="font-size:12px"> · v zozname zobrazených ${shown.length}</span>`:""}</td><td class="num r"><b>${eur(L.reduce((s,x)=>s+x.amount,0))}</b></td></tr></tfoot></table></div>`
+      :`<div class="muted">Žiadne výdavky${F.area||F.src||F.q?" pre zvolený filter":" za tento rok"}.</div>`}
+    <div class="muted" style="font-size:13px">Okrem výdavkov firmy sa tu automaticky zobrazujú náklady zadané v stavbách (Stavba → Ekonomika) a zapísané servisy a termíny strojov (Doprava a logistika).</div></div>`}
+function finIncHTML(y){const L=(S.finInc||[]).filter(x=>(x.date||"").startsWith(y)).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const D=view.finIncEdit&&view.finIncEdit!=="__new"?(S.finInc||[]).find(x=>x.id===view.finIncEdit)||{}:{date:todayIso(),type:"fa",vat:23};
+  const tot=L.reduce((s,x)=>s+numIn(x.amount),0),unpaid=L.filter(x=>!x.paid).reduce((s,x)=>s+withVat(x.amount,x.vat),0),ed=view.finIncEdit&&view.finIncEdit!=="__new";
+  return `<div class="card stack"><div class="entry-head"><h3>Príjmy</h3><div class="row" style="gap:16px"><span>Za rok ${y} bez DPH <b>${eur(tot)}</b></span>${unpaid?`<span class="bad">Neuhradené s DPH <b>${eur(unpaid)}</b></span>`:""}</div></div>
+    <div class="fininc">
+    <form class="stack" id="finIncForm"><div class="eyebrow">${ed?"Upraviť príjem":"Nový príjem"}</div>
+      <div class="seg" role="radiogroup" aria-label="Druh dokladu"><label><input type="radio" name="fiType" value="fa" ${D.type!=="vrp"?"checked":""}><span>Faktúra</span></label><label><input type="radio" name="fiType" value="vrp" ${D.type==="vrp"?"checked":""}><span>Bloček z VRP</span></label></div>
+      <div class="grid2"><label>Dátum<input type="date" id="fiDate" value="${esc(D.date||"")}" required></label><label>Číslo dokladu<input id="fiNo" value="${esc(D.docNo||"")}" placeholder="napr. 2026015"></label></div>
+      <div class="grid2"><label>Odberateľ<input id="fiClient" value="${esc(D.client||"")}" list="fiClients" placeholder="názov firmy alebo meno"></label>
+        <label>Stavba (nepovinné)<select id="fiProj"><option value="">–</option>${S.projects.map(p=>`<option value="${p.id}" ${D.projectId===p.id?"selected":""}>${esc(p.name)}</option>`).join("")}</select></label></div>
+      <datalist id="fiClients">${[...new Set([...(S.finInc||[]).map(x=>x.client),...S.projects.map(p=>p.client)].filter(Boolean))].sort().map(s=>`<option value="${esc(s)}">`).join("")}</datalist>
+      <label>Popis<input id="fiDesc" value="${esc(D.desc||"")}" placeholder="napr. 2. čiastková faktúra"></label>
+      <div class="grid3"><label>Suma bez DPH (€)<input id="fiAmt" inputmode="decimal" value="${esc(D.amount!=null?String(D.amount).replace(".",","):"")}" placeholder="0,00" required></label>
+        <label>DPH<select id="fiVat">${FIN_VAT.map(v=>`<option value="${v}" ${+D.vat===v?"selected":""}>${v} %</option>`).join("")}</select></label>
+        <label>Splatnosť<input type="date" id="fiDue" value="${esc(D.due||"")}"></label></div>
+      <label class="chk"><input type="checkbox" id="fiPaid" ${D.paid||D.type==="vrp"?"checked":""}> Uhradené</label>
+      <div class="row"><button class="btn primary" type="submit">${ed?"Uložiť":"+ Pridať príjem"}</button>${ed?`<button type="button" class="btn ghost" data-a="finIncCancel">Zrušiť</button><button type="button" class="btn ghost findel" data-a="finIncDel">Odstrániť</button>`:""}</div></form>
+    <div class="stack" style="min-width:0">${L.length?`<div class="tablewrap"><table class="fintab"><thead><tr><th>Dátum</th><th>Doklad a odberateľ</th><th class="r">Suma</th></tr></thead><tbody>
+      ${L.map(x=>{const late=!x.paid&&x.due&&x.due<todayIso();return `<tr class="clickrow" data-a="finIncOpen" data-id="${x.id}"><td class="num">${d2(x.date)}</td><td>${x.type==="vrp"?"Bloček VRP":"Faktúra"}${x.docNo?` ${esc(x.docNo)}`:""}${x.client?`<div>${esc(x.client)}</div>`:""}<div class="muted" style="font-size:12px">${[x.desc,x.projectId?(S.projects.find(p=>p.id===x.projectId)||{}).name:""].filter(Boolean).map(esc).join(" · ")}</div></td><td class="num r"><b>${eur(numIn(x.amount))}</b><div class="muted" style="font-size:12px">s DPH ${eur(withVat(x.amount,x.vat))}</div>
+        <div style="margin-top:3px">${x.paid?`<span class="pill s-ok">uhradená</span>`:`<span class="pill ${late?"s-lock":"s-open"}">${late?"po splatnosti":"neuhradená"}</span>`}</div></td></tr>`}).join("")}</tbody></table></div>`:`<div class="muted">Za rok ${y} zatiaľ žiadne príjmy.</div>`}
+      <div class="muted" style="font-size:13px">Zatiaľ sa príjmy zapisujú ručne. Prepojenie s fakturáciou v KROS-e doplníme neskôr.</div></div></div></div>`}
+function financeHTML(){const y=finYear(),all=finAllExp(y);
+  return `<div class="stack"><div class="fingrid">${finExpFormHTML()}${finSumHTML(all,y)}</div>${finListHTML(all)}${finIncHTML(y)}</div>`}
+document.addEventListener("click",ev=>{const b=ev.target.closest&&ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;
+  if(!/^fin/.test(a)||!isAdmin(me))return;
+  if(a==="finOpen"){view.finEdit=b.dataset.id;render();window.scrollTo({top:0,behavior:"smooth"})}
+  else if(a==="finCancel"){view.finEdit=null;render()}
+  else if(a==="finDel"){const x=(S.finExp||[]).find(e=>e.id===view.finEdit);if(!x)return;S.finExp=S.finExp.filter(e=>e!==x);view.finEdit=null;save();toast("Výdavok odstránený");render()}
+  else if(a==="finProj"){view={screen:"project",projectId:b.dataset.id,tab:"ekonomika"};render()}
+  else if(a==="finIncOpen"){view.finIncEdit=b.dataset.id;render()}
+  else if(a==="finIncCancel"){view.finIncEdit=null;render()}
+  else if(a==="finIncDel"){const x=(S.finInc||[]).find(e=>e.id===view.finIncEdit);if(!x)return;S.finInc=S.finInc.filter(e=>e!==x);view.finIncEdit=null;save();toast("Príjem odstránený");render()}});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me||!isAdmin(me))return;
+  if(t.id==="finYear"){view.finYear=t.value;render()}
+  else if(t.id==="finFArea"||t.id==="finFSrc"||t.id==="finLim"){view.finF={...(view.finF||{}),[{finFArea:"area",finFSrc:"src",finLim:"lim"}[t.id]]:t.id==="finLim"?+t.value:t.value};render()}
+  else if(t.id==="feCat"){const c=FIN_CATS.find(x=>x[0]===t.value);if(c&&$("#feArea")){$("#feArea").value=c[2];$("#feArea").dispatchEvent(new Event("change",{bubbles:true}))}}
+  else if(t.id==="feArea"||t.id==="feRec"){const keep=finFormKeep();view.finKeep=keep;render();finFormRestore()}});
+document.addEventListener("input",ev=>{const t=ev.target;if(t.id!=="finQ")return;view.finF={...(view.finF||{}),q:t.value};clearTimeout(view.__finQ);view.__finQ=setTimeout(()=>{const pos=t.selectionStart;render();const n=$("#finQ");if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}},250)});
+/* pri zmene „Patrí do“ / „Pravidelný“ sa formulár prekreslí – rozpísané hodnoty sa zachovajú */
+function finFormKeep(){const o={};["feDate","feNo","feCat","feArea","feMach","feSup","feDesc","feAmt","feVat","feUntil"].forEach(k=>{const e=$("#"+k);if(e)o[k]=e.value});o.feRec=!!$("#feRec")?.checked;return o}
+function finFormRestore(){const o=view.finKeep;if(!o)return;Object.entries(o).forEach(([k,v])=>{const e=$("#"+k);if(!e)return;if(k==="feRec")e.checked=v;else e.value=v});view.finKeep=null;
+  if(o.feRec&&!$("#feUntil")){/* doplní pole „Platí do“ */const f=$("#feRec").closest("label");f.insertAdjacentHTML("afterend",`<label>Platí do (nepovinné)<input type="date" id="feUntil" value=""></label>`)}
+  if(!o.feRec)$("#feUntil")?.closest("label")?.remove()}
+document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||(id!=="finExpForm"&&id!=="finIncForm"))return;ev.preventDefault();if(!isAdmin(me))return;
+  const v=k=>($("#"+k)?.value||"").trim();
+  if(id==="finExpForm"){const amt=moneyVal("feAmt");if(!amt){toast("Suma má mať tvar napr. 90 alebo 89,50");return}
+    const isNew=!view.finEdit||view.finEdit==="__new",x=isNew?{id:uid("fe")}:(S.finExp||[]).find(e=>e.id===view.finEdit);if(!x)return;
+    Object.assign(x,{date:v("feDate"),docNo:v("feNo"),cat:v("feCat"),area:v("feArea"),machineId:v("feArea")==="stroje"?v("feMach"):"",supplier:v("feSup"),desc:v("feDesc"),amount:amt,vat:+v("feVat"),recurring:!!$("#feRec").checked,until:$("#feRec").checked?v("feUntil"):""});
+    if(isNew)(S.finExp=S.finExp||[]).push(x);view.finEdit=null;save();toast(isNew?"Výdavok pridaný":"Výdavok uložený");render()}
+  else{const amt=moneyVal("fiAmt");if(!amt){toast("Suma má mať tvar napr. 1200 alebo 1199,90");return}
+    const isNew=!view.finIncEdit||view.finIncEdit==="__new",x=isNew?{id:uid("fi")}:(S.finInc||[]).find(e=>e.id===view.finIncEdit);if(!x)return;
+    Object.assign(x,{type:document.querySelector('input[name="fiType"]:checked').value,date:v("fiDate"),docNo:v("fiNo"),client:v("fiClient"),projectId:v("fiProj"),desc:v("fiDesc"),amount:amt,vat:+v("fiVat"),due:v("fiDue"),paid:!!$("#fiPaid").checked});
+    if(isNew)(S.finInc=S.finInc||[]).push(x);view.finIncEdit=null;save();toast(isNew?"Príjem pridaný":"Príjem uložený");render()}});
 function firmaHTML(){
   const t=firmTabCur(),tabs="";
-  const body=t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():t==="ponuka"?marketHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML()+mailSetHTML()+accDelHTML("firm"));
+  const body=t==="fin"?financeHTML():t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():t==="ponuka"?marketHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML()+mailSetHTML()+accDelHTML("firm"));
   return `<div class="stack"><div><div class="eyebrow">Firma</div><h1>${esc(S.firm.name||"Firma")}</h1></div>${tabs}${t==="udaje"&&!view.firmEditing?firmStartRowHTML():""}${body}</div>`}
 const P_TABS=[["emp","Zamestnanci"],["att","Dochádzka"],["mzdy","Podklady pre mzdy"],["sc","Služobné cesty"],["skol","Školenia"],["ost","Ostatné"]];
 /* služobné cesty sa skladajú z dní "SC" v dochádzke; po sebe idúce dni jedného zamestnanca = jedna cesta */
@@ -6630,6 +6757,21 @@ document.addEventListener("submit",ev=>{
     if(m){m.role=role;if(role==="extsv")m.areaIds=ar||[];else delete m.areaIds;toast("Rola aktualizovaná")}else{p.members.push({userId:u.id,role,status:"pozvaný",...(ar?{areaIds:ar}:{})});toast("Pozvánka pripravená. Odhlás sa a prihlás jeho e-mailom.")}
     save();render()}
 });
+/* ukážkové výdavky a príjmy firmy (Firma → Financie) */
+if(!ROOT.tenants.demo.finExp){const T=ROOT.tenants.demo,y=new Date().getFullYear(),m1=y+"-01-01";
+  T.finExp=[{id:"fe1",date:m1,cat:"leasing",area:"stroje",machineId:(T.machines||[])[0]?.id||"",supplier:"ČSOB Leasing",desc:"Leasing nakladača",amount:"850",vat:23,recurring:true},
+    {id:"fe2",date:m1,cat:"najom",area:"rezia",supplier:"Mesto",desc:"Nájom kancelárie",amount:"420",vat:0,recurring:true},
+    {id:"fe3",date:m1,cat:"uct",area:"rezia",supplier:"Účtovníctvo Novák",desc:"Vedenie účtovníctva",amount:"180",vat:23,recurring:true},
+    {id:"fe4",date:m1,cat:"mzdy",area:"pers",desc:"Mzdy a odvody – administratíva",amount:"2650",vat:0,recurring:true},
+    {id:"fe5",date:m1,cat:"tel",area:"rezia",supplier:"Telekom",desc:"Mobilné paušály",amount:"96",vat:23,recurring:true},
+    {id:"fe6",date:todayIso(),docNo:"BL-2041",cat:"phm",area:"stroje",machineId:(T.machines||[])[1]?.id||"",supplier:"Slovnaft",desc:"Nafta 62 l",amount:"84.60",vat:23},
+    {id:"fe7",date:todayIso().slice(0,8)+"03",docNo:"FA-55812",cat:"ooppc",area:"pers",supplier:"Pracovné odevy s.r.o.",desc:"Zimné bundy 6 ks",amount:"312",vat:23}];
+  T.finInc=[{id:"fi1",date:todayIso().slice(0,8)+"02",type:"fa",docNo:"2026041",client:"Mesto Tornaľa",projectId:"p3",desc:"2. čiastková faktúra",amount:"18450",vat:23,due:todayIso().slice(0,8)+"16",paid:false},
+    {id:"fi2",date:todayIso().slice(0,8)+"05",type:"vrp",docNo:"VRP 0187",client:"Súkromná osoba",desc:"Odvoz sutiny",amount:"120",vat:23,paid:true}];
+  if(!(T.costs||[]).length){const d=todayIso().slice(0,8);T.costs=[{id:"nk1",projectId:"p1",cat:"mat",date:d+"04",supplier:"Stavebniny Javor",docNo:"FA-7781",desc:"Cement, malta, tvárnice",amount:"1840.50"},
+    {id:"nk2",projectId:"p2",cat:"sub",date:d+"06",supplier:"Lešenár s.r.o.",docNo:"FA-2026/118",desc:"Prenájom lešenia",amount:"960"},
+    {id:"nk3",projectId:"p1",cat:"dop",date:y+"-02-12",supplier:"Autodoprava Breza",docNo:"FA-310",desc:"Odvoz sutiny",amount:"420"}]}
+  try{localStorage.setItem(KEY,JSON.stringify(ROOT))}catch(e){}}
 if(!ROOT.tenants.demo.trainings){ROOT.tenants.demo.trainings=SEED_TRAININGS();try{localStorage.setItem(KEY,JSON.stringify(ROOT))}catch(e){}}
 if(ROOT.tenants.demo.machines&&!ROOT.tenants.demo.mig12){const KM={m4:1.2,m5:0.45};ROOT.tenants.demo.machines.forEach(m=>{if(KM[m.id]&&m.rateKm==null)m.rateKm=KM[m.id]});ROOT.tenants.demo.mig12=true;try{localStorage.setItem(KEY,JSON.stringify(ROOT))}catch(e){}}
 if(ROOT.tenants.demo.jobs&&!ROOT.tenants.demo.mig11){const j1=ROOT.tenants.demo.jobs.find(j=>j.id==="jb1");if(j1&&!j1.log)j1.log=SEED_JOBS()[0].log;ROOT.tenants.demo.mig11=true;try{localStorage.setItem(KEY,JSON.stringify(ROOT))}catch(e){}}
