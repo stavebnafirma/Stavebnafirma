@@ -927,6 +927,8 @@ table.dxt{font-size:13.5px}table.dxt td.dxw{white-space:normal;min-width:240px;l
 .cenpart{display:grid;grid-template-columns:minmax(0,1fr) 80px 44px 100px 34px;gap:8px;align-items:center}@media (max-width:560px){.cenpart{grid-template-columns:minmax(0,1fr) 70px 34px}.cenpart>span{display:none}}
 .okmsg{background:var(--tint);border-radius:8px;padding:8px 12px;font-size:13.5px}
 .obup{cursor:pointer}.obup.dis{opacity:.6;cursor:progress}
+.fintab td.finsrc{max-width:220px}.finsrcn{font-size:12px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:560px){.fintab td.finsrc,.finsrcn{max-width:140px}}
 .fintab{width:100%}.fintab td{vertical-align:top}.fintab td.num{font-family:inherit;white-space:nowrap}.fintab td{overflow-wrap:anywhere}
 .fininc{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:18px;align-items:start}@media (max-width:900px){.fininc{grid-template-columns:1fr}}
 .findel{color:var(--bad)}
@@ -5042,7 +5044,7 @@ function finListHTML(all){const F=view.finF||{},lim=F.lim!=null?F.lim:10;
   const shown=lim?L.slice(0,lim):L,src={firma:"Firma",stavba:"Stavba",stroj:"Stroj"};
   const rows=shown.map(x=>`<tr${x.src==="firma"?` class="clickrow" data-a="finOpen" data-id="${x.id}"`:x.src==="stavba"?` class="clickrow" data-a="finProj" data-id="${x.projectId}"`:""}><td class="num">${d2(x.date)}</td><td>${esc(x.cat)}${x.recurring?` <span class="pill">mesačne</span>`:""}<div class="muted" style="font-size:12px">${finArea(x.area)}</div></td>
     <td>${esc(x.desc||"")}${x.supplier?`<div class="muted" style="font-size:12px">${esc(x.supplier)}${x.docNo?" · "+esc(x.docNo):""}</div>`:x.docNo?`<div class="muted" style="font-size:12px">${esc(x.docNo)}</div>`:""}</td>
-    <td><span class="muted">${src[x.src]}</span>${x.proj?`<div style="font-size:12px">${esc(x.proj)}</div>`:x.machine?`<div style="font-size:12px">${esc(x.machine)}</div>`:x.machineId?`<div style="font-size:12px">${esc(((S.machines||[]).find(m=>m.id===x.machineId)||{}).name||"")}</div>`:""}</td>
+    <td class="finsrc">${(()=>{const n=x.proj||x.machine||(x.machineId?((S.machines||[]).find(m=>m.id===x.machineId)||{}).name:"")||"";return `<span class="muted">${src[x.src]}</span>${n?`<div class="finsrcn" title="${esc(n)}">${esc(n)}</div>`:""}`})()}</td>
     <td class="num r">${eur(x.amount)}</td></tr>`).join("");
   return `<div class="card stack"><div class="entry-head ecdh"><h3>Všetky výdavky</h3><div class="ecdh-r">
       <input id="finQ" type="search" placeholder="Hľadať…" value="${esc(F.q||"")}" style="max-width:180px">
