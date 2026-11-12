@@ -906,6 +906,8 @@ table.dxt{font-size:13.5px}table.dxt td.dxw{white-space:normal;min-width:240px;l
 .obpick{gap:8px}.obpick #obPick{flex:1 1 280px;max-width:520px}
 .acpop{position:absolute;z-index:9999;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.18);max-height:300px;overflow:auto;padding:4px}
 .acopt{padding:8px 10px;border-radius:7px;cursor:pointer;font-size:14px;line-height:1.3}.acopt:hover,.acopt.on{background:var(--tint)}
+.skcrumb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px}.skcrumb .linkbtn{font-weight:500}
+.skmove{max-width:190px;font-size:13px;padding:4px 6px;min-height:0}.skfic{font-size:15px}
 .skrows{display:flex;flex-direction:column;gap:8px}
 .skrow{display:grid;grid-template-columns:minmax(0,1fr) 110px 34px;gap:4px 8px;align-items:end;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
 .skrow.in{grid-template-columns:minmax(0,1fr) 84px 70px 100px 34px}.skrow label{gap:2px}.skrow label>span{font-size:11.5px;color:var(--muted);font-weight:600}.skrow select,.skrow input{min-width:0}
@@ -4605,7 +4607,7 @@ function feRowsSave(){feRowsSync();const v=id=>($("#"+id)?.value||"").trim(),dat
     if(r.dest==="sklad"&&(!r.name||!(numIn(r.qty)>0))){toast(`Položka na sklad „${r.name||"?"}“: doplň názov a množstvo`);return false}}
   let n=0,pdoc=null;R.forEach(r=>{const amt=String(+String(r.amt).replace(/\s|€/g,"").replace(",",".")),qty=numIn(r.qty),desc=[r.name,qty?`${nf(qty)} ${r.mj||""}`.trim():""].filter(Boolean).join(" – ");
     if(r.dest==="sklad"){let it=(S.cennik||[]).find(i=>i.type==="mat"&&acNorm(i.name)===acNorm(r.name));const unit=String(Math.round(+amt/qty*10000)/10000);
-      if(!it){it={id:uid("cn"),type:"mat",code:"",name:r.name,sub:"",mj:r.mj||"ks",price:"",cost:unit,vat:+r.vat,stock:true};(S.cennik=S.cennik||[]).push(it)}
+      if(!it){it={id:uid("cn"),type:"mat",code:"",name:r.name,sub:"",mj:r.mj||"ks",price:"",cost:unit,vat:+r.vat,stock:true,folderId:skFolder(view.skFolder)?view.skFolder:""};(S.cennik=S.cennik||[]).push(it)}
       const x={id:uid("fe"),date,docNo,supplier,cat:"mat",area:"sklad",itemId:it.id,qty:String(qty),desc,amount:amt,vat:+r.vat,grp};
       x.stockMove=stockIn({date,itemId:it.id,qty:String(qty),price:unit,docNo,supplier,expId:x.id,doc:pdoc||(pdoc=stockDocNo("in",date))}).id;(S.finExp=S.finExp||[]).push(x)}
     else if(r.dest.startsWith("p:"))(S.costs=S.costs||[]).push({id:uid("nk"),projectId:r.dest.slice(2),cat:r.cat||"mat",date,supplier,docNo,desc,amount:amt,grp,by:me.id,at:nowIso()});
@@ -4724,7 +4726,7 @@ document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||(id!=="fin
   if(id==="finExpForm"){const amt=moneyVal("feAmt");if(!amt){toast("Suma má mať tvar napr. 90 alebo 89,50");return}
     if(document.querySelector('input[name="feMode"]:checked')?.value==="sklad"){const nm=v("feItem"),qty=numIn(v("feQty"));if(!nm){toast("Zadaj materiál");return}if(!(qty>0)){toast("Zadaj množstvo");return}
       let it=(S.cennik||[]).find(i=>i.type==="mat"&&acNorm(i.name)===acNorm(nm));const unit=String(Math.round(+amt/qty*10000)/10000);
-      if(!it){it={id:uid("cn"),type:"mat",code:"",name:nm,sub:"",mj:v("feMj")||"ks",price:"",cost:unit,vat:+v("feVat"),stock:true};(S.cennik=S.cennik||[]).push(it)}
+      if(!it){it={id:uid("cn"),type:"mat",code:"",name:nm,sub:"",mj:v("feMj")||"ks",price:"",cost:unit,vat:+v("feVat"),stock:true,folderId:skFolder(view.skFolder)?view.skFolder:""};(S.cennik=S.cennik||[]).push(it)}
       const isNew=!view.finEdit||view.finEdit==="__new",x=isNew?{id:uid("fe")}:(S.finExp||[]).find(e=>e.id===view.finEdit);if(!x)return;
       Object.assign(x,{date:v("feDate"),docNo:v("feNo"),cat:"mat",area:"sklad",itemId:it.id,qty:String(qty),machineId:"",supplier:v("feSup"),desc:v("feDesc")||`${it.name} – ${nf(qty)} ${it.mj||""}`.trim(),amount:amt,vat:+v("feVat"),recurring:false,until:""});
       let m=x.stockMove&&(S.stock||[]).find(z=>z.id===x.stockMove);if(m)Object.assign(m,{date:x.date,itemId:it.id,qty:String(qty),price:unit,docNo:x.docNo,supplier:x.supplier});else{m=stockIn({date:x.date,itemId:it.id,qty:String(qty),price:unit,docNo:x.docNo,supplier:x.supplier,expId:x.id});x.stockMove=m.id}
@@ -4767,7 +4769,8 @@ function cenFormHTML(){const D=view.cenDraft,t=D.type,Pp=D.parts||[];
       <label>DPH<select id="cenVat">${FIN_VAT.map(v=>`<option value="${v}" ${+D.vat===v?"selected":""}>${v} %</option>`).join("")}</select></label></div>
     <datalist id="obMjs">${["ks","m","m2","m3","t","kg","hod","deň","km","kpl","bm","l","bal","vrece"].map(x=>`<option value="${x}">`).join("")}</datalist>
     ${t==="mat"?`<div class="grid2"><label>Nákupná cena bez DPH (€, orientačná)<input id="cenCost" inputmode="decimal" value="${esc(String(D.cost??"").replace(".",","))}" placeholder="0,00"></label>
-      <label class="chk" style="align-self:end;padding-bottom:10px"><input type="checkbox" id="cenStock" ${D.stock!==false?"checked":""}> Skladová položka (sleduje sa na sklade)</label></div>`:""}
+      <label class="chk" style="align-self:end;padding-bottom:10px"><input type="checkbox" id="cenStock" ${D.stock!==false?"checked":""}> Skladová položka (sleduje sa na sklade)</label></div>
+      <label>Umiestnenie na sklade (zložka)<select id="cenFolder">${skFolderOpts(D.folderId&&skFolder(D.folderId)?D.folderId:"")}</select></label>`:""}
     ${t==="zdruz"?`<div class="stack" style="gap:6px"><div class="eyebrow">Zložky položky (na 1 ${esc(D.mj||"MJ")})</div>
       ${Pp.map((p,n)=>{const c=cenItem(p.itemId);return `<div class="cenpart" data-n="${n}"><select class="cenP" data-f="itemId"><option value="">– vyber z cenníka –</option>${opts.map(o=>`<option value="${o.id}" ${o.id===p.itemId?"selected":""}>${esc(cenT(o.type))}: ${esc(cenLabel(o))}</option>`).join("")}</select>
         <input class="cenP" data-f="qty" inputmode="decimal" value="${esc(String(p.qty??"").replace(".",","))}" aria-label="Množstvo"><span class="muted">${c?esc(c.mj||""):""}</span><span class="num r">${c?eur(Math.round(numIn(c.price)*numIn(p.qty)*100)/100):""}</span>
@@ -4776,7 +4779,7 @@ function cenFormHTML(){const D=view.cenDraft,t=D.type,Pp=D.parts||[];
     <div class="row"><button class="btn primary" type="submit">Uložiť položku</button>${D.id?`<button type="button" class="btn ghost findel" data-a="cenDel">Odstrániť</button>`:""}</div></form>`}
 function cenRead(){const D=view.cenDraft;if(!D||!$("#cenForm"))return D;const v=id=>($("#"+id)?.value??"").trim(),n=id=>v(id).replace(/\s/g,"").replace(",",".");
   D.type=document.querySelector('input[name="cenType"]:checked')?.value||D.type;Object.assign(D,{code:v("cenCode"),name:v("cenName"),sub:v("cenSub"),mj:v("cenMj"),price:n("cenPrice"),vat:+v("cenVat")});
-  if($("#cenCost"))D.cost=n("cenCost");if($("#cenStock"))D.stock=$("#cenStock").checked;
+  if($("#cenCost"))D.cost=n("cenCost");if($("#cenFolder"))D.folderId=$("#cenFolder").value;if($("#cenStock"))D.stock=$("#cenStock").checked;
   document.querySelectorAll(".cenpart").forEach(r=>{const p=(D.parts||[])[+r.dataset.n];if(!p)return;r.querySelectorAll(".cenP").forEach(e=>{p[e.dataset.f]=e.dataset.f==="qty"?e.value.trim().replace(",","."):e.value})});return D}
 function cenListHTML(){const F=view.cenF||{},q=(F.q||"").toLowerCase();
   const L=(S.cennik||[]).filter(i=>(!F.t||i.type===F.t)&&(!q||[i.code,i.name,i.sub].join(" ").toLowerCase().includes(q))).sort((a,b)=>(a.type+a.name).localeCompare(b.type+b.name,"sk"));
@@ -4792,17 +4795,17 @@ function cenHTML(){return `<div class="stack">${view.cenDraft?cenFormHTML():""}$
 
 
 /* našepkávač: pri písaní ukáže zhodné položky (bez ohľadu na diakritiku a veľkosť písmen), funguje aj na mobile */
-const AC_SRC={sklad:()=>stockItems().map(i=>({v:cenLabel(i),t:i.name,c:i.code,d:(()=>{const s=stockOf(i.id);return `na sklade ${nf(s.qty)} ${i.mj||""}`})()})),
+const AC_SRC={sklad:()=>stockItems().map(i=>({v:cenLabel(i),t:i.name,c:i.code,p:skPathText(i.folderId),d:(()=>{const s=stockOf(i.id);return `na sklade ${nf(s.qty)} ${i.mj||""}`})()})),
   mat:()=>(S.cennik||[]).filter(i=>i.type==="mat").map(i=>({v:i.name,t:i.name,c:i.code,d:i.mj||""})),
   cen:()=>(S.cennik||[]).map(i=>({v:cenLabel(i),t:i.name,c:i.code,d:`${cenT(i.type)} · ${eur(numIn(i.price))}`}))};
 let acEl=null,acIn=null,acL=[],acI=-1;
 function acHide(){if(acEl)acEl.remove();acEl=null;acIn=null;acL=[];acI=-1}
 function acCands(kind,val){const src=AC_SRC[kind];if(!src)return [];const q=acNorm(val),ws=q.split(" ").filter(Boolean);if(!ws.length)return src().slice(0,0);
-  return src().filter(o=>{const h=acNorm((o.c||"")+" "+o.t+" "+o.v);return ws.every(w=>h.includes(w))}).sort((a,b)=>(acNorm(a.t).startsWith(q)?0:1)-(acNorm(b.t).startsWith(q)?0:1)||a.t.localeCompare(b.t,"sk"))}
+  return src().filter(o=>{const h=acNorm((o.c||"")+" "+o.t+" "+o.v+" "+(o.p||""));return ws.every(w=>h.includes(w))}).sort((a,b)=>(acNorm(a.t).startsWith(q)?0:1)-(acNorm(b.t).startsWith(q)?0:1)||a.t.localeCompare(b.t,"sk"))}
 function acShow(inp){if(!AC_SRC[inp.dataset.ac])return;const q=acNorm(inp.value);acL=(q?acCands(inp.dataset.ac,inp.value):AC_SRC[inp.dataset.ac]()).slice(0,8);
   if(!acL.length||(acL.length===1&&acNorm(acL[0].v)===q)){if(acEl){acEl.remove();acEl=null}acIn=inp;return}
   if(!acEl){acEl=document.createElement("div");acEl.className="acpop";acEl.setAttribute("role","listbox");document.body.appendChild(acEl)}
-  acIn=inp;acI=Math.min(acI,acL.length-1);acEl.innerHTML=acL.map((o,i)=>`<div class="acopt${i===acI?" on":""}" role="option" data-i="${i}">${o.c?`<span class="muted">${esc(o.c)}</span> `:""}<b>${esc(o.t)}</b>${o.d?`<span class="muted"> · ${esc(o.d)}</span>`:""}</div>`).join("");acPos()}
+  acIn=inp;acI=Math.min(acI,acL.length-1);acEl.innerHTML=acL.map((o,i)=>`<div class="acopt${i===acI?" on":""}" role="option" data-i="${i}">${o.c?`<span class="muted">${esc(o.c)}</span> `:""}<b>${esc(o.t)}</b>${o.d?`<span class="muted"> · ${esc(o.d)}</span>`:""}${o.p?`<div class="muted" style="font-size:12px">📁 ${esc(o.p)}</div>`:""}</div>`).join("");acPos()}
 function acPos(){if(!acEl||!acIn||!document.body.contains(acIn)){acHide();return}const r=acIn.getBoundingClientRect();
   Object.assign(acEl.style,{left:(r.left+window.scrollX)+"px",top:(r.bottom+window.scrollY+2)+"px",width:Math.max(r.width,260)+"px"})}
 function acPick(i){const o=acL[i],inp=acIn;if(!o||!inp)return;inp.value=o.v;acHide();inp.dispatchEvent(new Event("input",{bubbles:true}));inp.dispatchEvent(new Event("change",{bubbles:true}))}
@@ -4816,6 +4819,51 @@ document.addEventListener("keydown",ev=>{if(!acEl||ev.target!==acIn)return;
 document.addEventListener("change",ev=>{const t=ev.target;if(!t||!t.dataset||!t.dataset.ac||t.dataset.ac==="cen"||!ev.isTrusted)return;const c=acCands(t.dataset.ac,t.value);
   if(c.length===1&&acNorm(c[0].v)!==acNorm(t.value)){t.value=c[0].v;t.dispatchEvent(new Event("input",{bubbles:true}))}},true);
 window.addEventListener("scroll",()=>{if(acEl)acPos()},{passive:true});window.addEventListener("resize",()=>{if(acEl)acPos()});
+/* --- zložky skladu: S.skFolders = [{id,name,parent}], materiál má folderId (umiestnenie); koreň = firma --- */
+const skRootName=()=>(S.firm&&S.firm.name)||S.company||"Firma";
+const skFolder=id=>(S.skFolders||[]).find(f=>f.id===id);
+function skPathIds(fid){const out=[];let f=skFolder(fid),g=0;while(f&&g++<20){out.unshift(f.id);f=skFolder(f.parent)}return out}
+const skPathNames=fid=>[skRootName(),...skPathIds(fid).map(id=>skFolder(id).name)];
+const skPathText=(fid,sep=" › ")=>skPathNames(fid).join(sep);
+const skKids=pid=>(S.skFolders||[]).filter(f=>(f.parent||"")===(pid||"")).sort((a,b)=>a.name.localeCompare(b.name,"sk"));
+function skSubtree(fid){const ids=new Set([fid||""]);let add=true;while(add){add=false;(S.skFolders||[]).forEach(f=>{if(ids.has(f.parent||"")&&!ids.has(f.id)){ids.add(f.id);add=true}})}return ids}
+const skItemsIn=fid=>{const T=skSubtree(fid);return stockItems().filter(i=>T.has(i.folderId&&skFolder(i.folderId)?i.folderId:""))};
+function skFolderOpts(sel,skip){const out=[`<option value="" ${!sel?"selected":""}>${esc(skRootName())} (bez zložky)</option>`];
+  const walk=(pid,d)=>skKids(pid).forEach(f=>{if(skip&&skSubtree(skip).has(f.id))return;out.push(`<option value="${f.id}" ${sel===f.id?"selected":""}>${"   ".repeat(d)}${esc(f.name)}</option>`);walk(f.id,d+1)});walk("",1);return out.join("")}
+const skCrumbs=fid=>`<nav class="skcrumb" aria-label="Umiestnenie">${[["",skRootName()],...skPathIds(fid).map(id=>[id,skFolder(id).name])].map(([id,n],k,a)=>k===a.length-1?`<b>${esc(n)}</b>`:`<button type="button" class="linkbtn" data-a="skFold" data-id="${id}">${esc(n)}</button>`).join(`<span class="muted">›</span>`)}</nav>`;
+function skBrowserHTML(asOf){const cur=skFolder(view.skFolder)?view.skFolder:"",q=acNorm(view.skQ||""),E=view.skFEdit;
+  const val=fid=>skItemsIn(fid).reduce((s,i)=>s+stockOf(i.id,asOf).value,0);
+  const itemRow=(i,showPath)=>{const s=stockOf(i.id,asOf);return `<tr><td class="clickrow" data-a="skPick" data-id="${i.id}"><b>${esc(i.name)}</b><div class="muted" style="font-size:12px">${[i.code,showPath?skPathText(i.folderId):""].filter(Boolean).map(esc).join(" · ")}</div></td>
+    <td class="num r${s.qty<0?" bad":""}">${nf(s.qty)} ${esc(i.mj||"")}<div class="muted" style="font-size:12px">ø ${eur(s.avg)}</div></td><td class="num r"><b>${eur(s.value)}</b></td>
+    <td class="r"><select class="skmove" data-id="${i.id}" aria-label="Presunúť ${esc(i.name)} do zložky" title="Presunúť do zložky">${skFolderOpts(i.folderId&&skFolder(i.folderId)?i.folderId:"")}</select></td></tr>`};
+  let body;
+  if(q){const L=stockItems().filter(i=>q.split(" ").every(w=>acNorm([i.code,i.name,skPathText(i.folderId," ")].join(" ")).includes(w)));
+    body=L.length?L.map(i=>itemRow(i,true)).join(""):`<tr><td colspan="4" class="muted">Nič sa nenašlo.</td></tr>`}
+  else{const fs=skKids(cur).map(f=>{const n=skItemsIn(f.id).length;return E===f.id?`<tr><td colspan="4"><form class="row" id="skFRen" data-id="${f.id}" style="gap:6px"><input id="skFRenName" value="${esc(f.name)}" required style="flex:1 1 200px"><button class="btn small primary">Uložiť</button><button type="button" class="btn small ghost" data-a="skFEditNo">Zrušiť</button></form></td></tr>`
+      :`<tr><td class="clickrow" data-a="skFold" data-id="${f.id}"><span class="skfic" aria-hidden="true">📁</span> <b>${esc(f.name)}</b><div class="muted" style="font-size:12px">${n} ${pl(n,"položka","položky","položiek")}${skKids(f.id).length?` · ${skKids(f.id).length} ${pl(skKids(f.id).length,"zložka","zložky","zložiek")}`:""}</div></td>
+      <td></td><td class="num r"><b>${eur(val(f.id))}</b></td><td class="r" style="white-space:nowrap"><button class="btn small ghost" data-a="skFEdit" data-id="${f.id}" aria-label="Premenovať ${esc(f.name)}">✎</button><button class="btn small ghost findel" data-a="skFDel" data-id="${f.id}" aria-label="Odstrániť zložku ${esc(f.name)}">×</button></td></tr>`}).join("");
+    const its=stockItems().filter(i=>(i.folderId&&skFolder(i.folderId)?i.folderId:"")===cur).sort((a,b)=>a.name.localeCompare(b.name,"sk")).map(i=>itemRow(i,false)).join("");
+    body=fs+its||`<tr><td colspan="4" class="muted">Zložka je prázdna. Materiál sem presunieš výberom zložky pri položke, alebo ho rovno prijmi – nový materiál sa založí v otvorenej zložke.</td></tr>`}
+  return `<div class="card stack"><div class="entry-head ecdh"><h3>Zásoby</h3><div class="ecdh-r"><input id="skQ" type="search" placeholder="Hľadať materiál vo všetkých zložkách…" value="${esc(view.skQ||"")}" style="max-width:260px">
+      <button class="btn small" data-a="skFNew">+ Nová zložka</button></div></div>
+    ${q?`<div class="muted" style="font-size:13px">Výsledky hľadania vo všetkých zložkách – pod názvom je celá cesta k položke.</div>`:skCrumbs(cur)}
+    ${view.skFNew?`<form class="row" id="skFNewForm" style="gap:6px"><input id="skFNewName" placeholder="Názov zložky, napr. Sklad č. 2" required style="flex:1 1 220px"><button class="btn small primary">Vytvoriť v „${esc(skPathNames(cur).slice(-1)[0])}“</button><button type="button" class="btn small ghost" data-a="skFNewNo">Zrušiť</button></form>`:""}
+    <div class="tablewrap"><table class="fintab"><thead><tr><th>${q?"Materiál a umiestnenie":"Zložka / materiál"}</th><th class="r">Na sklade</th><th class="r">Hodnota</th><th class="r">Umiestnenie</th></tr></thead><tbody>${body}</tbody></table></div>
+    ${!q?`<div class="row" style="justify-content:space-between"><span class="muted" style="font-size:13px">Hodnota v tejto zložke: <b>${eur(val(cur))}</b></span><span class="row" style="gap:6px"><button class="btn small" data-a="skStPdf">Stav zložky – PDF</button><button class="btn small" data-a="skStXls">Stav zložky – Excel</button></span></div>`:""}</div>`}
+/* udalosti zložiek */
+document.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b||!me||!isAdmin(me))return;const a=b.dataset.a;
+  if(a==="skFold"){view.skFolder=b.dataset.id||"";view.skFEdit=null;view.skFNew=false;skRe()}
+  else if(a==="skFNew"){view.skFNew=true;skRe();$("#skFNewName")?.focus()}else if(a==="skFNewNo"){view.skFNew=false;skRe()}
+  else if(a==="skFEdit"){view.skFEdit=b.dataset.id;skRe();$("#skFRenName")?.select()}else if(a==="skFEditNo"){view.skFEdit=null;skRe()}
+  else if(a==="skFDel"){const f=skFolder(b.dataset.id);if(!f)return;if(skKids(f.id).length||stockItems().some(i=>i.folderId===f.id)){toast("Zložka nie je prázdna – najprv presuň materiál a podzložky.");return}
+    if(!b.dataset.sure){b.dataset.sure="1";b.textContent="Odstrániť?";return}S.skFolders=S.skFolders.filter(x=>x!==f);save();toast("Zložka odstránená");skRe()}});
+document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||(id!=="skFNewForm"&&id!=="skFRen"))return;ev.preventDefault();if(!isAdmin(me))return;
+  if(id==="skFNewForm"){const n=$("#skFNewName").value.trim();if(!n)return;const par=skFolder(view.skFolder)?view.skFolder:"";
+    if(skKids(par).some(f=>acNorm(f.name)===acNorm(n))){toast("Taká zložka tu už je");return}(S.skFolders=S.skFolders||[]).push({id:uid("sf"),name:n,parent:par});view.skFNew=false;save();toast("Zložka vytvorená")}
+  else{const f=skFolder(ev.target.dataset.id),n=$("#skFRenName").value.trim();if(f&&n)f.name=n;view.skFEdit=null;save();toast("Zložka premenovaná")}skRe()});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me||!t.classList||!t.classList.contains("skmove"))return;const it=cenItem(t.dataset.id);if(!it)return;
+  it.folderId=t.value||"";save();toast(`${it.name} → ${skPathText(it.folderId)}`);skRe()});
+document.addEventListener("input",ev=>{const t=ev.target;if(t.id==="skQ"&&me){view.skQ=t.value;const pos=t.selectionStart;skRe();const e=$("#skQ");if(e){e.focus();try{e.setSelectionRange(pos,pos)}catch(x){}}}});
 /* --- sklad --- */
 /* skladové doklady: príjemka PR-RRRR/001, výdajka VY-RRRR/001, korekcia (inventúrny rozdiel) KO-RRRR/001; jeden doklad = viac pohybov s rovnakým m.doc */
 const SK_PFX={in:"PR",out:"VY",kor:"KO"},SK_NAME={in:"Príjemka",out:"Výdajka",kor:"Korekcia"};
@@ -4869,16 +4917,14 @@ function skladHTML(){stockMigrate();setTimeout(()=>{if($("#skForm"))skInfoUpdate
     :`<div class="muted">Na sklade sa sledujú materiálové položky z cenníka. Najprv pridaj materiál v karte Cenník.</div><button type="button" class="btn" data-a="firmTab" data-tab="cennik" style="align-self:flex-start">Otvoriť cenník</button>`}</form>`;
   const sum=`<div class="card stack finbox"><div class="entry-head"><h3>Stav skladu</h3><label class="row" style="gap:6px;font-weight:500;font-size:13px">k dátumu<input type="date" id="skAsOf" value="${esc(asOf)}" style="width:auto"></label></div>
     <div><div class="muted" style="font-size:13px">Hodnota skladu bez DPH</div><div class="finbig fintot">${eur(tot)}</div></div>
-    ${items.length?`<div class="row"><button class="btn small" data-a="skStPdf">Stav skladu – PDF</button><button class="btn small" data-a="skStXls">Stav skladu – Excel</button></div>
-      <div class="tablewrap"><table class="fintab"><thead><tr><th>Materiál</th><th class="r">Na sklade</th><th class="r">Hodnota</th></tr></thead><tbody>${items.map(i=>{const s=stockOf(i.id,asOf);
-      return `<tr class="clickrow" data-a="skPick" data-id="${i.id}"><td><b>${esc(i.name)}</b>${i.code?`<div class="muted" style="font-size:12px">${esc(i.code)}</div>`:""}</td><td class="num r${s.qty<0?" bad":""}">${nf(s.qty)} ${esc(i.mj||"")}<div class="muted" style="font-size:12px">ø ${eur(s.avg)}</div></td><td class="num r"><b>${eur(s.value)}</b></td></tr>`}).join("")}</tbody></table></div>`:""}</div>`;
+    <div class="muted" style="font-size:13px">${items.length} ${pl(items.length,"skladová položka","skladové položky","skladových položiek")} v ${(S.skFolders||[]).length} ${pl((S.skFolders||[]).length,"zložke","zložkách","zložkách")}. Materiál a zložky nájdeš nižšie v Zásobách – kliknutím na materiál ho pridáš do dokladu.</div></div>`;
   const rows=(lim?docs.slice(0,lim):docs).map(d=>{const m0=d.ms[0],p=S.projects.find(z=>z.id===m0.projectId),val=d.ms.reduce((s,m)=>s+skVal(m),0),hasExp=d.ms.some(m=>m.expId);
     const names=d.ms.map(m=>{const i=cenItem(m.itemId)||{};return `${esc(i.name||"?")} ${d.type==="kor"&&numIn(m.qty)>0?"+":""}${nf(numIn(m.qty))} ${esc(i.mj||"")}`});
     return `<tr><td class="num">${d.date?d2(d.date):""}<div class="muted" style="font-size:12px">${esc(m0.doc||"")}</div></td><td><span class="pill ${d.type==="in"?"s-ok":d.type==="out"?"s-open":""}">${d.type==="in"?"príjem":d.type==="out"?"výdaj":"korekcia"}</span></td>
       <td>${names.slice(0,3).join("<br>")}${names.length>3?`<div class="muted" style="font-size:12px">+ ďalšie ${names.length-3}</div>`:""}<div class="muted" style="font-size:12px">${[d.type==="in"?m0.supplier:d.type==="out"?p&&p.name:"",m0.docNo,m0.note,hasExp?"z výdavkov":""].filter(Boolean).map(esc).join(" · ")}</div></td>
       <td class="num r">${eur(Math.round(val*100)/100)}</td>
       <td class="r" style="white-space:nowrap"><button class="btn small" data-a="skDocPdf" data-doc="${esc(d.doc)}">${SK_NAME[d.type]}</button>${hasExp?"":` <button class="btn small ghost findel" data-a="skDel" data-doc="${esc(d.doc)}" aria-label="Zmazať doklad">×</button>`}</td></tr>`}).join("");
-  return `<div class="stack"><div class="fingrid">${form}${sum}</div>
+  return `<div class="stack"><div class="fingrid">${form}${sum}</div>${items.length||(S.skFolders||[]).length?skBrowserHTML(asOf):""}
     <div class="card stack"><div class="entry-head ecdh"><h3>Pohyby na sklade</h3><div class="ecdh-r"><select id="skFItem"><option value="">všetok materiál</option>${items.map(i=>`<option value="${i.id}" ${F.item===i.id?"selected":""}>${esc(i.name)}</option>`).join("")}</select>
       <select id="skLim">${[[20,"posledných 20"],[50,"posledných 50"],[100,"posledných 100"],[0,"všetky"]].map(([n,l])=>`<option value="${n}" ${lim===n?"selected":""}>${l}</option>`).join("")}</select></div></div>
       ${docs.length?`<div class="tablewrap"><table class="fintab"><thead><tr><th>Dátum / doklad</th><th>Pohyb</th><th>Materiál</th><th class="r">Hodnota</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="muted">Zatiaľ žiadne pohyby.</div>`}
@@ -4913,24 +4959,27 @@ function skDocPdf(docNo){const ms=(S.stock||[]).filter(m=>(m.doc||m.id)===docNo)
   else{half(0,"ORIGINÁL");doc.setLineDashPattern([1.5,1.5],0);doc.setDrawColor(160,160,156);doc.line(4,148.5,206,148.5);doc.setLineDashPattern([],0);doc.setFontSize(6);doc.setTextColor(150,150,146);doc.text("odstrihnúť",206,147,{align:"right"});half(148.5,"KÓPIA")}
   offerFile(`${SK_NAME[t]}_${String(m0.doc||"").replace(/[^\w-]+/g,"-")}.pdf`.normalize("NFD").replace(/[̀-ͯ]/g,""),doc.output("arraybuffer"))}
 /* stav skladu – podklad k inventúre */
-function skStateRows(asOf){return stockItems().map(i=>{const s=stockOf(i.id,asOf);return {i,s}})}
+function skStateRows(asOf){const cur=skFolder(view.skFolder)?view.skFolder:"",base=skPathIds(cur).length;
+  return skItemsIn(cur).map(i=>{const s=stockOf(i.id,asOf),fid=i.folderId&&skFolder(i.folderId)?i.folderId:"";return {i,s,path:skPathIds(fid).slice(base).map(id=>skFolder(id).name).join(" – "),full:skPathText(fid)}})
+    .sort((a,b)=>a.full.localeCompare(b.full,"sk")||a.i.name.localeCompare(b.i.name,"sk"))}
+const skStTitle=(sep)=>{const cur=skFolder(view.skFolder)?view.skFolder:"";return cur?skPathText(cur,sep):"celý sklad"};
 function skStPdf(){const asOf=view.skAsOf||todayIso(),doc=newPdf("portrait");if(!doc)return;const R=skStateRows(asOf),tot=R.reduce((t,r)=>t+r.s.value,0);
-  pdfFirmHeader(doc,"Stav skladu – podklad k inventúre",`k dátumu ${obDate(asOf)} · Hlavný sklad`);
+  pdfFirmHeader(doc,"Stav skladu – podklad k inventúre",plain(`k dátumu ${obDate(asOf)} · ${skStTitle(" – ")}`));
   doc.autoTable({startY:28,head:[["Kód","Názov materiálu","MJ","Stav podľa evidencie","Priem. cena €","Hodnota €","Skutočný stav","Rozdiel"]],
-    body:R.map(({i,s})=>[plain(i.code||""),plain(i.name),plain(i.mj||""),obQty(s.qty),obMoney(s.avg),obMoney(s.value),"",""]),foot:[[{content:"Spolu",colSpan:5},obMoney(tot),"",""]],
+    body:R.map(({i,s,path})=>[plain(i.code||""),plain(i.name)+(path?"\n"+plain(path):""),plain(i.mj||""),obQty(s.qty),obMoney(s.avg),obMoney(s.value),"",""]),foot:[[{content:"Spolu",colSpan:5},obMoney(tot),"",""]],
     margin:{left:14,right:14,bottom:30},theme:"grid",styles:{font:"DVC",fontSize:8,cellPadding:1.4,lineColor:[200,200,196],lineWidth:0.15,textColor:[28,28,27],minCellHeight:7,valign:"middle"},
     headStyles:{font:"DVC",fontStyle:"bold",fillColor:[237,237,235],textColor:[60,60,58],fontSize:7.4},footStyles:{font:"DVC",fontStyle:"bold",fillColor:[237,237,235],textColor:[28,28,27],halign:"right"},
     columnStyles:{0:{cellWidth:16},1:{cellWidth:"auto"},2:{cellWidth:12,halign:"center"},3:{cellWidth:24,halign:"right"},4:{cellWidth:20,halign:"right"},5:{cellWidth:22,halign:"right"},6:{cellWidth:22},7:{cellWidth:18}}});
   let y=doc.lastAutoTable.finalY+18;if(y>270){doc.addPage();y=30}
   doc.setFont("DVC","normal");doc.setFontSize(8);doc.setTextColor(107,107,104);["Inventúru vykonal","Inventúrna komisia","Schválil"].forEach((s,k)=>{const x=14+k*62;doc.line(x,y,x+54,y);doc.text(`${s} – dátum, podpis`,x,y+4)});
   const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(7);doc.text(`Strana ${i}/${n}`,196,290,{align:"right"})}
-  offerFile(`Stav_skladu_${asOf}.pdf`,doc.output("arraybuffer"))}
+  offerFile(`Stav_skladu_${asOf}${skFolder(view.skFolder)?"_"+skFolder(view.skFolder).name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w-]+/g,"_"):""}.pdf`,doc.output("arraybuffer"))}
 function skStXls(){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.");return}const asOf=view.skAsOf||todayIso(),R=skStateRows(asOf);
-  const rows=[[`Stav skladu k ${obDate(asOf)} – ${S.firm&&S.firm.name||S.company||""}`],[],["Kód","Názov materiálu","MJ","Stav podľa evidencie","Priemerná cena €","Hodnota €","Skutočný stav","Rozdiel","Poznámka"]];
-  R.forEach(({i,s},k)=>{const r=rows.length+1;rows.push([i.code||"",i.name,i.mj||"",s.qty,Math.round(s.avg*10000)/10000,s.value,null,{f:`IF(G${r}="","",G${r}-D${r})`},""])});
-  rows.push(["","Spolu","","","",{f:`SUM(F4:F${rows.length})`}]);
-  const ws=XLSX.utils.aoa_to_sheet(rows);ws["!cols"]=[{wch:10},{wch:38},{wch:7},{wch:14},{wch:14},{wch:13},{wch:13},{wch:10},{wch:24}];
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Stav skladu");offerFile(`Stav_skladu_${asOf}.xlsx`,XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
+  const rows=[[`Stav skladu k ${obDate(asOf)} – ${skStTitle()}`],[],["Umiestnenie","Kód","Názov materiálu","MJ","Stav podľa evidencie","Priemerná cena €","Hodnota €","Skutočný stav","Rozdiel","Poznámka"]];
+  R.forEach(({i,s,full})=>{const r=rows.length+1;rows.push([full,i.code||"",i.name,i.mj||"",s.qty,Math.round(s.avg*10000)/10000,s.value,null,{f:`IF(H${r}="","",H${r}-E${r})`},""])});
+  rows.push(["","","Spolu","","","",{f:`SUM(G4:G${rows.length})`}]);
+  const ws=XLSX.utils.aoa_to_sheet(rows);ws["!cols"]=[{wch:34},{wch:10},{wch:34},{wch:7},{wch:14},{wch:14},{wch:13},{wch:13},{wch:10},{wch:24}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Stav skladu");offerFile(`Stav_skladu_${asOf}${skFolder(view.skFolder)?"_"+skFolder(view.skFolder).name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^\w-]+/g,"_"):""}.xlsx`,XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
 
 /* rozpísané formuláre sa priebežne prepisujú do konceptu, aby ich prekreslenie stránky nezmazalo */
 ["input","change"].forEach(t=>document.addEventListener(t,ev=>{const f=ev.target&&ev.target.closest&&ev.target.closest("form");if(!f||!me)return;
@@ -4979,7 +5028,7 @@ function skInfoUpdate(){const R=view.skRows;if(!R)return;const inn=(view.skKeep|
     if(!it){const n=acCands("sklad",r.text).length;inf.className="sk-info "+(r.text&&!inn&&!n?"bad":"muted");
       inf.textContent=!r.text?"":n?"vyber materiál zo zoznamu":inn?"nový materiál – pri uložení sa založí v cenníku (doplň MJ)":"taký materiál na sklade nie je";return}
     const st=stockOf(it.id),over=!inn&&need[it.id]>st.qty+1e-9;
-    inf.className="sk-info "+(over?"bad":"muted");inf.textContent=`${it.code?it.code+" · ":""}na sklade ${nf(st.qty)} ${it.mj||""} · ø ${eur(st.avg)}${over?" – nedostatok na sklade":""}`})}
+    inf.className="sk-info "+(over?"bad":"muted");inf.textContent=`📁 ${skPathText(it.folderId)} · ${it.code?it.code+" · ":""}na sklade ${nf(st.qty)} ${it.mj||""} · ø ${eur(st.avg)}${over?" – nedostatok na sklade":""}`})}
 document.addEventListener("input",ev=>{const t=ev.target;if(!me)return;
   if(t.classList&&t.classList.contains("skR")){skRowsSync();skInfoUpdate();return}
   if(t.closest&&t.closest("#skKorForm")){skKorSync();return}
@@ -5003,7 +5052,7 @@ document.addEventListener("submit",ev=>{const id=ev.target.id;if(!me||!["cenForm
       if(typ==="in"&&!/^\d+(\.\d+)?$/.test(String(r.price||"").replace(/\s/g,"").replace(",","."))){toast(`${it.name}: zadaj nákupnú cenu za MJ`);return}need[it.id]=(need[it.id]||0)+q}
     if(typ==="out")for(const [iid,q] of Object.entries(need)){if(!iid)continue;const s=stockOf(iid),it=cenItem(iid);if(q>s.qty+1e-9){toast(`${it.name}: na sklade je len ${nf(s.qty)} ${it.mj||""}`);return}}
     const dn=stockDocNo(typ,date),grp=uid("dk");
-    R.forEach(r=>{if(!r.itemId){const pr0=String(r.price).replace(/\s/g,"").replace(",",".");const ni={id:uid("cn"),type:"mat",code:"",name:r.text.trim(),sub:"",mj:r.mj.trim(),price:"",cost:pr0,vat:23,stock:true};(S.cennik=S.cennik||[]).push(ni);r.itemId=ni.id}
+    R.forEach(r=>{if(!r.itemId){const pr0=String(r.price).replace(/\s/g,"").replace(",",".");const ni={id:uid("cn"),type:"mat",code:"",name:r.text.trim(),sub:"",mj:r.mj.trim(),price:"",cost:pr0,vat:23,stock:true,folderId:skFolder(view.skFolder)?view.skFolder:""};(S.cennik=S.cennik||[]).push(ni);r.itemId=ni.id}
       const it=cenItem(r.itemId),q=numIn(r.qty);
       if(typ==="in"){const pr=String(r.price).replace(/\s/g,"").replace(",",".");let expId="";
         if(K.skExp!==false){const e={id:uid("fe"),date,docNo:K.skDoc,supplier:K.skSup,cat:"mat",area:"sklad",itemId:it.id,qty:String(q),desc:`${it.name} – ${nf(q)} ${it.mj||""}`.trim(),amount:String(Math.round(q*+pr*100)/100),vat:+it.vat||23,grp};(S.finExp=S.finExp||[]).push(e);expId=e.id}
@@ -7436,14 +7485,17 @@ if(!ROOT.tenants.demo.finExp){const T=ROOT.tenants.demo,y=new Date().getFullYear
 /* ukážkový cenník a sklad (Firma → Obchod) */
 {const T=ROOT.tenants.demo;if(!T.cennik){const d=todayIso().slice(0,8);
   T.cennik=[{id:"cn1",type:"praca",code:"P-01",name:"Murárske práce",sub:"",mj:"hod",price:"26",vat:23},{id:"cn2",type:"praca",code:"P-02",name:"Demontáž strešnej krytiny",sub:"vrátane odvozu sutiny",mj:"m2",price:"8.5",vat:23},
-    {id:"cn3",type:"mat",code:"M-01",name:"Tvárnica 30 P+D",sub:"",mj:"ks",price:"3.4",cost:"2.86",vat:23,stock:true},{id:"cn4",type:"mat",code:"M-02",name:"Malta na murovanie 25 kg",sub:"",mj:"vrece",price:"6.2",cost:"4.9",vat:23,stock:true},
-    {id:"cn5",type:"mat",code:"M-03",name:"Cement CEM II 25 kg",sub:"",mj:"vrece",price:"7.5",cost:"5.6",vat:23,stock:true},
+    {id:"cn3",type:"mat",code:"M-01",name:"Tvárnica 30 P+D",sub:"",mj:"ks",price:"3.4",cost:"2.86",vat:23,stock:true,folderId:"sf2"},{id:"cn4",type:"mat",code:"M-02",name:"Malta na murovanie 25 kg",sub:"",mj:"vrece",price:"6.2",cost:"4.9",vat:23,stock:true,folderId:"sf3"},
+    {id:"cn5",type:"mat",code:"M-03",name:"Cement CEM II 25 kg",sub:"",mj:"vrece",price:"7.5",cost:"5.6",vat:23,stock:true,folderId:"sf3"},
     {id:"cn6",type:"zdruz",code:"Z-01",name:"Murivo z tvárnic hr. 30 cm",sub:"dodávka a montáž vrátane malty",mj:"m2",price:"64.9",vat:23,parts:[{itemId:"cn3",qty:"10"},{itemId:"cn4",qty:"0.5"},{itemId:"cn1",qty:"1"}]}];
   T.stock=[{id:"sk1",type:"in",doc:"PR-"+d.slice(0,4)+"/001",date:d+"01",itemId:"cn3",qty:"400",price:"2.86",supplier:"Stavebniny Javor",docNo:"FA-7702",note:"počiatočný stav"},{id:"sk2",type:"in",doc:"PR-"+d.slice(0,4)+"/001",date:d+"01",itemId:"cn4",qty:"30",price:"4.9",supplier:"Stavebniny Javor",docNo:"FA-7702",note:"počiatočný stav"},
     {id:"sk3",type:"in",doc:"PR-"+d.slice(0,4)+"/001",date:d+"01",itemId:"cn5",qty:"20",price:"5.6",supplier:"Stavebniny Javor",docNo:"FA-7702",note:"počiatočný stav"},{id:"sk4",type:"out",doc:"VY-"+d.slice(0,4)+"/001",date:d+"05",itemId:"cn3",qty:"120",price:"2.86",projectId:"p1",note:"",costId:"nk_sk4"},
     {id:"sk5",type:"out",doc:"VY-"+d.slice(0,4)+"/001",date:d+"05",itemId:"cn4",qty:"6",price:"4.9",projectId:"p1",note:"",costId:"nk_sk5"}];
   (T.costs=T.costs||[]).push({id:"nk_sk4",projectId:"p1",cat:"mat",date:d+"05",supplier:"Sklad",docNo:"",desc:"Tvárnica 30 P+D – 120 ks zo skladu",amount:"343.2",fromStock:"sk4"},{id:"nk_sk5",projectId:"p1",cat:"mat",date:d+"05",supplier:"Sklad",docNo:"",desc:"Malta na murovanie 25 kg – 6 vrece zo skladu",amount:"29.4",fromStock:"sk5"});
   try{localStorage.setItem(KEY,JSON.stringify(ROOT))}catch(e){}}}
+/* ukážkové zložky skladu */
+{const T=ROOT.tenants.demo;if(!T.skFolders){T.skFolders=[{id:"sf1",name:"Sklad prevádzka",parent:""},{id:"sf2",name:"Sklad č. 1",parent:"sf1"},{id:"sf3",name:"Sklad č. 2",parent:"sf1"},{id:"sf4",name:"Stavebný kontajner",parent:""}];
+  const F={cn3:"sf2",cn4:"sf3",cn5:"sf3"};(T.cennik||[]).forEach(i=>{if(F[i.id]&&!i.folderId)i.folderId=F[i.id]});try{localStorage.setItem(KEY,JSON.stringify(ROOT))}catch(e){}}}
 /* ukážkoví obchodní partneri, cenová ponuka a objednávka (Firma → Obchod) */
 {const T=ROOT.tenants.demo;
   if(!T.partners){T.partners=[{id:"pa1",name:"Bytové družstvo Lipa",street:"Lipová 14",zip:"974 01",city:"Horná Lúka",country:"Slovenská republika",ico:"31111222",dic:"2020111222",icdph:"",contact:"Ing. Eva Malá",phone:"+421 900 111 222",email:"lipa@example.sk"},
