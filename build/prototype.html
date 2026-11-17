@@ -929,10 +929,11 @@ table.hm .hm-l{position:sticky;left:0;z-index:1;background:var(--surface);min-wi
 table.hm thead .hm-l{z-index:3;background:#fff59d;padding:3px 8px}
 .hm-lw{display:flex;align-items:center;gap:6px;padding:3px 6px;flex-wrap:nowrap;position:relative}
 .hm-n{min-width:30px;font-weight:700;color:var(--muted)}.hm-t{flex:1 1 150px;min-width:0;padding:4px 6px;min-height:0;font-size:13px}.hm-d{width:62px;padding:4px 6px;min-height:0;font-size:12.5px;text-align:center}
-.hm-act{display:none;gap:2px;position:absolute;right:74px;top:50%;transform:translateY(-50%);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:2px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:2}
-.hm-act .btn{padding:2px 7px;font-size:12px;min-height:0;white-space:nowrap}.hm-r:hover .hm-act,.hm-r:focus-within .hm-act{display:flex}
-@media (hover:none){.hm-act{position:static;transform:none;box-shadow:none;border:0;background:none;padding:0}.hm-r .hm-lw{flex-wrap:wrap}}
-.hm-r.l1 .hm-l,.hm-r.l1 td{background:#c5e5a5}.hm-r.l1 .hm-t{font-weight:700}.hm-r.l2 .hm-t{font-weight:600;text-align:right}.hm-r.l3 .hm-t{font-style:italic;text-align:right;font-size:12.5px}
+.hm-mb{padding:2px 8px;min-height:0;font-size:16px;line-height:1}
+.hm-menu{position:fixed;z-index:60;display:flex;flex-direction:column;align-items:stretch;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:4px;box-shadow:0 8px 24px rgba(0,0,0,.18);min-width:180px}
+.hm-menu .btn{justify-content:flex-start;text-align:left;white-space:nowrap}
+table.hm tr.hm-r:has(.hm-menu) .hm-l{z-index:5}
+.hm-r.l1 .hm-l,.hm-r.l1 td{background:#c5e5a5}.hm-r.l1 .hm-t{font-weight:700}.hm-r.l2 .hm-t{font-weight:600;margin-left:12px}.hm-r.l3 .hm-t{font-style:italic;font-size:12.5px;margin-left:28px}
 .hm-r.l1 td.hm-l{background:#b6dc8f}
 td.hc{width:22px;min-width:22px;height:26px;cursor:pointer;user-select:none}td.hc:hover{outline:2px solid var(--accent);outline-offset:-2px}
 td.hc.sub{background:color-mix(in srgb,#1f6fc5 35%,transparent)}td.hc.on{background:#1f6fc5}.hm-r.l1 td.hc.on,.hm-r.l1 td.hc.sub{background:#1f6fc5}
@@ -5359,13 +5360,16 @@ function hmBlank(p){const F=S.firm||{};return {id:uid("hm"),projectId:p?p.id:"",
 const hmCanEdit=H=>{if(!H)return false;if(!H.projectId)return isAdmin(me);const p=S.projects.find(x=>x.id===H.projectId);return !!p&&can(p,"harm.edit")};
 
 /* --- editor --- */
-function hmEditorHTML(H){const ed=hmCanEdit(H),N=H.weeks||26,W=[...Array(N).keys()].map(w=>hmWeek(H,w)),nums=hmNums(H),stops=new Set(H.stops||[]),sp=hmSpan(H);
+function hmMenuPos(){const m=document.querySelector(".hm-menu"),b=m&&m.parentElement.querySelector(".hm-mb");if(!m||!b)return;const r=b.getBoundingClientRect(),h=m.offsetHeight,w=m.offsetWidth;
+  m.style.left=Math.max(8,r.right-w)+"px";m.style.top=(r.bottom+4+h>window.innerHeight-8?Math.max(8,r.top-4-h):r.bottom+4)+"px"}
+document.addEventListener("scroll",()=>{if(view.hmMenu!=null){view.hmMenu=null;render()}},{passive:true,capture:true});
+function hmEditorHTML(H){if(view.hmMenu!=null)setTimeout(hmMenuPos,0);const ed=hmCanEdit(H),N=H.weeks||26,W=[...Array(N).keys()].map(w=>hmWeek(H,w)),nums=hmNums(H),stops=new Set(H.stops||[]),sp=hmSpan(H);
   const grp=(key)=>{const out=[];W.forEach((x,i)=>{const v=x[key];if(out.length&&out[out.length-1].v===v)out[out.length-1].n++;else out.push({v,n:1,i})});return out};
   const hdr=(lab,key,fmt)=>`<tr class="hm-h"><th class="hm-l">${lab}</th>${grp(key).map(g=>`<th colspan="${g.n}">${esc(fmt?fmt(g.v):g.v)}</th>`).join("")}</tr>`;
   const head=(H.mode==="date"?hdr("Rok","year"):"")+hdr("Mesiac","mon")+`<tr class="hm-h"><th class="hm-l">Týždeň</th>${W.map((x,w)=>`<th class="hm-w${stops.has(w)?" stop":""}${view.hmStopMode&&ed?" pick":""}" ${view.hmStopMode&&ed?`data-a="hmStop" data-w="${w}" title="Prerušenie prác v tomto týždni"`:""}>${x.wk}</th>`).join("")}</tr>`;
   const rows=H.rows.map((r,i)=>{const U=hmUnion(H,i),own=new Set(r.cells||[]),d=hmDur(H,i);
-    const acts=ed?`<span class="hm-act">${r.lvl===1?`<button class="btn small ghost" data-a="hmAdd" data-i="${i}" data-l="2">+ Etapa</button>`:""}${r.lvl<3?`<button class="btn small ghost" data-a="hmAdd" data-i="${i}" data-l="3">+ Konštrukcia</button>`:""}
-      <button class="btn small ghost" data-a="hmMove" data-i="${i}" data-d="-1" aria-label="Posunúť vyššie">↑</button><button class="btn small ghost" data-a="hmMove" data-i="${i}" data-d="1" aria-label="Posunúť nižšie">↓</button><button class="btn small ghost findel" data-a="hmDelRow" data-i="${i}" aria-label="Odstrániť riadok">×</button></span>`:"";
+    const acts=ed?`<button type="button" class="btn small ghost hm-mb" data-a="hmMenu" data-i="${i}" aria-label="Možnosti riadku" aria-expanded="${view.hmMenu===i}">⋯</button>${view.hmMenu===i?`<div class="hm-menu" role="menu">${r.lvl===1?`<button class="btn small ghost" data-a="hmAdd" data-i="${i}" data-l="2">+ Etapa</button>`:""}${r.lvl<3?`<button class="btn small ghost" data-a="hmAdd" data-i="${i}" data-l="3">+ Konštrukcia</button>`:""}
+      <button class="btn small ghost" data-a="hmMove" data-i="${i}" data-d="-1">↑ Posunúť vyššie</button><button class="btn small ghost" data-a="hmMove" data-i="${i}" data-d="1">↓ Posunúť nižšie</button><button class="btn small ghost findel" data-a="hmDelRow" data-i="${i}">× Odstrániť</button></div>`:""}`:"";
     return `<tr class="hm-r l${r.lvl}" data-i="${i}"><td class="hm-l"><div class="hm-lw"><span class="hm-n">${nums[i]}</span>
       ${ed?`<input class="hm-t" data-i="${i}" value="${esc(r.title)}" placeholder="${HM_LVL[r.lvl]}" aria-label="${HM_LVL[r.lvl]} – názov">`:`<span class="hm-tt">${esc(r.title)}</span>`}
       ${ed?`<input class="hm-d" data-i="${i}" value="${esc(r.dur||"")}" placeholder="${d===""?"dní":esc(String(d))}" inputmode="numeric" aria-label="Doba trvania (dní)" title="Doba trvania – prázdne = počet označených týždňov × 5 pracovných dní">`:`<span class="hm-dd">${esc(hmDurTxt(d))}</span>`}${acts}</div></td>
@@ -5448,8 +5452,11 @@ document.addEventListener("pointermove",ev=>{if(!hmPaint)return;const el=documen
 document.addEventListener("pointerup",()=>{if(!hmPaint)return;hmPaint=null;save();render()});
 document.addEventListener("click",ev=>{const td=ev.target.closest&&ev.target.closest("td.hc");if(td&&me){const H=hmById(view.hmOpen);if(!hmCanEdit(H))return;
     if(window.matchMedia&&window.matchMedia("(pointer:fine)").matches)return;hmCellSet(td,!td.classList.contains("on"));save();render();return}
-  const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;if(!/^hm/.test(a))return;const H=hmById(view.hmOpen);
-  if(a==="hmNew"){if(!isAdmin(me))return;const h=hmBlank(null);h.name="";h.zakazka="";(S.harms=S.harms||[]).push(h);view.hmOpen=h.id;save();render();window.scrollTo({top:0,behavior:"smooth"})}
+  const b=ev.target.closest("[data-a]");if(view.hmMenu!=null&&!(ev.target.closest&&ev.target.closest(".hm-menu,.hm-mb"))){view.hmMenu=null;if(!b){render();return}}
+  if(!b||!me)return;const a=b.dataset.a;if(!/^hm/.test(a)){return}const H=hmById(view.hmOpen);
+  if(a!=="hmMenu"&&view.hmMenu!=null)view.hmMenu=null;
+  if(a==="hmMenu"){const i=+b.dataset.i;view.hmMenu=view.hmMenu===i?null:i;render()}
+  else if(a==="hmNew"){if(!isAdmin(me))return;const h=hmBlank(null);h.name="";h.zakazka="";(S.harms=S.harms||[]).push(h);view.hmOpen=h.id;save();render();window.scrollTo({top:0,behavior:"smooth"})}
   else if(a==="hmNewP"){const p=S.projects.find(x=>x.id===b.dataset.p);if(!p||!can(p,"harm.edit"))return;const h=hmBlank(p);(S.harms=S.harms||[]).push(h);view.hmOpen=h.id;save();render();window.scrollTo({top:0,behavior:"smooth"})}
   else if(a==="hmOpen"){view.hmOpen=b.dataset.id;view.hmStopMode=false;render();window.scrollTo({top:0,behavior:"smooth"})}
   else if(a==="hmClose"){view.hmOpen=null;render()}
