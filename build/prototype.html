@@ -920,6 +920,28 @@ table.dxt{font-size:13.5px}table.dxt td.dxw{white-space:normal;min-width:240px;l
 @media (max-width:560px){.fintab td.finsrc,.finsrcn{max-width:140px}}
 #dBlocks[hidden]{display:none}
 .pill.nowork{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad);font-weight:600}
+.hmwrap{overflow:auto;border:1px solid var(--line);border-radius:10px;max-height:70vh}
+table.hm{border-collapse:separate;border-spacing:0;font-size:12.5px;min-width:100%}
+table.hm th,table.hm td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:0}
+table.hm thead th{position:sticky;top:0;z-index:2;background:#fff59d;color:#222;font-weight:700;text-align:center;padding:3px 2px;white-space:nowrap}
+table.hm thead tr:nth-child(2) th{top:22px}table.hm thead tr:nth-child(3) th{top:44px}
+table.hm .hm-l{position:sticky;left:0;z-index:1;background:var(--surface);min-width:430px;max-width:430px;text-align:left}
+table.hm thead .hm-l{z-index:3;background:#fff59d;padding:3px 8px}
+.hm-lw{display:flex;align-items:center;gap:6px;padding:3px 6px;flex-wrap:nowrap;position:relative}
+.hm-n{min-width:30px;font-weight:700;color:var(--muted)}.hm-t{flex:1 1 150px;min-width:0;padding:4px 6px;min-height:0;font-size:13px}.hm-d{width:62px;padding:4px 6px;min-height:0;font-size:12.5px;text-align:center}
+.hm-act{display:none;gap:2px;position:absolute;right:74px;top:50%;transform:translateY(-50%);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:2px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:2}
+.hm-act .btn{padding:2px 7px;font-size:12px;min-height:0;white-space:nowrap}.hm-r:hover .hm-act,.hm-r:focus-within .hm-act{display:flex}
+@media (hover:none){.hm-act{position:static;transform:none;box-shadow:none;border:0;background:none;padding:0}.hm-r .hm-lw{flex-wrap:wrap}}
+.hm-r.l1 .hm-l,.hm-r.l1 td{background:#c5e5a5}.hm-r.l1 .hm-t{font-weight:700}.hm-r.l2 .hm-t{font-weight:600;text-align:right}.hm-r.l3 .hm-t{font-style:italic;text-align:right;font-size:12.5px}
+.hm-r.l1 td.hm-l{background:#b6dc8f}
+td.hc{width:22px;min-width:22px;height:26px;cursor:pointer;user-select:none}td.hc:hover{outline:2px solid var(--accent);outline-offset:-2px}
+td.hc.sub{background:color-mix(in srgb,#1f6fc5 35%,transparent)}td.hc.on{background:#1f6fc5}.hm-r.l1 td.hc.on,.hm-r.l1 td.hc.sub{background:#1f6fc5}
+td.hc.stop,th.hm-w.stop{background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.28) 0 3px,transparent 3px 7px)}
+th.hm-w.pick{cursor:pointer;text-decoration:underline}
+.hm-obj td{background:var(--surface)}.hm-obj .hm-lw{font-size:15px;padding:6px 8px}.hm-leh .hm-l,.hm-leh td{background:color-mix(in srgb,var(--muted) 18%,var(--surface))}.hm-leh .hm-lw{justify-content:flex-end;gap:12px}
+.hm-note{color:var(--bad);font-size:12.5px;text-align:center}
+.hm-foot{gap:24px;color:var(--bad);font-size:14px}
+@media (max-width:700px){table.hm .hm-l{min-width:220px;max-width:220px}.hm-d{width:48px}.hm-n{min-width:22px}}
 .fintab{width:100%}.fintab td{vertical-align:top}.fintab td.num{font-family:inherit;white-space:nowrap}.fintab td{overflow-wrap:anywhere}
 .fininc{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:18px;align-items:start}@media (max-width:900px){.fininc{grid-template-columns:1fr}}
 .findel{color:var(--bad)}
@@ -1284,6 +1306,7 @@ function can(p,act,entry){
     case"docs.delete":return ["admin","stavbyveduci"].includes(r)||(XSV.includes(r)&&!!entry&&entry.by===me.id);   /* externý stavbyvedúci maže len to, čo sám nahral */
     case"docs.folders":return["admin","stavbyveduci"].includes(r);
     case"team.view":return !["dozor",...XSV].includes(r);
+    case"harm.edit":return["admin","stavbyveduci"].includes(r);
     case"budget.upload":return["admin","stavbyveduci"].includes(r);
     case"inv.view":return["admin","sledovanie","stavbyveduci","dozor",...XSV,"citanie"].includes(r);
     case"inv.edit":return["admin","stavbyveduci"].includes(r);
@@ -2373,8 +2396,8 @@ function attSet(wid,d){if(!canEdit("personal"))return;const tool=view.attTool||"
   else W[d]={t:tool,h:ATT[tool].hrs?+(view.attHours??8):(tool==="PN"||tool==="OCR"||tool==="NPV"||tool==="A"?0:8)};save()}
 
 /* PDF dochádzky */
-function newPdf(orientation){if(!window.jspdf||!window.jspdf.jsPDF){toast("Knižnica na PDF sa nenačítala. Skús stránku obnoviť.");return null}
-  const doc=new window.jspdf.jsPDF({orientation,unit:"mm",format:"a4"});if(typeof doc.autoTable!=="function"){toast("Knižnica na tabuľky v PDF sa nenačítala.");return null}
+function newPdf(orientation,format){if(!window.jspdf||!window.jspdf.jsPDF){toast("Knižnica na PDF sa nenačítala. Skús stránku obnoviť.");return null}
+  const doc=new window.jspdf.jsPDF({orientation,unit:"mm",format:format||"a4"});if(typeof doc.autoTable!=="function"){toast("Knižnica na tabuľky v PDF sa nenačítala.");return null}
   doc.addFileToVFS("DVC.ttf",PDF_FONT_R);doc.addFont("DVC.ttf","DVC","normal");doc.addFileToVFS("DVCB.ttf",PDF_FONT_B);doc.addFont("DVCB.ttf","DVC","bold");return doc}
 /* pečiatka (s podpisom) nad podpisovou čiarou: x = začiatok čiary, yLine = výška čiary */
 const firmStamp=()=>S.firm&&S.firm.stamp&&S.firm.stamp.data?S.firm.stamp:null;
@@ -4499,7 +4522,7 @@ function firmTabs(){return [["nastenka","Nástenka"],["udaje","Údaje o firme"],
 /* podkarty karty „Údaje o firme“ */
 function firmSubTabs(){return [["udaje","Základné údaje"],...(isCompanyRole(me)?[["zam","Zamestnanci"],["park","Strojový a vozový park"]]:[])]}
 /* podkarty karty „Obchod“ (len admin) */
-function obchodSubTabs(){return isAdmin(me)?[["fin","Financie"],["cennik","Cenník"],["sklad","Sklad"],["ponuky","Cenové ponuky"],["obj","Objednávky"]]:[]}
+function obchodSubTabs(){return isAdmin(me)?[["fin","Financie"],["cennik","Cenník"],["sklad","Sklad"],["ponuky","Cenové ponuky"],["obj","Objednávky"],["harm","Harmonogram"]]:[]}
 const firmGroups=()=>({udaje:firmSubTabs(),fin:obchodSubTabs()});
 function firmTabCur(){const t=view.firmTab||"nastenka";return firmTabs().some(x=>x[0]===t)||Object.values(firmGroups()).some(g=>g.some(x=>x[0]===t))?t:"nastenka"}
 const firmTabTop=()=>{const t=firmTabCur(),G=firmGroups();return Object.keys(G).find(k=>G[k].some(x=>x[0]===t))||t};
@@ -5310,9 +5333,151 @@ document.addEventListener("change",ev=>{const t=ev.target;if(!me)return;
     const r=document.querySelectorAll(".obrow");r[r.length-1]?.querySelector('[data-f="qty"]')?.select();toast("Pridané z cenníka – doplň množstvo")}
   else if(t.id==="obSrc"&&t.files&&t.files[0]&&isAdmin(me)){const f=t.files[0];t.value="";obFromFile(f)}
   else if(t.dataset&&t.dataset.f==="vat"&&t.classList.contains("obI"))t.dispatchEvent(new Event("input",{bubbles:true}))});
+/* ===================== Časový harmonogram stavby (Firma → Obchod → Harmonogram, Stavba → Harmonogram) ===================== */
+/* S.harms = [{id,projectId?,name,zakazka,objednavatel,zhotovitel,mode:"work"|"date",start,weeks,lehota,stops:[w],stopNote,
+     rows:[{id,lvl:1 oddiel|2 etapa|3 konštrukcia,title,dur,cells:[w]}]}]  – w = poradie týždňa od 0; harmonogram bez projectId je v Obchode */
+const HM_LVL={1:"Oddiel",2:"Etapa",3:"Konštrukcia stavby"};
+const hmById=id=>(S.harms||[]).find(h=>h.id===id);
+const hmMon=d=>{const x=new Date((d||todayIso())+"T12:00:00Z"),k=(x.getUTCDay()+6)%7;x.setUTCDate(x.getUTCDate()-k);return x};
+function hmWeek(H,w){/* údaje o týždni w: pondelok, piatok, ISO týždeň, mesiac a rok (podľa štvrtka) */
+  if(H.mode!=="date")return {wk:w+1,mon:Math.floor(w*7/30.4375)+1};
+  const m=hmMon(H.start);m.setUTCDate(m.getUTCDate()+7*w);const th=new Date(m);th.setUTCDate(th.getUTCDate()+3);const fr=new Date(m);fr.setUTCDate(fr.getUTCDate()+4);
+  const y0=new Date(Date.UTC(th.getUTCFullYear(),0,4)),wk=1+Math.round((th-hmMon(y0.toISOString().slice(0,10)))/6048e5);
+  return {wk,mon:`${th.getUTCMonth()+1}.${String(th.getUTCFullYear()).slice(2)}`,year:th.getUTCFullYear(),monday:m.toISOString().slice(0,10),friday:fr.toISOString().slice(0,10)}}
+function hmDesc(H,i){const L=H.rows[i].lvl,out=[];for(let j=i+1;j<H.rows.length&&H.rows[j].lvl>L;j++)out.push(j);return out}
+function hmUnion(H,i){const s=new Set(H.rows[i].cells||[]);hmDesc(H,i).forEach(j=>(H.rows[j].cells||[]).forEach(w=>s.add(w)));return s}
+const hmDur=(H,i)=>{const r=H.rows[i];if(String(r.dur||"").trim())return r.dur;const n=hmUnion(H,i).size*5;return n?n:""};
+const hmDurTxt=v=>v===""?"":/^\d+([.,]\d+)?$/.test(String(v).trim())?`${v} ${pl(+String(v).replace(",","."),"deň","dni","dní")}`:String(v);
+function hmAll(H){const s=new Set();H.rows.forEach(r=>(r.cells||[]).forEach(w=>s.add(w)));return [...s].sort((a,b)=>a-b)}
+function hmSpan(H){const a=hmAll(H);if(!a.length)return null;const f=a[0],l=a[a.length-1],stops=(H.stops||[]).filter(w=>w>=f&&w<=l).length;
+  return {f,l,days:(l-f+1-stops)*7,start:H.mode==="date"?hmWeek(H,f).monday:"",end:H.mode==="date"?hmWeek(H,l).friday:""}}
+const hmLehota=H=>{if(String(H.lehota||"").trim())return H.lehota;const s=hmSpan(H);return s?s.days:""};
+function hmNums(H){let o=0,e=0,k=0;return H.rows.map(r=>{if(r.lvl===1){o++;e=0;k=0;return `${o}.`}if(r.lvl===2){e++;k=0;return `${o}.${e}`}k++;return ""})}
+function hmBlank(p){const F=S.firm||{};return {id:uid("hm"),projectId:p?p.id:"",name:p?p.name:"",zakazka:p?p.name:"",objednavatel:p&&p.investor?p.investor:"",
+  zhotovitel:[F.name||S.company,firmAddress(F)].filter(Boolean).join(", "),mode:"date",start:todayIso(),weeks:26,lehota:"",stops:[],stopNote:"",
+  rows:[{id:uid("hr"),lvl:1,title:"Všeobecné položky",dur:"",cells:[]}],by:me.id,at:nowIso()}}
+const hmCanEdit=H=>{if(!H)return false;if(!H.projectId)return isAdmin(me);const p=S.projects.find(x=>x.id===H.projectId);return !!p&&can(p,"harm.edit")};
+
+/* --- editor --- */
+function hmEditorHTML(H){const ed=hmCanEdit(H),N=H.weeks||26,W=[...Array(N).keys()].map(w=>hmWeek(H,w)),nums=hmNums(H),stops=new Set(H.stops||[]),sp=hmSpan(H);
+  const grp=(key)=>{const out=[];W.forEach((x,i)=>{const v=x[key];if(out.length&&out[out.length-1].v===v)out[out.length-1].n++;else out.push({v,n:1,i})});return out};
+  const hdr=(lab,key,fmt)=>`<tr class="hm-h"><th class="hm-l">${lab}</th>${grp(key).map(g=>`<th colspan="${g.n}">${esc(fmt?fmt(g.v):g.v)}</th>`).join("")}</tr>`;
+  const head=(H.mode==="date"?hdr("Rok","year"):"")+hdr("Mesiac","mon")+`<tr class="hm-h"><th class="hm-l">Týždeň</th>${W.map((x,w)=>`<th class="hm-w${stops.has(w)?" stop":""}${view.hmStopMode&&ed?" pick":""}" ${view.hmStopMode&&ed?`data-a="hmStop" data-w="${w}" title="Prerušenie prác v tomto týždni"`:""}>${x.wk}</th>`).join("")}</tr>`;
+  const rows=H.rows.map((r,i)=>{const U=hmUnion(H,i),own=new Set(r.cells||[]),d=hmDur(H,i);
+    const acts=ed?`<span class="hm-act">${r.lvl===1?`<button class="btn small ghost" data-a="hmAdd" data-i="${i}" data-l="2">+ Etapa</button>`:""}${r.lvl<3?`<button class="btn small ghost" data-a="hmAdd" data-i="${i}" data-l="3">+ Konštrukcia</button>`:""}
+      <button class="btn small ghost" data-a="hmMove" data-i="${i}" data-d="-1" aria-label="Posunúť vyššie">↑</button><button class="btn small ghost" data-a="hmMove" data-i="${i}" data-d="1" aria-label="Posunúť nižšie">↓</button><button class="btn small ghost findel" data-a="hmDelRow" data-i="${i}" aria-label="Odstrániť riadok">×</button></span>`:"";
+    return `<tr class="hm-r l${r.lvl}" data-i="${i}"><td class="hm-l"><div class="hm-lw"><span class="hm-n">${nums[i]}</span>
+      ${ed?`<input class="hm-t" data-i="${i}" value="${esc(r.title)}" placeholder="${HM_LVL[r.lvl]}" aria-label="${HM_LVL[r.lvl]} – názov">`:`<span class="hm-tt">${esc(r.title)}</span>`}
+      ${ed?`<input class="hm-d" data-i="${i}" value="${esc(r.dur||"")}" placeholder="${d===""?"dní":esc(String(d))}" inputmode="numeric" aria-label="Doba trvania (dní)" title="Doba trvania – prázdne = počet označených týždňov × 5 pracovných dní">`:`<span class="hm-dd">${esc(hmDurTxt(d))}</span>`}${acts}</div></td>
+      ${W.map((x,w)=>`<td class="hc${own.has(w)?" on":U.has(w)?" sub":""}${stops.has(w)?" stop":""}" data-i="${i}" data-w="${w}"></td>`).join("")}</tr>`}).join("");
+  const stopRange=[...stops].sort((a,b)=>a-b);
+  return `<div class="card stack hmed"><div class="entry-head"><h3>Časový harmonogram stavby</h3><div class="row" style="gap:6px"><button class="btn small" data-a="hmPdf" data-id="${H.id}">PDF</button><button class="btn small ghost" data-a="hmClose">Zavrieť</button></div></div>
+    <form class="stack" id="hmHead" autocomplete="off" onsubmit="return false">
+      <div class="grid3"><label>Zákazka<input data-hf="zakazka" value="${esc(H.zakazka||"")}" ${ed?"":"readonly"}></label><label>Objednávateľ<input data-hf="objednavatel" value="${esc(H.objednavatel||"")}" ${ed?"":"readonly"}></label><label>Zhotoviteľ<input data-hf="zhotovitel" value="${esc(H.zhotovitel||"")}" ${ed?"":"readonly"}></label></div>
+      <div class="grid3"><label>Stavebný objekt (nadpis)<input data-hf="name" value="${esc(H.name||"")}" placeholder="napr. SO 101 – Most" ${ed?"":"readonly"}></label>
+        <div class="stack" style="gap:4px"><span class="lbl">Kalendár</span><div class="seg" role="radiogroup" aria-label="Kalendár"><label><input type="radio" name="hmMode" value="work" ${H.mode!=="date"?"checked":""} ${ed?"":"disabled"}><span>Pracovný čas</span></label><label><input type="radio" name="hmMode" value="date" ${H.mode==="date"?"checked":""} ${ed?"":"disabled"}><span>Presný dátum</span></label></div></div>
+        ${H.mode==="date"?`<label>Začiatok kalendára (týždeň)<input type="date" data-hf="start" value="${esc(H.start||todayIso())}" ${ed?"":"readonly"}></label>`:`<div class="muted" style="font-size:13px;align-self:end">Týždne a mesiace sa číslujú od začiatku výstavby (1, 2, 3…).</div>`}</div>
+      <div class="grid3"><label>Počet týždňov v kalendári<span class="row" style="gap:6px;flex-wrap:nowrap">${ed?`<button type="button" class="btn small" data-a="hmWeeks" data-d="-4">−4</button>`:""}<input data-hf="weeks" inputmode="numeric" value="${N}" ${ed?"":"readonly"} style="text-align:center">${ed?`<button type="button" class="btn small" data-a="hmWeeks" data-d="4">+4</button>`:""}</span></label>
+        <label>Plánovaná lehota výstavby (dní)<input data-hf="lehota" value="${esc(H.lehota||"")}" placeholder="${sp?sp.days+" (od prvého po posledný týždeň)":""}" ${ed?"":"readonly"}></label>
+        <label>Prerušenie prác – dôvod<input data-hf="stopNote" value="${esc(H.stopNote||"")}" placeholder="napr. klimatické podmienky" ${ed?"":"readonly"}></label></div>
+    </form>
+    ${ed?`<div class="row" style="gap:8px"><label class="chk"><input type="checkbox" id="hmStopMode" ${view.hmStopMode?"checked":""}> Označiť týždne prerušenia prác (klikaním na čísla týždňov)</label><span class="muted" style="font-size:13px">Klikni alebo ťahaj myšou po políčkach týždňov.</span></div>`:""}
+    <div class="hmwrap"><table class="hm"><thead>${head}</thead><tbody>
+      <tr class="hm-r hm-obj"><td class="hm-l"><div class="hm-lw"><b>${esc(H.name||"")}</b></div></td><td colspan="${N}"></td></tr>
+      <tr class="hm-r hm-leh"><td class="hm-l"><div class="hm-lw"><span>Plánovaná lehota výstavby:</span><b>${esc(hmDurTxt(hmLehota(H)))}</b></div></td><td colspan="${N}" class="hm-note">${stopRange.length&&H.stopNote?esc(H.stopNote):""}</td></tr>
+      ${rows}</tbody></table></div>
+    ${ed?`<div class="row"><button class="btn" data-a="hmAdd" data-i="-1" data-l="1">+ Oddiel</button></div>`:""}
+    <div class="row hm-foot"><span>Zahájenie stavebných prác: <b>${sp?(H.mode==="date"?d2(sp.start):`${sp.f+1}. týždeň`):"–"}</b></span><span>Plánované ukončenie stavebných prác: <b>${sp?(H.mode==="date"?d2(sp.end):`${sp.l+1}. týždeň`):"–"}</b></span></div></div>`}
+function hmListHTML(L,opts){return L.length?`<div class="tablewrap"><table class="fintab"><thead><tr><th>Harmonogram</th><th>Obdobie</th><th class="r">Lehota</th><th></th></tr></thead><tbody>${L.map(H=>{const sp=hmSpan(H);
+  return `<tr class="clickrow" data-a="hmOpen" data-id="${H.id}"><td><b>${esc(H.name||H.zakazka||"Bez názvu")}</b><div class="muted" style="font-size:12px">${[H.zakazka!==H.name?H.zakazka:"",H.objednavatel].filter(Boolean).map(esc).join(" · ")}</div></td>
+    <td>${sp?(H.mode==="date"?`${d2(sp.start)} – ${d2(sp.end)}`:`${sp.f+1}. – ${sp.l+1}. týždeň`):`<span class="muted">bez termínov</span>`}<div class="muted" style="font-size:12px">${H.mode==="date"?"presný dátum":"pracovný čas"}</div></td>
+    <td class="num r">${esc(hmDurTxt(hmLehota(H)))}</td><td class="r" style="white-space:nowrap"><button class="btn small" data-a="hmPdf" data-id="${H.id}">PDF</button>${opts&&opts.del&&hmCanEdit(H)?` <button class="btn small ghost findel" data-a="hmDel" data-id="${H.id}" aria-label="Zmazať harmonogram">×</button>`:""}</td></tr>`}).join("")}</tbody></table></div>`:""}
+function hmObchodHTML(){const L=(S.harms||[]).filter(h=>!h.projectId),H=view.hmOpen&&hmById(view.hmOpen);
+  return `<div class="stack">${H&&!H.projectId?hmEditorHTML(H):""}<div class="card stack"><div class="entry-head ecdh"><h3>Harmonogramy</h3><button class="btn primary" data-a="hmNew">+ Nový harmonogram</button></div>
+    <div class="muted" style="font-size:13px">Časové harmonogramy aj pre stavby, ktoré ešte len pripravuješ alebo súťažíš. Keď stavbu získaš, pridáš harmonogram do stavby v karte Harmonogram.</div>
+    ${hmListHTML(L,{del:true})||`<div class="muted">Zatiaľ žiadne harmonogramy.</div>`}</div></div>`}
+function hmProjectHTML(p){const L=(S.harms||[]).filter(h=>h.projectId===p.id),H=view.hmOpen&&hmById(view.hmOpen),ed=can(p,"harm.edit"),src=(S.harms||[]).filter(h=>!h.projectId);
+  return `<div class="stack">${H&&H.projectId===p.id?hmEditorHTML(H):""}<div class="card stack"><div class="entry-head ecdh"><h3>Harmonogram stavby</h3>${ed?`<div class="ecdh-r">${isAdmin(me)&&src.length?`<button class="btn" data-a="hmAddPick">Pridať harmonogram</button>`:""}<button class="btn primary" data-a="hmNewP" data-p="${p.id}">Vytvoriť harmonogram</button></div>`:""}</div>
+    ${view.hmPick&&ed?`<form class="row" id="hmPickForm" style="gap:6px"><select id="hmPickSel" required style="flex:1 1 260px"><option value="">– vyber harmonogram z Obchodu –</option>${src.map(h=>`<option value="${h.id}">${esc(h.name||h.zakazka||"Bez názvu")}</option>`).join("")}</select><button class="btn small primary">Pridať do stavby</button><button type="button" class="btn small ghost" data-a="hmPickNo">Zrušiť</button></form>`:""}
+    ${hmListHTML(L,{del:true})||`<div class="muted">Stavba zatiaľ nemá harmonogram.${ed?" Vytvor nový, alebo pridaj harmonogram pripravený v karte Firma → Obchod → Harmonogram.":""}</div>`}</div></div>`}
+
+/* --- PDF: A4 na šírku (viac ako 40 týždňov → A3) --- */
+function hmPdf(H){const N=H.weeks||26,big=N>40,doc=newPdf("landscape",big?"a3":"a4");if(!doc)return;
+  const PW=doc.internal.pageSize.getWidth(),PH=doc.internal.pageSize.getHeight(),L=10,R=PW-10,cN=12,cT=big?110:82,cD=18,gx=L+cN+cT+cD,cw=(R-gx)/N,W=[...Array(N).keys()].map(w=>hmWeek(H,w)),stops=new Set(H.stops||[]),nums=hmNums(H),sp=hmSpan(H);
+  const RED=[220,30,30],GREEN=[146,208,80],BLUE=[31,111,197],YEL=[255,255,0],GR=[190,190,190],LN=[120,120,120];
+  const font=(b,sz,c)=>{doc.setFont("DVC",b?"bold":"normal");doc.setFontSize(sz);doc.setTextColor(...(c||[0,0,0]))};
+  let y;const top=()=>{y=12;font(true,16,RED);doc.text("Časový harmonogram stavby",L,y);y+=7;
+    [["Zákazka:",H.zakazka],["Objednávateľ:",H.objednavatel],["Zhotoviteľ:",H.zhotovitel]].forEach(([a,b])=>{font(false,9);doc.text(a,L,y);font(true,9.5);doc.text(doc.splitTextToSize(plain(b||""),R-L-30)[0]||"",L+28,y);y+=4.6});y+=2;
+    const hr=H.mode==="date"?[["Rok","year"],["Mesiac","mon"],["Týždeň","wk"]]:[["Mesiac","mon"],["Týždeň","wk"]],rh=4.6,hh=hr.length*rh;
+    doc.setDrawColor(...LN);doc.setLineWidth(0.15);doc.setFillColor(...YEL);doc.rect(L,y,R-L,hh,"F");
+    font(true,8);doc.rect(L,y,cN,hh);doc.text(["Označenie","objektu"],L+cN/2,y+hh/2-1,{align:"center"});doc.rect(L+cN,y,cT,hh);doc.text("Popis prác",L+cN+cT/2,y+hh/2+1,{align:"center"});
+    doc.rect(L+cN+cT,y,cD,hh);font(true,7);doc.text(["Doba","trvania","prác"],L+cN+cT+cD/2,y+hh/2-2.2,{align:"center"});
+    hr.forEach(([lab,key],k)=>{const yy=y+k*rh;let i=0;while(i<N){let j=i;while(j+1<N&&W[j+1][key]===W[i][key]&&key!=="wk")j++;const x=gx+i*cw,w=(j-i+1)*cw;
+      if(key==="wk"&&stops.has(i)){doc.setFillColor(...GR);doc.rect(x,yy,w,rh,"F")}doc.rect(x,yy,w,rh);font(key!=="wk",key==="wk"?(cw<4?5:6):7);const t=String(W[i][key]);if(doc.getTextWidth(t)<w-0.6)doc.text(t,x+w/2,yy+rh-1.2,{align:"center"});i=j+1}});
+    y+=hh+1.5};
+  top();const rowH=5.2,band=(txt,b)=>{font(true,11);doc.text(plain(txt),L+1,y+4.2);y+=rowH+0.8};
+  const gridRow=(fill)=>{for(let w=0;w<N;w++){const x=gx+w*cw;if(stops.has(w)){doc.setFillColor(...GR);doc.rect(x,y,cw,rowH,"F")}if(fill&&fill(w)){doc.setFillColor(...fill(w));doc.rect(x+0.15,y+0.9,cw-0.3,rowH-1.8,"F")}doc.setDrawColor(200,200,200);doc.rect(x,y,cw,rowH)}doc.setDrawColor(...LN)};
+  if(H.name)band(H.name);
+  doc.setFillColor(215,215,215);doc.rect(L,y,gx-L,rowH,"F");doc.rect(L,y,gx-L,rowH);font(true,9);doc.text("Plánovaná lehota výstavby:",L+cN+cT-2,y+3.7,{align:"right"});doc.text(plain(hmDurTxt(hmLehota(H))),L+cN+cT+cD/2,y+3.7,{align:"center"});
+  gridRow(null);const stopY=y;y+=rowH;
+  H.rows.forEach((r,i)=>{if(y+rowH>PH-14){doc.addPage(big?"a3":"a4","landscape");top()}
+    const U=hmUnion(H,i),own=new Set(r.cells||[]),d=hmDurTxt(hmDur(H,i));
+    if(r.lvl===1){doc.setFillColor(...GREEN);doc.rect(L,y,gx-L,rowH,"F")}
+    doc.rect(L,y,cN,rowH);doc.rect(L+cN,y,cT,rowH);doc.rect(L+cN+cT,y,cD,rowH);
+    if(r.lvl===1){font(true,9);doc.text(nums[i],L+cN/2,y+3.7,{align:"center"});doc.text(doc.splitTextToSize(plain(r.title),cT-3)[0]||"",L+cN+1.5,y+3.7);font(true,8.5);doc.text(plain(d),L+cN+cT+cD/2,y+3.7,{align:"center"})}
+    else if(r.lvl===2){font(true,8.5);doc.text(doc.splitTextToSize(plain(r.title),cT-3)[0]||"",L+cN+cT-1.5,y+3.7,{align:"right"});font(true,7.5);doc.text(plain(d),L+cN+cT+cD/2,y+3.6,{align:"center"})}
+    else{font(false,7);doc.text(doc.splitTextToSize(plain(r.title),cT-3)[0]||"",L+cN+cT-1.5,y+3.6,{align:"right"});doc.text(plain(d),L+cN+cT+cD/2,y+3.6,{align:"center"})}
+    if(r.lvl===1){for(let w=0;w<N;w++){const x=gx+w*cw;doc.setFillColor(...(stops.has(w)?GR:GREEN));doc.rect(x,y,cw,rowH,"F");if(U.has(w)){doc.setFillColor(...BLUE);doc.rect(x+0.15,y+0.9,cw-0.3,rowH-1.8,"F")}doc.setDrawColor(200,200,200);doc.rect(x,y,cw,rowH)}doc.setDrawColor(...LN)}
+    else gridRow(w=>own.has(w)||U.has(w)?BLUE:null);
+    y+=rowH});
+  /* poznámka k prerušeniu do stredu prerušených týždňov */
+  const st=[...stops].sort((a,b)=>a-b);if(st.length&&H.stopNote){const m=(st[0]+st[st.length-1]+1)/2;font(false,8,RED);const tw=doc.getTextWidth(plain(H.stopNote))+3,cx=gx+m*cw,ny=Math.min(y-rowH*2,stopY+(y-stopY)/2);
+    doc.setFillColor(255,255,255);doc.rect(cx-tw/2,ny-3.4,tw,4.6,"F");doc.text(plain(H.stopNote),cx,ny,{align:"center"})}
+  y+=6;font(false,9,RED);if(sp){doc.text(plain(`Zahájenie stavebných prác: ${H.mode==="date"?obDate(sp.start):(sp.f+1)+". týždeň"}`),L+cN+cT,y);doc.text(plain(`Plánované ukončenie stavebných prác: ${H.mode==="date"?obDate(sp.end):(sp.l+1)+". týždeň"}`),L+cN+cT+95,y)}
+  const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);font(false,7,[120,120,120]);doc.text(`Strana ${i}/${n}`,R,PH-6,{align:"right"});doc.text(plain(S.firm&&S.firm.name||S.company||""),L,PH-6)}
+  offerFile(`Harmonogram_${(H.name||H.zakazka||"stavba").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w-]+/g,"_").slice(0,60)}.pdf`,doc.output("arraybuffer"))}
+
+/* --- udalosti --- */
+let hmPaint=null;
+function hmCellSet(td,on){const H=hmById(view.hmOpen);if(!H)return;const r=H.rows[+td.dataset.i],w=+td.dataset.w;r.cells=r.cells||[];const has=r.cells.includes(w);
+  if(on&&!has)r.cells.push(w);if(!on&&has)r.cells=r.cells.filter(x=>x!==w);td.classList.toggle("on",on);if(!on)td.classList.remove("sub")}
+document.addEventListener("pointerdown",ev=>{const td=ev.target.closest&&ev.target.closest("td.hc");if(!td||!me)return;const H=hmById(view.hmOpen);if(!hmCanEdit(H))return;
+  if(ev.pointerType!=="mouse"){return}   /* dotyk: prepína sa ťuknutím (click), ťahanie posúva tabuľku */
+  ev.preventDefault();const on=!td.classList.contains("on");hmPaint={on};hmCellSet(td,on)});
+document.addEventListener("pointermove",ev=>{if(!hmPaint)return;const el=document.elementFromPoint(ev.clientX,ev.clientY),td=el&&el.closest&&el.closest("td.hc");if(td)hmCellSet(td,hmPaint.on)});
+document.addEventListener("pointerup",()=>{if(!hmPaint)return;hmPaint=null;save();render()});
+document.addEventListener("click",ev=>{const td=ev.target.closest&&ev.target.closest("td.hc");if(td&&me){const H=hmById(view.hmOpen);if(!hmCanEdit(H))return;
+    if(window.matchMedia&&window.matchMedia("(pointer:fine)").matches)return;hmCellSet(td,!td.classList.contains("on"));save();render();return}
+  const b=ev.target.closest("[data-a]");if(!b||!me)return;const a=b.dataset.a;if(!/^hm/.test(a))return;const H=hmById(view.hmOpen);
+  if(a==="hmNew"){if(!isAdmin(me))return;const h=hmBlank(null);h.name="";h.zakazka="";(S.harms=S.harms||[]).push(h);view.hmOpen=h.id;save();render();window.scrollTo({top:0,behavior:"smooth"})}
+  else if(a==="hmNewP"){const p=S.projects.find(x=>x.id===b.dataset.p);if(!p||!can(p,"harm.edit"))return;const h=hmBlank(p);(S.harms=S.harms||[]).push(h);view.hmOpen=h.id;save();render();window.scrollTo({top:0,behavior:"smooth"})}
+  else if(a==="hmOpen"){view.hmOpen=b.dataset.id;view.hmStopMode=false;render();window.scrollTo({top:0,behavior:"smooth"})}
+  else if(a==="hmClose"){view.hmOpen=null;render()}
+  else if(a==="hmPdf"){const h=hmById(b.dataset.id);if(h)hmPdf(h)}
+  else if(a==="hmAddPick"){view.hmPick=true;render()}else if(a==="hmPickNo"){view.hmPick=false;render()}
+  else if(a==="hmDel"){const h=hmById(b.dataset.id);if(!hmCanEdit(h))return;if(!b.dataset.sure){b.dataset.sure="1";b.textContent="Zmazať?";return}S.harms=S.harms.filter(x=>x!==h);if(view.hmOpen===h.id)view.hmOpen=null;save();toast("Harmonogram zmazaný");render()}
+  else if(!hmCanEdit(H))return;
+  else if(a==="hmAdd"){const i=+b.dataset.i,l=+b.dataset.l,row={id:uid("hr"),lvl:l,title:"",dur:"",cells:[]};let at=H.rows.length;if(i>=0){const d=hmDesc(H,i);at=(d.length?d[d.length-1]:i)+1}
+    H.rows.splice(at,0,row);save();render();document.querySelector(`.hm-t[data-i="${at}"]`)?.focus()}
+  else if(a==="hmMove"){const i=+b.dataset.i,dir=+b.dataset.d,blk=[i,...hmDesc(H,i)],L=H.rows[i].lvl;
+    if(dir<0){let j=i-1;while(j>=0&&H.rows[j].lvl>L)j--;if(j<0||H.rows[j].lvl!==L)return;const moved=H.rows.splice(i,blk.length);H.rows.splice(j,0,...moved)}
+    else{const k=blk[blk.length-1]+1;if(k>=H.rows.length||H.rows[k].lvl!==L)return;const nb=[k,...hmDesc(H,k)];const moved=H.rows.splice(k,nb.length);H.rows.splice(i,0,...moved)}save();render()}
+  else if(a==="hmDelRow"){const i=+b.dataset.i,blk=[i,...hmDesc(H,i)];if(blk.length>1&&!b.dataset.sure){b.dataset.sure="1";b.textContent=`Zmazať aj ${blk.length-1} pod ním?`;return}H.rows.splice(i,blk.length);save();render()}
+  else if(a==="hmWeeks"){H.weeks=Math.max(4,Math.min(104,(H.weeks||26)+(+b.dataset.d)));save();render()}
+  else if(a==="hmStop"){const w=+b.dataset.w;H.stops=H.stops||[];H.stops=H.stops.includes(w)?H.stops.filter(x=>x!==w):[...H.stops,w];save();render()}});
+document.addEventListener("change",ev=>{const t=ev.target;if(!me)return;const H=hmById(view.hmOpen);
+  if(t.id==="hmStopMode"){view.hmStopMode=t.checked;render();return}
+  if(!H||!hmCanEdit(H))return;
+  if(t.name==="hmMode"){H.mode=t.value;if(t.value==="date"&&!H.start)H.start=todayIso();save();render()}
+  else if(t.dataset&&t.dataset.hf){const f=t.dataset.hf;let v=t.value.trim();if(f==="weeks"){v=Math.max(4,Math.min(104,parseInt(v)||26))}H[f]=v;save();render()}
+  else if(t.classList&&t.classList.contains("hm-t")){H.rows[+t.dataset.i].title=t.value.trim();save()}
+  else if(t.classList&&t.classList.contains("hm-d")){H.rows[+t.dataset.i].dur=t.value.trim();save();render()}});
+document.addEventListener("submit",ev=>{if(ev.target.id!=="hmPickForm"||!me)return;ev.preventDefault();const src=hmById($("#hmPickSel").value),p=S.projects.find(x=>x.id===view.projectId);
+  if(!src||!p||!can(p,"harm.edit")||!isAdmin(me))return;const c=JSON.parse(JSON.stringify(src));c.id=uid("hm");c.projectId=p.id;c.from=src.id;c.at=nowIso();c.by=me.id;c.rows.forEach(r=>r.id=uid("hr"));
+  (S.harms=S.harms||[]).push(c);view.hmPick=false;view.hmOpen=c.id;save();toast("Harmonogram pridaný do stavby");render()});
 function firmaHTML(){
   const t=firmTabCur(),tabs="";
-  const body=t==="fin"?financeHTML():t==="cennik"?cenHTML():t==="sklad"?skladHTML():t==="ponuky"?obHTML("q"):t==="obj"?obHTML("o"):t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():t==="ponuka"?marketHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML()+mailSetHTML()+accDelHTML("firm"));
+  const body=t==="fin"?financeHTML():t==="cennik"?cenHTML():t==="sklad"?skladHTML():t==="ponuky"?obHTML("q"):t==="obj"?obHTML("o"):t==="harm"?hmObchodHTML():t==="nastenka"?nastenkaHTML():t==="role"?usersHTML():t==="moduly"?modulesHTML():t==="zam"?firmEmployeesHTML():t==="park"?firmMachinesHTML():t==="ponuka"?marketHTML():(view.firmEditing&&me.companyRole==="admin"?firmFormHTML("edit"):firmCardHTML()+centersHTML()+mailSetHTML()+accDelHTML("firm"));
   const top=firmTabTop(),grp=firmGroups()[top]||[];
   const sub=grp.length>1?`<div class="tabs firmsub" role="tablist" aria-label="${top==="fin"?"Obchod":"Údaje o firme"}">${grp.map(([k,l])=>`<button class="tab" role="tab" data-a="firmTab" data-tab="${k}" aria-selected="${t===k}">${l}</button>`).join("")}</div>`:"";
   return `<div class="stack"><div><div class="eyebrow">Firma</div><h1>${esc(S.firm.name||"Firma")}</h1></div>${sub}${t==="udaje"&&!view.firmEditing?firmStartRowHTML():""}${body}</div>`}
@@ -5727,6 +5892,7 @@ function projectTabs(p){
   const tabs=[["dennik","Denný záznam",dn],["kd","Kontrolné dni",kn]];
   if(can(p,"team.view"))tabs.push(["tim","Tím"]);   /* externí (stavebný dozor, externý stavbyvedúci) tím stavby nevidia */
   tabs.push(["rozpocet","Rozpočet"]);
+  tabs.push(["harmonogram","Harmonogram"]);
   if(can(p,"inv.view"))tabs.push(["faktury","Fakturácia",myNotices().filter(x=>x.p===p).length]);
   if(can(p,"econ.view"))tabs.push(["ekonomika","Ekonomika"]);
   if(can(p,"settings")||(p.closed&&canDelProj()))tabs.push(["nastavenia","Nastavenia"]);
@@ -5761,6 +5927,7 @@ function projectHTML(){
   else if(view.tab==="tim")body=teamHTML(p);
   else if(view.tab==="ekonomika")body=econHTML(p);
   else if(view.tab==="rozpocet")body=areaBarHTML(p)+budgetHTML(p);
+  else if(view.tab==="harmonogram")body=hmProjectHTML(p);
   else if(view.tab==="nastavenia")body=settingsHTML(p);
   else if(view.tab==="dokumentacia")body=areaBarHTML(p)+docsHTML(p);
   else if(view.tab==="kd")body=kdHTML(p);
@@ -7532,6 +7699,15 @@ if(!ROOT.tenants.demo.finExp){const T=ROOT.tenants.demo,y=new Date().getFullYear
 /* ukážkové zložky skladu */
 {const T=ROOT.tenants.demo;if(!T.skFolders){T.skFolders=[{id:"sf1",name:"Sklad prevádzka",parent:""},{id:"sf2",name:"Sklad č. 1",parent:"sf1"},{id:"sf3",name:"Sklad č. 2",parent:"sf1"},{id:"sf4",name:"Stavebný kontajner",parent:""}];
   const F={cn3:"sf2",cn4:"sf3",cn5:"sf3"};(T.cennik||[]).forEach(i=>{if(F[i.id]&&!i.folderId)i.folderId=F[i.id]});try{localStorage.setItem(KEY,JSON.stringify(ROOT))}catch(e){}}}
+/* ukážkový harmonogram (Firma → Obchod → Harmonogram) */
+{const T=ROOT.tenants.demo;if(!T.harms){const R=(l,t,c,dur)=>({id:uid("hr"),lvl:l,title:t,dur:dur||"",cells:c});const rg=(a,b)=>[...Array(b-a+1).keys()].map(k=>a+k);
+  T.harms=[{id:"hm1",projectId:"",name:"SO 101 – Oprava mosta cez potok",zakazka:"Oprava mosta cez potok v obci Horná Lúka – realizácia",objednavatel:"Obec Horná Lúka, Hlavná 1, 974 01 Horná Lúka",zhotovitel:"Kalimis s.r.o., Rimavská Sobota",
+    mode:"date",start:"2026-08-24",weeks:40,lehota:"",stops:rg(15,22),stopNote:"Prerušenie prác – klimatické podmienky",by:"u1",at:"2026-11-17T18:00",
+    rows:[R(1,"Všeobecné položky",[]),R(3,"Prieskumné, geodetické, projektové práce",[0,1,2,3,4,5,6,7],"40"),R(3,"Ostatné práce",[...rg(0,14),...rg(23,34)]),R(3,"Dokumentácia skutočného vyhotovenia",[34,35],"10"),
+      R(1,"Práce a dodávky HSV",[]),R(2,"1. Etapa",[]),R(3,"Frézovanie, odstránenie podkladov",[0]),R(3,"Vybúranie rímsy, záverného múrika",[1]),R(3,"Výkop a realizácia zaisťovacieho prahu",[2,3]),R(3,"Debnenie, armovanie, betonáž",[4]),R(3,"Izolácie, realizácia rímsy",[5]),R(3,"Asfaltové vrstvy",[6],"2"),
+      R(2,"2. Etapa",[]),R(3,"Frézovanie, odstránenie podkladov",[7]),R(3,"Vybúranie rímsy, záverného múrika",[8]),R(3,"Pokládka častí NK",[9,10]),R(3,"Asfaltové vrstvy",[11],"2"),R(3,"Ostatné dokončovacie práce",[12,13,14,...rg(23,30)]),
+      R(1,"Elektromontáže",[]),R(3,"Verejné osvetlenie",[31,32],"10")]}];
+  try{localStorage.setItem(KEY,JSON.stringify(ROOT))}catch(e){}}}
 /* ukážkoví obchodní partneri, cenová ponuka a objednávka (Firma → Obchod) */
 {const T=ROOT.tenants.demo;
   if(!T.partners){T.partners=[{id:"pa1",name:"Bytové družstvo Lipa",street:"Lipová 14",zip:"974 01",city:"Horná Lúka",country:"Slovenská republika",ico:"31111222",dic:"2020111222",icdph:"",contact:"Ing. Eva Malá",phone:"+421 900 111 222",email:"lipa@example.sk"},
