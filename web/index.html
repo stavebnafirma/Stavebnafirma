@@ -5793,38 +5793,50 @@ function hmProjectHTML(p){const L=(S.harms||[]).filter(h=>h.projectId===p.id),H=
 
 /* --- PDF: A4 na šírku (viac ako 40 týždňov → A3) --- */
 function hmPdf(H){const N=H.weeks||26,big=N>40,doc=newPdf("landscape",big?"a3":"a4");if(!doc)return;
-  const PW=doc.internal.pageSize.getWidth(),PH=doc.internal.pageSize.getHeight(),L=10,R=PW-10,cN=12,cT=big?110:82,cD=18,gx=L+cN+cT+cD,cw=(R-gx)/N,W=[...Array(N).keys()].map(w=>hmWeek(H,w)),stops=new Set(H.stops||[]),nums=hmNums(H),sp=hmSpan(H);
-  const RED=[220,30,30],GREEN=[146,208,80],BLUE=[31,111,197],YEL=[255,255,0],GR=[190,190,190],LN=[120,120,120];
-  const font=(b,sz,c)=>{doc.setFont("DVC",b?"bold":"normal");doc.setFontSize(sz);doc.setTextColor(...(c||[0,0,0]))};
-  let y;const top=()=>{y=12;font(true,16,RED);doc.text("Časový harmonogram stavby",L,y);y+=7;
-    [["Zákazka:",H.zakazka],["Objednávateľ:",H.objednavatel],["Zhotoviteľ:",H.zhotovitel]].forEach(([a,b])=>{font(false,9);doc.text(a,L,y);font(true,9.5);doc.text(doc.splitTextToSize(plain(b||""),R-L-30)[0]||"",L+28,y);y+=4.6});y+=2;
-    const hr=H.mode==="date"?[["Rok","year"],["Mesiac","mon"],["Týždeň","wk"]]:[["Mesiac","mon"],["Týždeň","wk"]],rh=4.6,hh=hr.length*rh;
-    doc.setDrawColor(...LN);doc.setLineWidth(0.15);doc.setFillColor(...YEL);doc.rect(L,y,R-L,hh,"F");
-    font(true,8);doc.rect(L,y,cN,hh);doc.text(["Označenie","objektu"],L+cN/2,y+hh/2-1,{align:"center"});doc.rect(L+cN,y,cT,hh);doc.text("Popis prác",L+cN+cT/2,y+hh/2+1,{align:"center"});
-    doc.rect(L+cN+cT,y,cD,hh);font(true,7);doc.text(["Doba","trvania","prác"],L+cN+cT+cD/2,y+hh/2-2.2,{align:"center"});
+  /* farby aplikácie: tmavosivá a oranžová */
+  const DARK=[43,43,43],ORA=[239,125,45],ORA_L=[253,226,205],ORA_M=[246,178,128],GRAY_L=[236,236,233],STOP=[205,205,200],LN=[150,150,146],GL=[215,215,210],MU=[110,110,106];
+  const PW=doc.internal.pageSize.getWidth(),PH=doc.internal.pageSize.getHeight(),L=10,R0=PW-10,cN=16,cT=big?120:92,cD=20,gx=L+cN+cT+cD;
+  const cw=Math.min(9,(R0-gx)/N),R=gx+cw*N,W=[...Array(N).keys()].map(w=>hmWeek(H,w)),stops=new Set(H.stops||[]),nums=hmNums(H),sp=hmSpan(H);
+  const font=(b,sz,c)=>{doc.setFont("DVC",b?"bold":"normal");doc.setFontSize(sz);doc.setTextColor(...(c||DARK))};
+  const lh=sz=>sz*0.3528*1.18;
+  let y;
+  const top=(first)=>{y=13;font(true,15,DARK);doc.text("Časový harmonogram stavby",L,y);doc.setFillColor(...ORA);doc.rect(L,y+2,26,1.1,"F");
+    font(false,7.5,MU);doc.text(plain(S.firm&&S.firm.name||S.company||""),R0,y,{align:"right"});y+=8;
+    if(first){[["Zákazka:",H.zakazka],["Objednávateľ:",H.objednavatel],["Zhotoviteľ:",H.zhotovitel]].forEach(([a,b])=>{if(!b)return;font(false,8.5,MU);doc.text(a,L,y);font(true,9);const t=doc.splitTextToSize(plain(b),R0-L-30);doc.text(t,L+28,y);y+=t.length*4.2+0.6});y+=2}
+    const hr=H.mode==="date"?[["Rok","year"],["Mesiac","mon"],["Týždeň","wk"]]:[["Mesiac","mon"],["Týždeň","wk"]],rh=4.8,hh=hr.length*rh;
+    doc.setFillColor(...DARK);doc.rect(L,y,R-L,hh,"F");doc.setDrawColor(90,90,90);doc.setLineWidth(0.15);
+    font(true,6.8,[255,255,255]);doc.rect(L,y,cN,hh);doc.text(["Označenie","objektu"],L+cN/2,y+hh/2-0.8,{align:"center"});
+    font(true,8,[255,255,255]);doc.rect(L+cN,y,cT,hh);doc.text("Popis prác",L+cN+cT/2,y+hh/2+1,{align:"center"});
+    doc.rect(L+cN+cT,y,cD,hh);font(true,6.8,[255,255,255]);doc.text(["Doba","trvania prác"],L+cN+cT+cD/2,y+hh/2-0.8,{align:"center"});
     hr.forEach(([lab,key],k)=>{const yy=y+k*rh;let i=0;while(i<N){let j=i;while(j+1<N&&W[j+1][key]===W[i][key]&&key!=="wk")j++;const x=gx+i*cw,w=(j-i+1)*cw;
-      if(key==="wk"&&stops.has(i)){doc.setFillColor(...GR);doc.rect(x,yy,w,rh,"F")}doc.rect(x,yy,w,rh);font(key!=="wk",key==="wk"?(cw<4?5:6):7);const t=String(W[i][key]);if(doc.getTextWidth(t)<w-0.6)doc.text(t,x+w/2,yy+rh-1.2,{align:"center"});i=j+1}});
-    y+=hh+1.5};
-  top();const rowH=5.2,band=(txt,b)=>{font(true,11);doc.text(plain(txt),L+1,y+4.2);y+=rowH+0.8};
-  const gridRow=(fill)=>{for(let w=0;w<N;w++){const x=gx+w*cw;if(stops.has(w)){doc.setFillColor(...GR);doc.rect(x,y,cw,rowH,"F")}if(fill&&fill(w)){doc.setFillColor(...fill(w));doc.rect(x+0.15,y+0.9,cw-0.3,rowH-1.8,"F")}doc.setDrawColor(200,200,200);doc.rect(x,y,cw,rowH)}doc.setDrawColor(...LN)};
-  if(H.name)band(H.name);
-  doc.setFillColor(215,215,215);doc.rect(L,y,gx-L,rowH,"F");doc.rect(L,y,gx-L,rowH);font(true,9);doc.text("Plánovaná lehota výstavby:",L+cN+cT-2,y+3.7,{align:"right"});doc.text(plain(hmDurTxt(hmLehota(H))),L+cN+cT+cD/2,y+3.7,{align:"center"});
-  gridRow(null);const stopY=y;y+=rowH;
-  H.rows.forEach((r,i)=>{if(y+rowH>PH-14){doc.addPage(big?"a3":"a4","landscape");top()}
-    const U=hmUnion(H,i),own=new Set(r.cells||[]),d=hmDurTxt(hmDur(H,i));
-    if(r.lvl===1){doc.setFillColor(...GREEN);doc.rect(L,y,gx-L,rowH,"F")}
-    doc.rect(L,y,cN,rowH);doc.rect(L+cN,y,cT,rowH);doc.rect(L+cN+cT,y,cD,rowH);
-    if(r.lvl===1){font(true,9);doc.text(nums[i],L+cN/2,y+3.7,{align:"center"});doc.text(doc.splitTextToSize(plain(r.title),cT-3)[0]||"",L+cN+1.5,y+3.7);font(true,8.5);doc.text(plain(d),L+cN+cT+cD/2,y+3.7,{align:"center"})}
-    else if(r.lvl===2){font(true,8.5);doc.text(doc.splitTextToSize(plain(r.title),cT-3)[0]||"",L+cN+cT-1.5,y+3.7,{align:"right"});font(true,7.5);doc.text(plain(d),L+cN+cT+cD/2,y+3.6,{align:"center"})}
-    else{font(false,7);doc.text(doc.splitTextToSize(plain(r.title),cT-3)[0]||"",L+cN+cT-1.5,y+3.6,{align:"right"});doc.text(plain(d),L+cN+cT+cD/2,y+3.6,{align:"center"})}
-    if(r.lvl===1){for(let w=0;w<N;w++){const x=gx+w*cw;doc.setFillColor(...(stops.has(w)?GR:GREEN));doc.rect(x,y,cw,rowH,"F");if(U.has(w)){doc.setFillColor(...BLUE);doc.rect(x+0.15,y+0.9,cw-0.3,rowH-1.8,"F")}doc.setDrawColor(200,200,200);doc.rect(x,y,cw,rowH)}doc.setDrawColor(...LN)}
-    else{gridRow(w=>own.has(w)||U.has(w)?BLUE:null);font(true,cw<4?4.5:5.5,[255,255,255]);own.forEach(w=>{const dd=hmCellDays(r,w);if(dd<5)doc.text(String(dd),gx+w*cw+cw/2,y+rowH/2+0.9,{align:"center"})})}
-    y+=rowH});
+      if(key==="wk"&&stops.has(i)){doc.setFillColor(95,95,95);doc.rect(x,yy,w,rh,"F")}doc.rect(x,yy,w,rh);font(key!=="wk",key==="wk"?(cw<4?5:6.2):7,[255,255,255]);
+      const t=String(W[i][key]);if(doc.getTextWidth(t)<w-0.6)doc.text(t,x+w/2,yy+rh-1.4,{align:"center"});i=j+1}});
+    y+=hh;doc.setFillColor(...ORA);doc.rect(L,y,R-L,0.9,"F");y+=2.4};
+  const gridCells=(y0,h,fill,bg)=>{for(let w=0;w<N;w++){const x=gx+w*cw;if(bg){doc.setFillColor(...bg);doc.rect(x,y0,cw,h,"F")}if(stops.has(w)){doc.setFillColor(...STOP);doc.rect(x,y0,cw,h,"F")}
+      const f=fill&&fill(w);if(f){doc.setFillColor(...f);doc.rect(x+0.2,y0+Math.min(1,h*0.18),cw-0.4,h-2*Math.min(1,h*0.18),"F")}doc.setDrawColor(...GL);doc.rect(x,y0,cw,h)}doc.setDrawColor(...LN)};
+  top(true);
+  if(H.name){font(true,11);const t=doc.splitTextToSize(plain(H.name),R-L);doc.text(t,L,y+3.6);y+=t.length*4.8+1.2}
+  /* lehota */
+  const rh0=5.4;doc.setFillColor(...GRAY_L);doc.rect(L,y,gx-L,rh0,"F");doc.setDrawColor(...LN);doc.rect(L,y,gx-L,rh0);font(true,8.5);doc.text("Plánovaná lehota výstavby:",L+cN+cT-2,y+3.8,{align:"right"});
+  font(true,8.5,ORA);doc.text(plain(hmDurTxt(hmLehota(H))),L+cN+cT+cD/2,y+3.8,{align:"center"});gridCells(y,rh0,null);const stopY=y;y+=rh0;
+  H.rows.forEach((r,i)=>{const U=hmUnion(H,i),own=new Set(r.cells||[]),d=plain(hmDurTxt(hmDur(H,i))),sz=r.lvl===3?7.4:r.lvl===2?8.2:8.8,ind=r.lvl===1?1.5:r.lvl===2?4:7.5;
+    font(r.lvl<3,sz);const lines=doc.splitTextToSize(plain(r.title||""),cT-ind-2),h=Math.max(r.lvl===1?6:5.2,lines.length*lh(sz)+2.2);
+    if(y+h>PH-16){doc.addPage(big?"a3":"a4","landscape");top(false)}
+    const bg=r.lvl===1?ORA_L:null;if(bg){doc.setFillColor(...bg);doc.rect(L,y,gx-L,h,"F")}
+    doc.setDrawColor(...LN);doc.rect(L,y,cN,h);doc.rect(L+cN,y,cT,h);doc.rect(L+cN+cT,y,cD,h);
+    const ty=y+(h-lines.length*lh(sz))/2+lh(sz)*0.78;
+    if(nums[i]){font(true,sz);doc.text(nums[i],L+cN/2,ty,{align:"center"})}
+    font(r.lvl<3,sz);doc.text(lines,L+cN+ind,ty);font(r.lvl<3,r.lvl===3?7.2:8);doc.text(d,L+cN+cT+cD/2,y+h/2+1,{align:"center"});
+    gridCells(y,h,w=>own.has(w)?ORA:U.has(w)?(r.lvl===1?ORA:ORA_M):null,bg);
+    if(cw>=3.2){font(true,cw<4?4.6:5.6,[255,255,255]);own.forEach(w=>{const dd=hmCellDays(r,w);if(dd<5)doc.text(String(dd),gx+w*cw+cw/2,y+h/2+0.9,{align:"center"})})}
+    y+=h});
   /* poznámka k prerušeniu do stredu prerušených týždňov */
-  const st=[...stops].sort((a,b)=>a-b);if(st.length&&H.stopNote){const m=(st[0]+st[st.length-1]+1)/2;font(false,8,RED);const tw=doc.getTextWidth(plain(H.stopNote))+3,cx=gx+m*cw,ny=Math.min(y-rowH*2,stopY+(y-stopY)/2);
-    doc.setFillColor(255,255,255);doc.rect(cx-tw/2,ny-3.4,tw,4.6,"F");doc.text(plain(H.stopNote),cx,ny,{align:"center"})}
-  y+=6;font(false,9,RED);if(sp){doc.text(plain(`Zahájenie stavebných prác: ${H.mode==="date"?obDate(sp.start):(sp.f+1)+". týždeň"}`),L+cN+cT,y);doc.text(plain(`Plánované ukončenie stavebných prác: ${H.mode==="date"?obDate(sp.end):(sp.l+1)+". týždeň"}`),L+cN+cT+95,y)}
-  const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);font(false,7,[120,120,120]);doc.text(`Strana ${i}/${n}`,R,PH-6,{align:"right"});doc.text(plain(S.firm&&S.firm.name||S.company||""),L,PH-6)}
+  const st=[...stops].sort((a,b)=>a-b);if(st.length&&H.stopNote){const m=(st[0]+st[st.length-1]+1)/2;font(true,7.5,ORA);const tw=doc.getTextWidth(plain(H.stopNote))+3,cx=gx+m*cw,ny=stopY+(y-stopY)/2;
+    doc.setFillColor(255,255,255);doc.rect(cx-tw/2,ny-3.3,tw,4.6,"F");doc.text(plain(H.stopNote),cx,ny,{align:"center"})}
+  y+=7;if(y>PH-14){doc.addPage(big?"a3":"a4","landscape");y=20}
+  if(sp){const a=plain(`Zahájenie stavebných prác: `),b=plain(H.mode==="date"?obDate(sp.start):(sp.f+1)+". týždeň"),c=plain(`Plánované ukončenie stavebných prác: `),e=plain(H.mode==="date"?obDate(sp.end):(sp.l+1)+". týždeň");
+    font(false,9);doc.text(a,L,y);let x=L+doc.getTextWidth(a);font(true,9,ORA);doc.text(b,x,y);x+=doc.getTextWidth(b)+14;font(false,9);doc.text(c,x,y);x+=doc.getTextWidth(c);font(true,9,ORA);doc.text(e,x,y)}
+  const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);font(false,7,MU);doc.text(`Strana ${i}/${n}`,R0,PH-6,{align:"right"});doc.text("www.stavebnafirma.eu",L,PH-6)}
   offerFile(`Harmonogram_${(H.name||H.zakazka||"stavba").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\w-]+/g,"_").slice(0,60)}.pdf`,doc.output("arraybuffer"))}
 
 /* --- udalosti --- */
