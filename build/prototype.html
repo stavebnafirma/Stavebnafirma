@@ -935,7 +935,7 @@ table.hm thead .hm-l{z-index:3;background:#fff59d;padding:3px 8px}
 table.hm tr.hm-r:has(.hm-menu) .hm-l{z-index:5}
 .hm-r.l1 .hm-l,.hm-r.l1 td{background:#c5e5a5}.hm-r.l1 .hm-t{font-weight:700}.hm-r.l2 .hm-t{font-weight:600;margin-left:12px}.hm-r.l3 .hm-t{font-style:italic;font-size:12.5px;margin-left:28px}
 .hm-r.l1 td.hm-l{background:#b6dc8f}
-td.hc{width:22px;min-width:22px;height:26px;cursor:pointer;user-select:none}td.hc:hover{outline:2px solid var(--accent);outline-offset:-2px}
+td.hc{width:22px;min-width:22px;height:26px;cursor:pointer;user-select:none;text-align:center;font-size:11px;font-weight:700;color:#fff}td.hc:hover{outline:2px solid var(--accent);outline-offset:-2px}
 td.hc.sub{background:color-mix(in srgb,#1f6fc5 35%,transparent)}td.hc.on{background:#1f6fc5}.hm-r.l1 td.hc.on,.hm-r.l1 td.hc.sub{background:#1f6fc5}
 td.hc.stop,th.hm-w.stop{background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.28) 0 3px,transparent 3px 7px)}
 th.hm-w.pick{cursor:pointer;text-decoration:underline}
@@ -5347,7 +5347,11 @@ function hmWeek(H,w){/* údaje o týždni w: pondelok, piatok, ISO týždeň, me
   return {wk,mon:`${th.getUTCMonth()+1}.${String(th.getUTCFullYear()).slice(2)}`,year:th.getUTCFullYear(),monday:m.toISOString().slice(0,10),friday:fr.toISOString().slice(0,10)}}
 function hmDesc(H,i){const L=H.rows[i].lvl,out=[];for(let j=i+1;j<H.rows.length&&H.rows[j].lvl>L;j++)out.push(j);return out}
 function hmUnion(H,i){const s=new Set(H.rows[i].cells||[]);hmDesc(H,i).forEach(j=>(H.rows[j].cells||[]).forEach(w=>s.add(w)));return s}
-const hmDur=(H,i)=>{const r=H.rows[i];if(String(r.dur||"").trim())return r.dur;const n=hmUnion(H,i).size*5;return n?n:""};
+const hmCellDays=(r,w)=>(r.days&&r.days[w])||5;
+const hmOwnDays=r=>(r.cells||[]).reduce((s,w)=>s+hmCellDays(r,w),0);
+function hmDurNum(H,i){const r=H.rows[i];if(String(r.dur||"").trim()&&/^\d+([.,]\d+)?$/.test(String(r.dur).trim()))return +String(r.dur).replace(",",".");
+  let n=hmOwnDays(r);const L=r.lvl;for(let j=i+1;j<H.rows.length&&H.rows[j].lvl>L;j++){if(j+1<H.rows.length&&H.rows[j+1].lvl>H.rows[j].lvl)n+=hmOwnDays(H.rows[j]);else n+=hmDurNum(H,j)}return n}
+const hmDur=(H,i)=>{const r=H.rows[i];if(String(r.dur||"").trim())return r.dur;const n=hmDurNum(H,i);return n?n:""};
 const hmDurTxt=v=>v===""?"":/^\d+([.,]\d+)?$/.test(String(v).trim())?`${v} ${pl(+String(v).replace(",","."),"deň","dni","dní")}`:String(v);
 function hmAll(H){const s=new Set();H.rows.forEach(r=>(r.cells||[]).forEach(w=>s.add(w)));return [...s].sort((a,b)=>a-b)}
 function hmSpan(H){const a=hmAll(H);if(!a.length)return null;const f=a[0],l=a[a.length-1],stops=(H.stops||[]).filter(w=>w>=f&&w<=l).length;
@@ -5373,7 +5377,7 @@ function hmEditorHTML(H){if(view.hmMenu!=null)setTimeout(hmMenuPos,0);const ed=h
     return `<tr class="hm-r l${r.lvl}" data-i="${i}"><td class="hm-l"><div class="hm-lw"><span class="hm-n">${nums[i]}</span>
       ${ed?`<input class="hm-t" data-i="${i}" value="${esc(r.title)}" placeholder="${HM_LVL[r.lvl]}" aria-label="${HM_LVL[r.lvl]} – názov">`:`<span class="hm-tt">${esc(r.title)}</span>`}
       ${ed?`<input class="hm-d" data-i="${i}" value="${esc(r.dur||"")}" placeholder="${d===""?"dní":esc(String(d))}" inputmode="numeric" aria-label="Doba trvania (dní)" title="Doba trvania – prázdne = počet označených týždňov × 5 pracovných dní">`:`<span class="hm-dd">${esc(hmDurTxt(d))}</span>`}${acts}</div></td>
-      ${W.map((x,w)=>`<td class="hc${own.has(w)?" on":U.has(w)?" sub":""}${stops.has(w)?" stop":""}" data-i="${i}" data-w="${w}"></td>`).join("")}</tr>`}).join("");
+      ${W.map((x,w)=>`<td class="hc${own.has(w)?" on":U.has(w)?" sub":""}${stops.has(w)?" stop":""}" data-i="${i}" data-w="${w}"${own.has(w)&&hmCellDays(r,w)<5?` title="${hmCellDays(r,w)} ${pl(hmCellDays(r,w),"deň","dni","dní")}"`:""}>${own.has(w)&&hmCellDays(r,w)<5?hmCellDays(r,w):""}</td>`).join("")}</tr>`}).join("");
   const stopRange=[...stops].sort((a,b)=>a-b);
   return `<div class="card stack hmed"><div class="entry-head"><h3>Časový harmonogram stavby</h3><div class="row" style="gap:6px"><button class="btn small" data-a="hmPdf" data-id="${H.id}">PDF</button><button class="btn small ghost" data-a="hmClose">Zavrieť</button></div></div>
     <form class="stack" id="hmHead" autocomplete="off" onsubmit="return false">
@@ -5385,7 +5389,9 @@ function hmEditorHTML(H){if(view.hmMenu!=null)setTimeout(hmMenuPos,0);const ed=h
         <label>Plánovaná lehota výstavby (dní)<input data-hf="lehota" value="${esc(H.lehota||"")}" placeholder="${sp?sp.days+" (od prvého po posledný týždeň)":""}" ${ed?"":"readonly"}></label>
         <label>Prerušenie prác – dôvod<input data-hf="stopNote" value="${esc(H.stopNote||"")}" placeholder="napr. klimatické podmienky" ${ed?"":"readonly"}></label></div>
     </form>
-    ${ed?`<div class="row" style="gap:8px"><label class="chk"><input type="checkbox" id="hmStopMode" ${view.hmStopMode?"checked":""}> Označiť týždne prerušenia prác (klikaním na čísla týždňov)</label><span class="muted" style="font-size:13px">Klikni alebo ťahaj myšou po políčkach týždňov.</span></div>`:""}
+    ${ed?`<div class="row" style="gap:10px 18px"><span class="row" style="gap:8px"><span class="lbl">Zapísať do kalendára</span><span class="seg" role="radiogroup" aria-label="Počet dní v týždni">${[1,2,3,4,5].map(n=>`<label><input type="radio" name="hmDays" value="${n}" ${(view.hmDays||5)===n?"checked":""}><span>${n}</span></label>`).join("")}</span><span class="lbl" id="hmDaysL">${pl(view.hmDays||5,"deň","dni","dní")}</span></span>
+      <label class="chk"><input type="checkbox" id="hmStopMode" ${view.hmStopMode?"checked":""}> Označiť týždne prerušenia prác (klikaním na čísla týždňov)</label></div>
+      <div class="muted" style="font-size:13px;margin-top:-6px">Klikni alebo ťahaj myšou po políčkach týždňov. Označený týždeň sa započíta zvoleným počtom dní (bez čísla = 5 dní) a dni sa sčítajú do doby trvania na začiatku riadku.</div>`:""}
     <div class="hmwrap"><table class="hm"><thead>${head}</thead><tbody>
       <tr class="hm-r hm-obj"><td class="hm-l"><div class="hm-lw"><b>${esc(H.name||"")}</b></div></td><td colspan="${N}"></td></tr>
       <tr class="hm-r hm-leh"><td class="hm-l"><div class="hm-lw"><span>Plánovaná lehota výstavby:</span><b>${esc(hmDurTxt(hmLehota(H)))}</b></div></td><td colspan="${N}" class="hm-note">${stopRange.length&&H.stopNote?esc(H.stopNote):""}</td></tr>
@@ -5432,7 +5438,7 @@ function hmPdf(H){const N=H.weeks||26,big=N>40,doc=newPdf("landscape",big?"a3":"
     else if(r.lvl===2){font(true,8.5);doc.text(doc.splitTextToSize(plain(r.title),cT-3)[0]||"",L+cN+cT-1.5,y+3.7,{align:"right"});font(true,7.5);doc.text(plain(d),L+cN+cT+cD/2,y+3.6,{align:"center"})}
     else{font(false,7);doc.text(doc.splitTextToSize(plain(r.title),cT-3)[0]||"",L+cN+cT-1.5,y+3.6,{align:"right"});doc.text(plain(d),L+cN+cT+cD/2,y+3.6,{align:"center"})}
     if(r.lvl===1){for(let w=0;w<N;w++){const x=gx+w*cw;doc.setFillColor(...(stops.has(w)?GR:GREEN));doc.rect(x,y,cw,rowH,"F");if(U.has(w)){doc.setFillColor(...BLUE);doc.rect(x+0.15,y+0.9,cw-0.3,rowH-1.8,"F")}doc.setDrawColor(200,200,200);doc.rect(x,y,cw,rowH)}doc.setDrawColor(...LN)}
-    else gridRow(w=>own.has(w)||U.has(w)?BLUE:null);
+    else{gridRow(w=>own.has(w)||U.has(w)?BLUE:null);font(true,cw<4?4.5:5.5,[255,255,255]);own.forEach(w=>{const dd=hmCellDays(r,w);if(dd<5)doc.text(String(dd),gx+w*cw+cw/2,y+rowH/2+0.9,{align:"center"})})}
     y+=rowH});
   /* poznámka k prerušeniu do stredu prerušených týždňov */
   const st=[...stops].sort((a,b)=>a-b);if(st.length&&H.stopNote){const m=(st[0]+st[st.length-1]+1)/2;font(false,8,RED);const tw=doc.getTextWidth(plain(H.stopNote))+3,cx=gx+m*cw,ny=Math.min(y-rowH*2,stopY+(y-stopY)/2);
@@ -5443,15 +5449,19 @@ function hmPdf(H){const N=H.weeks||26,big=N>40,doc=newPdf("landscape",big?"a3":"
 
 /* --- udalosti --- */
 let hmPaint=null;
-function hmCellSet(td,on){const H=hmById(view.hmOpen);if(!H)return;const r=H.rows[+td.dataset.i],w=+td.dataset.w;r.cells=r.cells||[];const has=r.cells.includes(w);
-  if(on&&!has)r.cells.push(w);if(!on&&has)r.cells=r.cells.filter(x=>x!==w);td.classList.toggle("on",on);if(!on)td.classList.remove("sub")}
+function hmCellSet(td,on){const H=hmById(view.hmOpen);if(!H)return;const r=H.rows[+td.dataset.i],w=+td.dataset.w,X=view.hmDays||5;r.cells=r.cells||[];r.days=r.days||{};const has=r.cells.includes(w);
+  if(on&&!has)r.cells.push(w);if(!on&&has)r.cells=r.cells.filter(x=>x!==w);
+  if(on){if(X===5)delete r.days[w];else r.days[w]=X}else delete r.days[w];
+  td.classList.toggle("on",on);if(!on)td.classList.remove("sub");td.textContent=on&&X<5?X:""}
+/* klik na označený týždeň s iným počtom dní ho prepíše, s rovnakým ho zruší */
+const hmCellNext=td=>{const H=hmById(view.hmOpen),r=H&&H.rows[+td.dataset.i],w=+td.dataset.w;if(!r)return true;return !td.classList.contains("on")||hmCellDays(r,w)!==(view.hmDays||5)};
 document.addEventListener("pointerdown",ev=>{const td=ev.target.closest&&ev.target.closest("td.hc");if(!td||!me)return;const H=hmById(view.hmOpen);if(!hmCanEdit(H))return;
   if(ev.pointerType!=="mouse"){return}   /* dotyk: prepína sa ťuknutím (click), ťahanie posúva tabuľku */
-  ev.preventDefault();const on=!td.classList.contains("on");hmPaint={on};hmCellSet(td,on)});
+  ev.preventDefault();const on=hmCellNext(td);hmPaint={on};hmCellSet(td,on)});
 document.addEventListener("pointermove",ev=>{if(!hmPaint)return;const el=document.elementFromPoint(ev.clientX,ev.clientY),td=el&&el.closest&&el.closest("td.hc");if(td)hmCellSet(td,hmPaint.on)});
 document.addEventListener("pointerup",()=>{if(!hmPaint)return;hmPaint=null;save();render()});
 document.addEventListener("click",ev=>{const td=ev.target.closest&&ev.target.closest("td.hc");if(td&&me){const H=hmById(view.hmOpen);if(!hmCanEdit(H))return;
-    if(window.matchMedia&&window.matchMedia("(pointer:fine)").matches)return;hmCellSet(td,!td.classList.contains("on"));save();render();return}
+    if(window.matchMedia&&window.matchMedia("(pointer:fine)").matches)return;hmCellSet(td,hmCellNext(td));save();render();return}
   const b=ev.target.closest("[data-a]");if(view.hmMenu!=null&&!(ev.target.closest&&ev.target.closest(".hm-menu,.hm-mb"))){view.hmMenu=null;if(!b){render();return}}
   if(!b||!me)return;const a=b.dataset.a;if(!/^hm/.test(a)){return}const H=hmById(view.hmOpen);
   if(a!=="hmMenu"&&view.hmMenu!=null)view.hmMenu=null;
@@ -5474,6 +5484,7 @@ document.addEventListener("click",ev=>{const td=ev.target.closest&&ev.target.clo
   else if(a==="hmStop"){const w=+b.dataset.w;H.stops=H.stops||[];H.stops=H.stops.includes(w)?H.stops.filter(x=>x!==w):[...H.stops,w];save();render()}});
 document.addEventListener("change",ev=>{const t=ev.target;if(!me)return;const H=hmById(view.hmOpen);
   if(t.id==="hmStopMode"){view.hmStopMode=t.checked;render();return}
+  if(t.name==="hmDays"){view.hmDays=+t.value;const l=$("#hmDaysL");if(l)l.textContent=pl(view.hmDays,"deň","dni","dní");return}
   if(!H||!hmCanEdit(H))return;
   if(t.name==="hmMode"){H.mode=t.value;if(t.value==="date"&&!H.start)H.start=todayIso();save();render()}
   else if(t.dataset&&t.dataset.hf){const f=t.dataset.hf;let v=t.value.trim();if(f==="weeks"){v=Math.max(4,Math.min(104,parseInt(v)||26))}H[f]=v;save();render()}
