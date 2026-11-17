@@ -6018,8 +6018,8 @@ function diaryDays(p){const all=S.diary.filter(d=>d.projectId===p.id&&d.date),to
 function diaryDaysHTML(p){const D=diaryDays(p);if(!D)return "";const n=(v,a,b,c)=>`${v} ${pl(v,a,b,c)}`;
   return `<details class="card info"><summary>Prehľad dní · ${n(D.worked,"odpracovaný deň","odpracované dni","odpracovaných dní")} z ${n(D.total,"dňa","dní","dní")}</summary>
     <dl class="dl">
-      <dt>Obdobie</dt><dd>${fmtDate(D.from)} – ${fmtDate(D.to)}${D.toToday?" (dnes)":""}${D.startFromEntry?`<div class="muted" style="font-size:12.5px">od prvého záznamu – začatie stavby nie je zadané v Nastaveniach</div>`:""}</dd>
-      <dt>Celkový počet dní na stavbe</dt><dd><b>${D.total}</b></dd>
+      <dt>Obdobie</dt><dd>${fmtDate(D.from)} – ${fmtDate(D.to)}${D.toToday?" (dnes)":""}${D.startFromEntry?`<div class="muted" style="font-size:12.5px">od prvého záznamu – v Nastaveniach zvoľ celkový čas pre stavbu</div>`:""}</dd>
+      <dt>Počet dní od začiatku stavby</dt><dd><b>${D.total}</b></dd>
       <dt>z toho víkendy a sviatky</dt><dd><b>${D.we+D.hol}</b> <span class="muted">(víkendy ${D.we}, sviatky ${D.hol})</span></dd>
       <dt>Pracovné dni</dt><dd>${D.wd}</dd>
       <dt>Odpracované dni</dt><dd><b>${D.worked}</b>${D.workOff?` <span class="muted">(z toho ${D.workOff} cez víkend alebo sviatok)</span>`:""}</dd>
@@ -6029,12 +6029,11 @@ function diaryDaysHTML(p){const D=diaryDays(p);if(!D)return "";const n=(v,a,b,c)
 function diaryHTML(p){
   const entries=diaryOf(p).sort((a,b)=>b.date.localeCompare(a.date));
   const editing=view.editId?S.diary.find(d=>d.id===view.editId)||{new:true}:null;
-  let out="";
+  let out=editing?"":diaryDaysHTML(p);
   if(editing) out+=diaryForm(p,editing.new?null:editing);
   else if(can(p,"diary.create")) out+=`<button class="btn primary" data-a="newEntry" style="align-self:flex-start">+ Nový denný záznam</button>`;
   else if(!p.closed) out+=`<div class="note">Máš prístup iba na čítanie. Záznamy zapisuje majster alebo stavbyvedúci.</div>`;
   if(areasOf(p).length&&!editing)out+=myAreas(p)?areaBarHTML(p):`<div class="card row areabar"><label style="flex:1 1 260px">Zobraziť záznamy<select id="dAreaF"><option value="">Všetky časti stavby</option><option value="__none" ${view.dArea==="__none"?"selected":""}>Celá stavba (bez časti)</option>${areasOf(p).map(a=>`<option value="${a.id}" ${view.dArea===a.id?"selected":""}>${esc(a.name)}</option>`).join("")}</select></label><span class="muted" style="font-size:13px">Filter platí aj pre export denníka.</span></div>`;
-  if(!editing)out+=diaryDaysHTML(p);
   if(entries.length&&!editing)out+=diaryExportHTML(p,entries.length);
   out+=entries.map(e=>{
     const status=e.locked?`<span class="pill s-lock">Uzamknuté · ${esc(user(e.lockedBy)?.name||"")}</span>`:`<span class="pill s-open">Rozpracované</span>`;
