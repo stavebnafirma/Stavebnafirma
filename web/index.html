@@ -5706,7 +5706,7 @@ document.addEventListener("input",ev=>{const t=ev.target;if(!me)return;
     const s=$(`[data-sum="${n}"]`);if(s)s.textContent=eur(Math.round(numIn(i.qty)*numIn(i.price)*100)/100);const T=obTotals(D);$("#obTB").textContent=eur(T.b);$("#obTV").textContent=eur(T.v);$("#obTS").textContent=eur(T.s)}
   if(t.id==="obP_name"){const p=obFindPartner(t.value);if(p&&t.dataset.filled!==p.id){t.dataset.filled=p.id;OB_P.forEach(([f])=>{if(f!=="name"){const e=$("#obP_"+f);if(e)e.value=p[f]||""}});toast("Údaje doplnené")}}});
 document.addEventListener("change",ev=>{const t=ev.target;if(!me)return;
-  if(t.id==="obPick"&&t.value){const it=(S.cennik||[]).find(i=>cenLabel(i)===t.value);if(!it)return;const D=obRead();if(!D)return;
+  if(t.id==="obPick"&&t.value){const it=(S.cennik||[]).find(i=>cenLabel(i)===t.value);if(!it)return;t.value="";const D=obRead();if(!D)return;
     const pr=view.obDraft.k==="o"&&it.cost?it.cost:it.price,nw=obItem({name:it.name,sub:it.sub||"",mj:it.mj||"",qty:"1",price:pr!=null&&pr!==""?String(pr):"",vat:+it.vat||0,itemId:it.id});
     const last=D.items[D.items.length-1];if(D.items.length===1&&last&&!last.name&&!numIn(last.price))D.items[0]=nw;else D.items.push(nw);render();
     const r=document.querySelectorAll(".obrow");r[r.length-1]?.querySelector('[data-f="qty"]')?.select();toast("Pridané z cenníka – doplň množstvo")}
