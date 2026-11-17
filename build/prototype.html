@@ -5354,11 +5354,13 @@ function hmDurNum(H,i){const r=H.rows[i];if(String(r.dur||"").trim()&&/^\d+([.,]
 const hmDur=(H,i)=>{const r=H.rows[i];if(String(r.dur||"").trim())return r.dur;const n=hmDurNum(H,i);return n?n:""};
 const hmDurTxt=v=>v===""?"":/^\d+([.,]\d+)?$/.test(String(v).trim())?`${v} ${pl(+String(v).replace(",","."),"deň","dni","dní")}`:String(v);
 function hmAll(H){const s=new Set();H.rows.forEach(r=>(r.cells||[]).forEach(w=>s.add(w)));return [...s].sort((a,b)=>a-b)}
-function hmSpan(H){const a=hmAll(H);if(!a.length)return null;const f=a[0],l=a[a.length-1],stops=(H.stops||[]).filter(w=>w>=f&&w<=l).length;
-  return {f,l,days:(l-f+1-stops)*7,start:H.mode==="date"?hmWeek(H,f).monday:"",end:H.mode==="date"?hmWeek(H,l).friday:""}}
+function hmSpan(H){const a=hmAll(H);if(!a.length)return null;const f=a[0],l=a[a.length-1],st=new Set(H.stops||[]);
+  /* lehota v pracovných dňoch: v každom týždni od prvého po posledný (bez prerušenia) súčet zapísaných dní, najviac 5; prázdny týždeň 5 dní */
+  let days=0;for(let w=f;w<=l;w++){if(st.has(w))continue;let sm=0;H.rows.forEach(r=>{if((r.cells||[]).includes(w))sm+=hmCellDays(r,w)});days+=sm?Math.min(5,sm):5}
+  return {f,l,days,start:H.mode==="date"?hmWeek(H,f).monday:"",end:H.mode==="date"?hmWeek(H,l).friday:""}}
 const hmLehota=H=>{if(String(H.lehota||"").trim())return H.lehota;const s=hmSpan(H);return s?s.days:""};
 function hmNums(H){let o=0,e=0,k=0;return H.rows.map(r=>{if(r.lvl===1){o++;e=0;k=0;return `${o}.`}if(r.lvl===2){e++;k=0;return `${o}.${e}`}k++;return ""})}
-function hmBlank(p){const F=S.firm||{};return {id:uid("hm"),projectId:p?p.id:"",name:p?p.name:"",zakazka:p?p.name:"",objednavatel:p&&p.investor?p.investor:"",
+function hmBlank(p){const F=S.firm||{};return {id:uid("hm"),projectId:p?p.id:undefined,name:p?p.name:"",zakazka:p?p.name:"",objednavatel:p&&p.investor?p.investor:"",
   zhotovitel:[F.name||S.company,firmAddress(F)].filter(Boolean).join(", "),mode:"date",start:todayIso(),weeks:26,lehota:"",stops:[],stopNote:"",
   rows:[{id:uid("hr"),lvl:1,title:"Všeobecné položky",dur:"",cells:[]}],by:me.id,at:nowIso()}}
 const hmCanEdit=H=>{if(!H)return false;if(!H.projectId)return isAdmin(me);const p=S.projects.find(x=>x.id===H.projectId);return !!p&&can(p,"harm.edit")};
@@ -5386,7 +5388,7 @@ function hmEditorHTML(H){if(view.hmMenu!=null)setTimeout(hmMenuPos,0);const ed=h
         <div class="stack" style="gap:4px"><span class="lbl">Kalendár</span><div class="seg" role="radiogroup" aria-label="Kalendár"><label><input type="radio" name="hmMode" value="work" ${H.mode!=="date"?"checked":""} ${ed?"":"disabled"}><span>Pracovný čas</span></label><label><input type="radio" name="hmMode" value="date" ${H.mode==="date"?"checked":""} ${ed?"":"disabled"}><span>Presný dátum</span></label></div></div>
         ${H.mode==="date"?`<label>Začiatok kalendára (týždeň)<input type="date" data-hf="start" value="${esc(H.start||todayIso())}" ${ed?"":"readonly"}></label>`:`<div class="muted" style="font-size:13px;align-self:end">Týždne a mesiace sa číslujú od začiatku výstavby (1, 2, 3…).</div>`}</div>
       <div class="grid3"><label>Počet týždňov v kalendári<span class="row" style="gap:6px;flex-wrap:nowrap">${ed?`<button type="button" class="btn small" data-a="hmWeeks" data-d="-4">−4</button>`:""}<input data-hf="weeks" inputmode="numeric" value="${N}" ${ed?"":"readonly"} style="text-align:center">${ed?`<button type="button" class="btn small" data-a="hmWeeks" data-d="4">+4</button>`:""}</span></label>
-        <label>Plánovaná lehota výstavby (dní)<input data-hf="lehota" value="${esc(H.lehota||"")}" placeholder="${sp?sp.days+" (od prvého po posledný týždeň)":""}" ${ed?"":"readonly"}></label>
+        <label>Plánovaná lehota výstavby (dní)<input data-hf="lehota" value="${esc(H.lehota||"")}" placeholder="${sp?sp.days+" (pracovné dni od prvého po posledný týždeň)":""}" ${ed?"":"readonly"}></label>
         <label>Prerušenie prác – dôvod<input data-hf="stopNote" value="${esc(H.stopNote||"")}" placeholder="napr. klimatické podmienky" ${ed?"":"readonly"}></label></div>
     </form>
     ${ed?`<div class="row" style="gap:10px 18px"><span class="row" style="gap:8px"><span class="lbl">Zapísať do kalendára</span><span class="seg" role="radiogroup" aria-label="Počet dní v týždni">${[1,2,3,4,5].map(n=>`<label><input type="radio" name="hmDays" value="${n}" ${(view.hmDays||5)===n?"checked":""}><span>${n}</span></label>`).join("")}</span><span class="lbl" id="hmDaysL">${pl(view.hmDays||5,"deň","dni","dní")}</span></span>
