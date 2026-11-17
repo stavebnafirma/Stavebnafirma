@@ -918,6 +918,8 @@ table.dxt{font-size:13.5px}table.dxt td.dxw{white-space:normal;min-width:240px;l
 .obup{cursor:pointer}.obup.dis{opacity:.6;cursor:progress}
 .fintab td.finsrc{max-width:220px}.finsrcn{font-size:12px;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:560px){.fintab td.finsrc,.finsrcn{max-width:140px}}
+#dBlocks[hidden]{display:none}
+.pill.nowork{background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad);font-weight:600}
 .fintab{width:100%}.fintab td{vertical-align:top}.fintab td.num{font-family:inherit;white-space:nowrap}.fintab td{overflow-wrap:anywhere}
 .fininc{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:18px;align-items:start}@media (max-width:900px){.fininc{grid-template-columns:1fr}}
 .findel{color:var(--bad)}
@@ -2315,7 +2317,10 @@ const isoUTC=d=>d.toISOString().slice(0,10);
 /* dni pracovného pokoja SR (štátne sviatky, ktoré sú voľnom) */
 function holidaysOf(y){const e=easter(y),gf=new Date(e),em=new Date(e);gf.setUTCDate(e.getUTCDate()-2);em.setUTCDate(e.getUTCDate()+1);
   const h={};[["01-01","Deň vzniku SR"],["01-06","Zjavenie Pána"],["05-01","Sviatok práce"],["07-05","Sv. Cyril a Metod"],["08-29","Výročie SNP"],["11-01","Sviatok všetkých svätých"],["12-24","Štedrý deň"],["12-25","1. sviatok vianočný"],["12-26","2. sviatok vianočný"]].forEach(([d,n])=>h[`${y}-${d}`]=n);
-  h[isoUTC(gf)]="Veľký piatok";h[isoUTC(em)]="Veľkonočný pondelok";return h}
+  h[isoUTC(gf)]="Veľký piatok";h[isoUTC(em)]="Veľkonočný pondelok";
+  /* zmeny zákona 241/1993: 8. 5. a 15. 9. boli v roku 2026 pracovné dni (od 2027 opäť voľno); 1. 9. je pracovný deň od 2026, 17. 11. od novembra 2025 */
+  if(y!==2026){h[`${y}-05-08`]="Deň víťazstva nad fašizmom";h[`${y}-09-15`]="Sedembolestná Panna Mária"}
+  if(y<=2025)h[`${y}-09-01`]="Deň Ústavy SR";if(y<=2024)h[`${y}-11-17`]="Deň boja za slobodu a demokraciu";return h}
 const HOLI_CACHE={};function holiday(d){const y=+d.slice(0,4);return (HOLI_CACHE[y]||(HOLI_CACHE[y]=holidaysOf(y)))[d]||null}
 const dow=d=>new Date(d+"T12:00").getDay();
 const isWeekend=d=>{const w=dow(d);return w===0||w===6};
@@ -5828,6 +5833,7 @@ function pdfDiaryEntries(doc,es,y){const W=doc.internal.pageSize.getWidth(),L=14
     else{if(dz)doc.setFillColor(222,241,228);else if(xs)doc.setFillColor(221,233,248);else doc.setFillColor(243,244,245);doc.rect(L,y,R-L,8,"F");doc.setFont("DVC","bold");doc.setFontSize(10.5);doc.text(plain(AR.length?areaName(P0,e.areaId):fmtDate(e.date)+(e.areaId?` · ${areaName(S.projects.find(x=>x.id===e.projectId),e.areaId)}`:"")),L+2,y+5.5);
     doc.setFont("DVC","normal");doc.setFontSize(8.5);doc.text(wx,R-2,y+5.5,{align:"right"});y+=11}
     doc.setFontSize(8.5);doc.setTextColor(90);doc.text(plain(`Zapísal: ${user(e.authorId)?.name||""}${xs?` (${memberRoleLabel(xsvRole(pE,e)).toLowerCase()})`:""}${e.locked?` · podpísal a uzamkol ${user(e.lockedBy)?.name||""}`:""}`),L,y);doc.setTextColor(0);y+=5;
+    if(e.noWork){need(6);doc.setFont("DVC","bold");doc.setFontSize(9.5);doc.text("Práce sa nevykonávali.",L,y);doc.setFont("DVC","normal");y+=4.8}
     doc.setFontSize(9.5);const wt=doc.splitTextToSize(plain(e.work||""),R-L);need(wt.length*4.6);doc.text(wt,L,y);y+=wt.length*4.6+2;
     const blk=(title,lines)=>{if(!lines.length)return;doc.setFont("DVC","bold");doc.setFontSize(8.8);need(8);doc.text(title,L,y);y+=4.3;doc.setFont("DVC","normal");
       lines.forEach(t=>{const ls=doc.splitTextToSize(plain("• "+t),R-L-4);need(ls.length*4);doc.text(ls,L+3,y);y+=ls.length*4});y+=1.5};
@@ -5919,7 +5925,7 @@ function diaryRangePDF(p){const es=diaryRangeEntries(p),X=view.dex||{};if(!es.le
   pdfDiaryEntries(doc,es,28);pdfDiaryFooter(doc,p,`denné záznamy ${X.from||""} – ${X.to||""}`);offerFile(diaryFile(p,`${X.from||"zaciatok"}_${X.to||todayIso()}`)+".pdf",doc.output("arraybuffer"))}
 function diaryRangeXLSX(p){if(!window.XLSX){toast("Knižnica na Excel sa nenačítala.");return}const es=diaryRangeEntries(p);if(!es.length){toast("V zvolenom období nie sú žiadne denné záznamy");return}
   const head=["Dátum","Zapísal","Počasie","Teplota","Vykonané práce","Pracovníci","Hodín pracovníkov","Stroje","Hodín strojov","Zápisy stavebného dozoru","Videné stavebným dozorom","Uzamknuté"];
-  const rows=es.map(e=>[d2(e.date),user(e.authorId)?.name||"",e.weather||"",tempText(e),e.work||"",entryPeopleText(e).join("\n"),r2(["crew","crewC"].reduce((s,g)=>s+grpHours(g,e[g]),0)),entryMachText(e).join("\n"),r2(["mach","machC"].reduce((s,g)=>s+grpHours(g,e[g]),0)),
+  const rows=es.map(e=>[d2(e.date),user(e.authorId)?.name||"",e.weather||"",tempText(e),(e.noWork?"Práce sa nevykonávali. ":"")+(e.work||""),entryPeopleText(e).join("\n"),r2(["crew","crewC"].reduce((s,g)=>s+grpHours(g,e[g]),0)),entryMachText(e).join("\n"),r2(["mach","machC"].reduce((s,g)=>s+grpHours(g,e[g]),0)),
     (e.dozorNotes||[]).map(n=>`${user(n.by)?.name||""} ${dt(n.at)}: ${n.text}`).join("\n"),diarySeenText(e,true).join("\n"),e.locked?(user(e.lockedBy)?.name||""):""]);
   const ws=XLSX.utils.aoa_to_sheet([[`Stavebný denník – ${p.name}`],[],head,...rows]);ws["!cols"]=[10,18,12,10,60,40,10,30,10,40,40,22].map(w=>({wch:w}));
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Denné záznamy");const X=view.dex||{};offerFile(diaryFile(p,`${X.from||"zaciatok"}_${X.to||todayIso()}`)+".xlsx",XLSX.write(wb,{bookType:"xlsx",type:"array"}))}
@@ -5994,6 +6000,32 @@ function gzOf(p){const b=p.__base||p;return [...S.users.filter(u=>isAdmin(u)),..
 function isExtSvEntry(p,e){return !!p&&p.members.some(m=>XSV.includes(m.role)&&m.userId===e.authorId)}
 /* rola autora externého záznamu (externý stavbyvedúci, projektant, geodet, štátny stavebný dohľad) */
 function xsvRole(p,e){const m=p&&p.members.find(m=>XSV.includes(m.role)&&m.userId===e.authorId);return m?m.role:"extsv"}
+/* „Práce sa nevykonávali“: skryje pracovníkov a stroje (rozpísané riadky ostanú v koncepte, ak by sa to zrušilo) */
+document.addEventListener("change",ev=>{if(ev.target.id!=="dNoWork")return;const on=ev.target.checked;view.dNoWork=on;const b=$("#dBlocks"),l=$("#dWorkL"),w=$("#dWork");
+  if(b)b.hidden=on;if(l)l.textContent=on?"Záznam (napr. prečo sa nepracovalo)":"Vykonané práce";if(w)w.placeholder=on?"napr. Práce sa nevykonávali pre dážď.":"Čo sa dnes na stavbe robilo"});
+/* prehľad dní stavby: obdobie od začiatku stavby (alebo prvého záznamu) po dnešok, koniec alebo ukončenie stavby */
+const dnDate=v=>{v=String(v||"").trim();let m=/^(\d{4})-(\d{2})-(\d{2})/.exec(v);if(m)return m[0];m=/^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})$/.exec(v);return m?`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`:""};
+function diaryDays(p){const all=S.diary.filter(d=>d.projectId===p.id&&d.date),today=todayIso(),dn=p.dn||{};
+  const first=all.map(d=>d.date).sort()[0],st=dnDate(dn.zaciatok)||p.start||"",from=st||first;if(!from)return null;
+  const endCap=p.closed&&p.closed.at?p.closed.at.slice(0,10):today;let to=endCap;const en=dnDate(dn.ukoncenie)||p.end;if(en&&en<to)to=en;
+  const lastE=all.map(d=>d.date).sort().slice(-1)[0];if(lastE&&lastE>to)to=lastE;if(to<from)to=from;
+  const work=new Set(all.filter(d=>!d.noWork).map(d=>d.date)),idle=new Set(all.filter(d=>d.noWork&&!work.has(d.date)).map(d=>d.date));
+  let total=0,we=0,hol=0,wd=0,noRec=0,workOff=0;const x=new Date(from+"T12:00:00Z"),end=new Date(to+"T12:00:00Z");
+  while(x<=end){const d=x.toISOString().slice(0,10),dow=x.getUTCDay(),isWe=dow===0||dow===6,h=!isWe&&holiday(d);total++;
+    if(isWe)we++;else if(h)hol++;else{wd++;if(!work.has(d)&&!idle.has(d))noRec++}
+    if((isWe||h)&&work.has(d))workOff++;x.setUTCDate(x.getUTCDate()+1)}
+  return {from,to,toToday:to===today,total,we,hol,wd,worked:[...work].filter(d=>d>=from&&d<=to).length,idle:[...idle].filter(d=>d>=from&&d<=to).length,noRec,workOff,startFromEntry:!st}}
+function diaryDaysHTML(p){const D=diaryDays(p);if(!D)return "";const n=(v,a,b,c)=>`${v} ${pl(v,a,b,c)}`;
+  return `<details class="card info"><summary>Prehľad dní · ${n(D.worked,"odpracovaný deň","odpracované dni","odpracovaných dní")} z ${n(D.total,"dňa","dní","dní")}</summary>
+    <dl class="dl">
+      <dt>Obdobie</dt><dd>${fmtDate(D.from)} – ${fmtDate(D.to)}${D.toToday?" (dnes)":""}${D.startFromEntry?`<div class="muted" style="font-size:12.5px">od prvého záznamu – začatie stavby nie je zadané v Nastaveniach</div>`:""}</dd>
+      <dt>Celkový počet dní na stavbe</dt><dd><b>${D.total}</b></dd>
+      <dt>z toho víkendy a sviatky</dt><dd><b>${D.we+D.hol}</b> <span class="muted">(víkendy ${D.we}, sviatky ${D.hol})</span></dd>
+      <dt>Pracovné dni</dt><dd>${D.wd}</dd>
+      <dt>Odpracované dni</dt><dd><b>${D.worked}</b>${D.workOff?` <span class="muted">(z toho ${D.workOff} cez víkend alebo sviatok)</span>`:""}</dd>
+      <dt>Dni, keď sa práce nevykonávali</dt><dd><b>${D.idle}</b></dd>
+      ${D.noRec?`<dt>Pracovné dni bez záznamu</dt><dd>${D.noRec}</dd>`:""}
+    </dl></details>`}
 function diaryHTML(p){
   const entries=diaryOf(p).sort((a,b)=>b.date.localeCompare(a.date));
   const editing=view.editId?S.diary.find(d=>d.id===view.editId)||{new:true}:null;
@@ -6002,6 +6034,7 @@ function diaryHTML(p){
   else if(can(p,"diary.create")) out+=`<button class="btn primary" data-a="newEntry" style="align-self:flex-start">+ Nový denný záznam</button>`;
   else if(!p.closed) out+=`<div class="note">Máš prístup iba na čítanie. Záznamy zapisuje majster alebo stavbyvedúci.</div>`;
   if(areasOf(p).length&&!editing)out+=myAreas(p)?areaBarHTML(p):`<div class="card row areabar"><label style="flex:1 1 260px">Zobraziť záznamy<select id="dAreaF"><option value="">Všetky časti stavby</option><option value="__none" ${view.dArea==="__none"?"selected":""}>Celá stavba (bez časti)</option>${areasOf(p).map(a=>`<option value="${a.id}" ${view.dArea===a.id?"selected":""}>${esc(a.name)}</option>`).join("")}</select></label><span class="muted" style="font-size:13px">Filter platí aj pre export denníka.</span></div>`;
+  if(!editing)out+=diaryDaysHTML(p);
   if(entries.length&&!editing)out+=diaryExportHTML(p,entries.length);
   out+=entries.map(e=>{
     const status=e.locked?`<span class="pill s-lock">Uzamknuté · ${esc(user(e.lockedBy)?.name||"")}</span>`:`<span class="pill s-open">Rozpracované</span>`;
@@ -6011,7 +6044,7 @@ function diaryHTML(p){
     const xs=isExtSvEntry(p,e);
     return `<article class="card stack${xs?" extsv":""}" id="e_${e.id}">${xs?`<div class="eyebrow xsv">Záznam ${XSV_OF[xsvRole(p,e)]} · ${esc(user(e.authorId)?.name||"")}</div>`:""}
       <div class="entry-head"><div><div class="date">${fmtDate(e.date)}${e.areaId?` <span class="pill areapill">${esc(areaName(p,e.areaId))}</span>`:""}</div><div class="muted" style="font-size:13px">${esc(e.weather)}${tempText(e)?`, ${esc(tempText(e))}`:""}${e.wxCheckedBy?` (počasie overil ${esc(user(e.wxCheckedBy)?.name||"")})`:""} · zapísal ${esc(user(e.authorId)?.name||"")}${e.createdAt?` · ${esc(dt(e.createdAt))}`:""}</div></div>${status}</div>
-      <div>${esc(e.work)}</div>${tables}${photosViewHTML(e)}
+      ${e.noWork?`<div><span class="pill nowork">Práce sa nevykonávali</span></div>`:""}<div>${esc(e.work)}</div>${tables}${photosViewHTML(e)}
       ${(e.gzNotes||[]).map(n=>`<div class="dnote gz"><div class="eyebrow">Vyjadrenie generálneho zhotoviteľa · ${esc(user(n.by)?.name||"")} · ${dt(n.at)}</div><div>${esc(n.text)}</div></div>`).join("")}
       ${can(p,"diary.gznote",e)?(view.gnoteFor===e.id?`<form class="stack dnote-form" id="gnoteForm" data-id="${e.id}"><label>Vyjadrenie generálneho zhotoviteľa<textarea id="gnoteText" required placeholder="Pripomienky, doplnenie, pokyny pre subdodávateľa"></textarea></label>
         <div class="muted" style="font-size:13px">Vyjadrenie sa pridá pod záznam subdodávateľa a po uložení sa už nedá meniť. Samotný záznam subdodávateľa upraviť nemôžeš.</div>
@@ -6057,11 +6090,11 @@ Zabezpečenie staveniska:
 Prístup na stavenisko: 
 Manipulačné plochy: 
 Zabezpečenie toaliet pre personál stavby: `;
-function diaryForm(p,e){
+function diaryForm(p,e){let nw=false;
   const today=new Date().toISOString().slice(0,10);
   const groups=e?entryGroups(e):[];projGroups(p).forEach(g=>{if(!groups.some(x=>x.slice(0,4)===g.slice(0,4)))groups.push(g)});
   // pri úprave starého záznamu ostane jeho formát; nový záznam podľa nastavenia stavby
-  if(!view.draft){view.draftPhotos=e&&e.photos?JSON.parse(JSON.stringify(e.photos)):[];view.draft={};groups.forEach(g=>view.draft[g]=e&&e[g]?JSON.parse(JSON.stringify(e[g])):[GROUPS[g].blank()])}
+  if(!view.draft){view.dNoWork=undefined;view.draftPhotos=e&&e.photos?JSON.parse(JSON.stringify(e.photos)):[];view.draft={};groups.forEach(g=>view.draft[g]=e&&e[g]?JSON.parse(JSON.stringify(e[g])):[GROUPS[g].blank()])}
   const blocks=Object.keys(view.draft).map(g=>{
     const rows=view.draft[g].map((c,i)=>rowHTML(g,c,i)).join("");
     const unit=g.startsWith("mach")?"Hod. spolu":"Hodín spolu";
@@ -6083,8 +6116,9 @@ function diaryForm(p,e){
     ${!e&&firstEntry(p)?`<div class="note">Prvý záznam stavby – text o prevzatí staveniska je predvyplnený. Doplň údaje za dvojbodkami a uprav, čo treba.</div>`:""}
     ${areasOf(p).length?(()=>{const mine=myAreas(p),cur=e?e.areaId||"":mine?mine[0]:view.dArea&&view.dArea!=="__none"?view.dArea:"";
       return `<label>Časť stavby<select id="dArea" ${mine&&mine.length===1?"disabled":""}>${mine?"":`<option value="">Celá stavba</option>`}${areasOf(p).filter(a=>!mine||mine.includes(a.id)).map(a=>`<option value="${a.id}" ${cur===a.id?"selected":""}>${esc(a.name)}</option>`).join("")}</select></label>`})():""}
-    <label>Vykonané práce<textarea id="dWork" required placeholder="Čo sa dnes na stavbe robilo" ${!e&&firstEntry(p)?'rows="11"':""}>${e?esc(e.work):firstEntry(p)?esc(FIRST_ENTRY):""}</textarea></label>
-    ${blocks}
+    ${(()=>{nw=view.dNoWork!==undefined?view.dNoWork:!!(e&&e.noWork);return ""})()}<label class="chk"><input type="checkbox" id="dNoWork" ${nw?"checked":""}> Práce sa nevykonávali</label>
+    <label><span id="dWorkL">${nw?"Záznam (napr. prečo sa nepracovalo)":"Vykonané práce"}</span><textarea id="dWork" required placeholder="${nw?"napr. Práce sa nevykonávali pre dážď.":"Čo sa dnes na stavbe robilo"}" ${!e&&firstEntry(p)?'rows="11"':""}>${e?esc(e.work):firstEntry(p)?esc(FIRST_ENTRY):""}</textarea></label>
+    <div id="dBlocks" class="stack" ${nw?"hidden":""}>${blocks}</div>
     ${photoFormBlock()}
     <datalist id="profList">${[...new Set([...S.diary.filter(d=>d.projectId===p.id).flatMap(d=>(d.crewC||[]).map(c=>String(c.label||"").trim())),...S.workers.map(w=>w.profession)].filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
     <datalist id="machList">${[...new Set((S.machines||[]).map(m=>m.type))].map(x=>`<option value="${esc(x)}">`).join("")}</datalist>
@@ -7409,7 +7443,8 @@ document.addEventListener("submit",ev=>{
     if(pp){S.payProf=S.payProf||{};S.payProf[id]=pp}
     view.empEdit=null;save();render()}
   else if(f==="diaryForm"){readDraft();
-    const data={date:$("#dDate").value,weather:$("#dWeather").value,work:$("#dWork").value.trim()};
+    const noWork=!!$("#dNoWork")?.checked;
+    const data={date:$("#dDate").value,weather:$("#dWeather").value,work:$("#dWork").value.trim(),noWork:noWork||undefined};
     if($("#dTmin")){data.tmin=$("#dTmin").value;data.tmax=$("#dTmax").value;if(hasT(data.tmin)&&hasT(data.tmax)&&+data.tmin>+data.tmax){toast("Teplota od musí byť nižšia ako teplota do");return}data.temp=""}else{data.temp=$("#dTemp").value;data.tmin=undefined;data.tmax=undefined}
     if(areasOf(p).length){const mine=myAreas(p),av=$("#dArea")?.value||"";if(mine&&!mine.includes(av)){toast("Vyber svoju časť stavby");return}data.areaId=av||undefined}
     if(view.wxMsg){const ok=$("#wxOk");if(!ok||!ok.checked){toast("Najprv skontroluj počasie a potvrď to zaškrtnutím políčka");return}data.wxCheckedBy=me.id}
@@ -7418,12 +7453,12 @@ document.addEventListener("submit",ev=>{
       view.draft.mach=view.draft.mach.map(c=>c.machineId==="__new"||c.ext?{...c,machineId:"",ext:String(c.ext).trim().replace(/\s+/g," ")}:c).filter(c=>c.machineId||c.ext);
       const nx=view.draft.mach.map(c=>c.ext).filter(x=>x&&!(p.extMach||[]).some(y=>y.toLowerCase()===x.toLowerCase()));
       if(nx.length&&!isSubOf(p))p.extMach=[...(p.extMach||[]),...new Set(nx)]}
-    Object.keys(GROUPS).forEach(g=>{data[g]=view.draft[g]?view.draft[g].filter(c=>g.endsWith("C")?(+c.count>0):true):undefined});
-    if(!(data.crew&&data.crew.length)&&!(data.crewC&&data.crewC.length)){toast("Zadaj aspoň jedného pracovníka alebo počet pracovníkov");return}
+    Object.keys(GROUPS).forEach(g=>{data[g]=!noWork&&view.draft[g]?view.draft[g].filter(c=>g.endsWith("C")?(+c.count>0):true):undefined});   /* keď sa nepracovalo: bez pracovníkov a strojov */
+    if(!noWork&&!(data.crew&&data.crew.length)&&!(data.crewC&&data.crewC.length)){toast("Zadaj aspoň jedného pracovníka alebo počet pracovníkov, alebo zaškrtni „Práce sa nevykonávali“");return}
     readCaptions();data.photos=view.draftPhotos||[];
     if(view.editId==="__new"){const ne={id:uid("d"),projectId:p.id,authorId:me.id,locked:false,createdAt:nowIso(),...data};["tmin","tmax"].forEach(k=>{if(ne[k]===undefined)delete ne[k]});S.diary.push(ne)}
     else{const en=S.diary.find(d=>d.id===view.editId);Object.keys(GROUPS).forEach(g=>delete en[g]);Object.assign(en,data,{updatedAt:nowIso()});["tmin","tmax"].forEach(k=>{if(en[k]===undefined)delete en[k]})}
-    Object.values(S.diary).forEach(en=>Object.keys(GROUPS).forEach(g=>{if(en[g]===undefined)delete en[g]}));
+    Object.values(S.diary).forEach(en=>{Object.keys(GROUPS).forEach(g=>{if(en[g]===undefined)delete en[g]});if(en.noWork===undefined)delete en.noWork});
     if(data.areaId===undefined){const en=S.diary.find(d=>d.id===view.editId);if(en)delete en.areaId}
     view.editId=null;view.draft=null;view.draftPhotos=null;if(save())toast("Záznam uložený");render()}
   else if(f==="newInvForm"){const n=view.newInv;n.from=$("#niFrom").value;n.to=$("#niTo").value;if(!n.from||!n.to||n.to<n.from){toast("Skontroluj dátumy obdobia");return}
