@@ -2730,9 +2730,9 @@ const DOW=["Ne","Po","Ut","St","Št","Pi","So"];
 function daysBetween(a,b){const out=[];let d=new Date(a+"T12:00");const e=new Date(b+"T12:00");while(d<=e){out.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1)}return out}
 function monthDays(ym){const [y,m]=ym.split("-").map(Number);const n=new Date(y,m,0).getDate();return daysBetween(`${ym}-01`,`${ym}-${String(n).padStart(2,"0")}`)}
 const attOf=(wid,d)=>((S.att||{})[wid]||{})[d];
-function attSummary(wid,days){const s={h:0,D:0,PN:0,OCR:0,P:0,PL:0,PS:0,PI:0,SC:0,NV:0,NPV:0,A:0,fond:0};
-  days.forEach(d=>{if(!isWeekend(d)&&!holiday(d))s.fond+=8;const a=attOf(wid,d);if(!a)return;
-    if(a.t==="W"){s.h+=+a.h||0;if(a.pt){const ph=+a.ph||0;s.P+=ph;s[a.pt==="P"?"PL":a.pt]+=ph}}else if(a.t==="SC"){s.h+=+a.h||0;s.SC+=1}else if(a.t==="D")s.D+=(+a.h||8)/8;else if(a.t==="P"||a.t==="PS"||a.t==="PI"){s.P+=+a.h||0;s[a.t==="P"?"PL":a.t]+=+a.h||0}else s[a.t]=(s[a.t]||0)+1});return s}
+function attSummary(wid,days){const s={h:0,D:0,PN:0,OCR:0,P:0,PL:0,PS:0,PI:0,SC:0,NV:0,NPV:0,A:0,fond:0},dh=dayHours(payProf(wid));
+  days.forEach(d=>{if(!isWeekend(d)&&!holiday(d))s.fond+=dh;const a=attOf(wid,d);if(!a)return;
+    if(a.t==="W"){s.h+=+a.h||0;if(a.pt){const ph=+a.ph||0;s.P+=ph;s[a.pt==="P"?"PL":a.pt]+=ph}}else if(a.t==="SC"){s.h+=+a.h||0;s.SC+=1}else if(a.t==="D")s.D+=(+a.h||dh)/dh;else if(a.t==="P"||a.t==="PS"||a.t==="PI"){s.P+=+a.h||0;s[a.t==="P"?"PL":a.t]+=+a.h||0}else s[a.t]=(s[a.t]||0)+1});return s}
 const nf1=n=>Number(n).toLocaleString("sk-SK",{maximumFractionDigits:2});
 function attCellText(a){if(!a)return "";if(a.t==="W")return a.pt?`${nf1(a.h)}+${ATT[a.pt]?ATT[a.pt].s:a.pt}`:nf1(a.h);if(a.t==="D"&&+a.h&&+a.h<8)return "½D";return ATT[a.t]?ATT[a.t].s:a.t}
 
@@ -2829,7 +2829,7 @@ const xe=s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/
 const isFree=d=>isWeekend(d)||!!holiday(d);
 /* mesačné údaje zamestnanca pre mzdy */
 function payMonthData(w,ym){const days=monthDays(ym),s=attSummary(w.id,days);let ot=0,free=0,meal=0;
-  days.forEach(d=>{const a=attOf(w.id,d);if(!a||a.t!=="W")return;const hh=+a.h||0;if(isFree(d))free+=hh;else if(hh>8)ot+=hh-8;if(hh>4)meal++});
+  days.forEach(d=>{const a=attOf(w.id,d);if(!a||a.t!=="W")return;const hh=+a.h||0;if(isFree(d))free+=hh;if(hh>4)meal++});ot=payAtt(w,ym).hOver;
   const abs=[];let cur=null;days.forEach(d=>{const a=attOf(w.id,d);const t=a&&a.t==="W"&&a.pt?a.pt:a&&a.t!=="W"&&a.t!=="SC"?a.t:a&&a.t==="SC"?"SC":null;
     const part=a&&a.t==="W"&&a.pt?+a.ph||0:a&&(a.t==="D"&&+a.h&&+a.h<8||["P","PS","PI"].includes(a.t))?+a.h||0:0;
     if(t&&cur&&cur.t===t&&!part&&!cur.part&&cur.to===addD(d,-1)){cur.to=d;cur.n++}
@@ -2949,20 +2949,24 @@ function ranges(list){const out=[];list.forEach(d=>{const L=out[out.length-1];if
 
 /* dochádzka mesiaca rozpísaná pre mzdy */
 function payAtt(w,ym){const P=payProf(w.id),dh=dayHours(P),days=monthDays(ym),today=todayIso();
-  const R={dh,fondDays:0,fondDaysFull:0,fondH:0,hWork:0,hOver:0,hSat:0,hSun:0,hHol:0,dD:0,hD:0,pn:[],pnCal:0,ocr:[],dOCR:0,hP:0,hPS:0,hPI:0,dNV:0,dNPV:0,dA:0,npv:[],abs:[],holWork:0,empty:[],sc:0,unpaidDays:0};
+  const part=(+P.weekHours||40)<40,wk={};
+  const R={dh,part,hExtra:0,fondDays:0,fondDaysFull:0,fondH:0,hWork:0,hOver:0,hSat:0,hSun:0,hHol:0,dD:0,hD:0,pn:[],pnCal:0,ocr:[],dOCR:0,hP:0,hPS:0,hPI:0,dNV:0,dNPV:0,dA:0,npv:[],abs:[],holWork:0,empty:[],sc:0,unpaidDays:0};
   days.forEach(d=>{const wd=isWorkday(d);if(wd)R.fondDaysFull++;if(!inJob(P,d))return;if(wd)R.fondDays++;
     const a=attOf(w.id,d);
     if(isPNday(w.id,d)){R.pnCal++;R.pn.push(d);if(wd)R.unpaidDays++;return}
-    if(!a){if(wd&&d<=today)R.empty.push(d);if(holiday(d)&&!isWeekend(d))R.holWork++;return}
+    if(!a){if(wd&&d<=today&&!part)R.empty.push(d);if(holiday(d)&&!isWeekend(d))R.holWork++;return}
     const h=+a.h||0;
     if(a.t==="W"&&a.pt){const ph=+a.ph||0;if(a.pt==="P")R.hP+=ph;else if(a.pt==="PS")R.hPS+=ph;else R.hPI+=ph}
-    if(a.t==="W"||a.t==="SC"){if(a.t==="SC")R.sc++;if(holiday(d))R.hHol+=h;else if(dow(d)===6)R.hSat+=h;else if(dow(d)===0)R.hSun+=h;else{R.hWork+=Math.min(h,dh);R.hOver+=Math.max(0,h-dh)}}
+    if(a.t==="W"||a.t==="SC"){if(a.t==="SC")R.sc++;if(holiday(d))R.hHol+=h;else if(dow(d)===6)R.hSat+=h;else if(dow(d)===0)R.hSun+=h;else if(part){R.hWork+=h;const k=isoShift(d,-((dow(d)+6)%7));wk[k]=(wk[k]||0)+h}else{R.hWork+=Math.min(h,dh);R.hOver+=Math.max(0,h-dh)}}
     else if(a.t==="D"){const hh=h||dh;R.hD+=hh;R.dD+=hh/dh}
     else if(a.t==="OCR"){R.ocr.push(d);if(wd){R.dOCR++;R.unpaidDays++}}
     else if(a.t==="P")R.hP+=h;else if(a.t==="PS")R.hPS+=h;else if(a.t==="PI")R.hPI+=h;
     else if(a.t==="NV")R.dNV+=(h||dh)/dh;
     else if(a.t==="NPV"){R.npv.push(d);if(wd){R.dNPV++;R.unpaidDays++}}
     else if(a.t==="A"){R.abs.push(d);if(wd){R.dA++;R.unpaidDays++}}});
+  /* kratší pracovný čas (§ 49 a § 97 ZP): nadčas sa nedá nariadiť – práca nad dohodnutý úväzok sa platí bez príplatku,
+     nadčasom je až práca nad ustanovený týždenný pracovný čas 40 h */
+  if(part){const wh=+P.weekHours;Object.values(wk).forEach(x=>{const o=Math.max(0,x-40);R.hOver+=o;R.hWork-=o;R.hExtra+=Math.max(0,Math.min(x,40)-wh)})}
   R.fondH=R.fondDays*dh;R.hTotal=R.hWork+R.hOver+R.hSat+R.hSun+R.hHol;return R}
 
 /* dovolenka v roku: nárok, prenos, čerpanie, zostatok (k dátumu upTo) */
@@ -3058,7 +3062,7 @@ function payHTML(){
 
 function payDetailHTML(w,ym,c,ed){const A=c.A,Y=+ym.slice(0,4),end=monthDays(ym).pop(),v=vacation(w,Y,end),pr=priepustky(w,Y,end),M=c.M,dis=ed?"":"disabled";
   const kv=(l,v,cls)=>`<div class="pkv ${cls||""}"><span>${l}</span><b>${v}</b></div>`;
-  const att=[["Fond pracovného času",`${nf1(A.fondH)} h (${A.fondDays} d)`],["Odpracované v pracovné dni",`${nf1(A.hWork)} h`],["Nadčas v pracovné dni",`${nf1(A.hOver)} h`],["Práca v sobotu",`${nf1(A.hSat)} h`],["Práca v nedeľu",`${nf1(A.hSun)} h`],["Práca vo sviatok",`${nf1(A.hHol)} h`],
+  const att=[["Fond pracovného času",`${nf1(A.fondH)} h (${A.fondDays} d)`],["Odpracované v pracovné dni",`${nf1(A.hWork)} h`],...(A.part?[["z toho nad dohodnutý úväzok (bez príplatku)",`${nf1(A.hExtra)} h`]]:[]),["Nadčas v pracovné dni",`${nf1(A.hOver)} h`],["Práca v sobotu",`${nf1(A.hSat)} h`],["Práca v nedeľu",`${nf1(A.hSun)} h`],["Práca vo sviatok",`${nf1(A.hHol)} h`],
     ["Služobné cesty",`${A.sc} d`],["Dovolenka",`${nf1(A.dD)} d`],["PN (kalendárne dni)",`${A.pnCal} d${A.pn.length?` · ${ranges(A.pn)}`:""}`],["OČR",`${A.dOCR} d${A.ocr.length?` · ${ranges(A.ocr)}`:""}`],
     ["Lekár – vlastné vyšetrenie",`${nf1(A.hP)} h`],["Sprevádzanie člena rodiny",`${nf1(A.hPS)} h`],["Iné prekážky v práci",`${nf1(A.hPI)} h`],["Náhradné voľno",`${nf1(A.dNV)} d`],["Neplatené voľno",`${A.dNPV} d`],["Absencia",`${A.dA} d`]];
   return `<div class="card stack paydet"><div class="entry-head"><h3>${esc(fullName(w))}${w.persNo?` <span class="muted">· ${esc(w.persNo)}</span>`:""}</h3><div class="row"><button class="btn small" data-a="payPdfOne" data-id="${w.id}">Výplatná páska PDF</button><button class="btn small ghost" data-a="payOpen" data-id="">Zavrieť</button></div></div>
@@ -6892,12 +6896,14 @@ const EMPLOYER_CONTRIB={year:2026,maxBase:16764,capped:[["Nemocenské",1.4],["St
   uncapped:[["Úrazové",0.8],["Zdravotné",11]]};
 function employerContrib(gross){const E=EMPLOYER_CONTRIB;const base=Math.min(gross,E.maxBase);
   return E.capped.reduce((s,[,r])=>s+base*r/100,0)+E.uncapped.reduce((s,[,r])=>s+gross*r/100,0)}
-function monthlyGross(w){return w.wageType==="month"?(+w.wage||0):(+w.wage||0)*HOURS_PER_MONTH}
+/* hodiny za mesiac podľa úväzku zamestnanca (plný úväzok 40 h = 173,3 h) */
+const monthHours=w=>{const wh=+((w&&w.weekHours!=null)?w.weekHours:(w&&w.id?payProf(w.id).weekHours:0))||40;return Math.round(wh*52/12*10)/10};
+function monthlyGross(w){return w.wageType==="month"?(+w.wage||0):(+w.wage||0)*monthHours(w)}
 function superGrossMonth(w){const g=monthlyGross(w);return g+employerContrib(g)}
 /* náklad na 1 hodinu = superhrubá mzda prepočítaná na hodinu */
-function workerRate(w){if(!w||!w.wage)return 0;return superGrossMonth(w)/HOURS_PER_MONTH}
+function workerRate(w){if(!w||!w.wage)return 0;return superGrossMonth(w)/monthHours(w)}
 const contribPct=()=>[...EMPLOYER_CONTRIB.capped,...EMPLOYER_CONTRIB.uncapped].reduce((s,[,r])=>s+r,0);
-function costText(w){if(!w.wage)return "";return `Superhrubá mzda ${eur(superGrossMonth(w))} / mes. · náklad ${eur(workerRate(w))} / hod.`}
+function costText(w){if(!w.wage)return "";const mh=monthHours(w);return `Superhrubá mzda ${eur(superGrossMonth(w))} / mes.${mh!==HOURS_PER_MONTH?` (úväzok ${nf1(mh)} h mesačne)`:""} · náklad ${eur(workerRate(w))} / hod.`}
 function wageText(w){if(!w.wage)return "–";return w.wageType==="month"?`${eur(+w.wage)} / mes.`:`${eur(+w.wage)} / hod.`}
 function fullName(w){return [w.firstName,w.lastName].filter(Boolean).join(" ")||w.name||""}
 function migrateWorkers(){S.workers.forEach(w=>{if(w.firstName==null){const parts=String(w.name||"").trim().split(/\s+/);w.firstName=parts.shift()||"";w.lastName=parts.join(" ");
@@ -6921,7 +6927,7 @@ function employeeForm(w){
         <label><input type="radio" name="eWageType" value="month" ${wt==="month"?"checked":""}><span>Mesačná</span></label></div>
       <label><span data-wt="hour" ${wt==="hour"?"":"hidden"}>Hodinová mzda €</span><span data-wt="month" ${wt==="month"?"":"hidden"}>Mesačná mzda €</span><input id="eWage" type="number" min="0" step="0.01" value="${w.wage||""}"></label>
       <div class="costbox" id="eCost">${costText(w)||"Po zadaní mzdy sa tu zobrazí superhrubá mzda a náklad na hodinu."}</div>
-      <span class="hint">Náklad pre stavbu = superhrubá mzda (hrubá mzda + odvody zamestnávateľa ${String(contribPct()).replace(".",",")} % podľa sadzieb ${EMPLOYER_CONTRIB.year}) prepočítaná na hodinu: ÷ ${String(HOURS_PER_MONTH).replace(".",",")} h mesačne.</span>
+      <span class="hint">Náklad pre stavbu = superhrubá mzda (hrubá mzda + odvody zamestnávateľa ${String(contribPct()).replace(".",",")} % podľa sadzieb ${EMPLOYER_CONTRIB.year}) prepočítaná na hodinu podľa úväzku – pri plnom úväzku 40 h týždenne ÷ ${String(HOURS_PER_MONTH).replace(".",",")} h mesačne.</span>
     </fieldset>
     ${payFormHTML(w)}
     <fieldset class="modes"><legend>Veľkosti pracovného odevu</legend>
@@ -6942,7 +6948,7 @@ function employeeForm(w){
     <div class="row"><button class="btn primary" type="submit">${isNew?"Pridať zamestnanca":"Uložiť zmeny"}</button><button type="button" class="btn ghost" data-a="empClose">Zrušiť</button>${!isNew&&w.id&&canEdit("personal")?`<span style="margin-left:auto">${workerDelBtn(w)}</span>`:""}</div>
     ${!isNew&&w.id?workerDelBox(w):""}
   </form>`}
-function updCost(){const el=$("#eCost");if(!el)return;const w={wageType:document.querySelector('input[name="eWageType"]:checked')?.value,wage:+($("#eWage")?.value||0)};
+function updCost(){const el=$("#eCost");if(!el)return;const w={wageType:document.querySelector('input[name="eWageType"]:checked')?.value,wage:+($("#eWage")?.value||0),weekHours:+($("#pWeek")?.value||0)||40};
   el.textContent=costText(w)||"Po zadaní mzdy sa tu zobrazí superhrubá mzda a náklad na hodinu."}
 function readEmployeeForm(){
   const v=id=>($("#"+id)?.value||"").trim();
@@ -7947,7 +7953,7 @@ document.addEventListener("change",ev=>{
 document.addEventListener("input",ev=>{
   if(ev.target.dataset&&ev.target.dataset.q){const p=projCtx(),inv=p.invoices.find(x=>x.id===view.invId);if(!inv||frozen(inv)||!can(p,"inv.edit"))return;
     const v=parseQty(ev.target.value);ev.target.classList.toggle("err-in",v===null);if(v===null)return;if(v)inv.qty[ev.target.dataset.q]=v;else delete inv.qty[ev.target.dataset.q];save();refreshInvNumbers(p,inv);return}
-  if(ev.target.id==="eWage"){updCost();return}
+  if(ev.target.id==="eWage"||ev.target.id==="pWeek"){updCost();return}
   if(ev.target.id==="empSearch"){view.empQ=ev.target.value;const pos=ev.target.selectionStart;render();const el=$("#empSearch");el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}return}
   if(ev.target.id==="budgetSearch"){view.bq=ev.target.value;const pos=ev.target.selectionStart;render();const el=$("#budgetSearch");el.focus();try{el.setSelectionRange(pos,pos)}catch(e){}return}const gb=ev.target.closest("[data-grp]");if(gb&&view.draft){readDraft();const g=gb.dataset.grp,t=$("#tot_"+g);if(t)t.textContent=h(grpHours(g,view.draft[g]))}});
 document.addEventListener("submit",ev=>{
