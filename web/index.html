@@ -2924,11 +2924,11 @@ function SEED_ATT(){const A={},ym="2026-10",days=monthDays(ym).filter(d=>!isWeek
    Sadzby SR pre rok 2026. */
 const PAY={year:2026,minWage:915,minHour:5.259,maxBase:16764,
   ee:[["Nemocenské",1.4],["Starobné",4],["Invalidné",3],["V nezamestnanosti",1]],zpEE:5,zpEEztp:2.5,zpER:11,zpERztp:5.5,
-  er:[["Nemocenské",1.4],["Starobné",14],["Invalidné",3],["V nezamestnanosti",0.5],["Podpora v čase skrátenej práce",0.5],["Garančné",0.25],["Rezervný fond solidarity",4.75]],erUncapped:[["Úrazové",0.8]],
-  nczd:497.23,nczdLim:2173.59,nczdK:1221.76,bands:[[3665.28,19],[5029.10,25],[6250.86,30],[Infinity,35]],
+  er:[["Nemocenské",1.4],["Starobné",14],["Invalidné",3],["V nezamestnanosti a podpora v čase skrátenej práce",1],["Garančné",0.25],["Rezervný fond solidarity",4.75]],erUncapped:[["Úrazové",0.8]],
+  zivMin:284.13,nczd:497.23,nczdLim:2173.59,nczdK:1221.76,bands:[[3665.28,19],[5029.10,25],[6250.86,30],[Infinity,35]],
   bonusU15:100,bonusU18:50,bonusLim:[0,29,36,43,50,57,64],bonusRed:2286,
   supSat:0.5,supSun:1,supHol:1,supOver:0.25,vacBase:20,vacPlus:25,priepDays:7,
-  source:"Sadzby 2026: poistné podľa zákona č. 461/2003 Z. z. a č. 580/2004 Z. z. (max. vymeriavací základ 16 764 €), daň podľa zákona č. 595/2003 Z. z. (19/25/30/35 %, NČZD 497,23 €/mes.), minimálna mzda 915 €, Zákonník práce (dovolenka, priepustky, príplatky)."};
+  source:"Sadzby 2026: poistné podľa zákona č. 461/2003 Z. z. a č. 580/2004 Z. z. (max. vymeriavací základ 16 764 €), daň podľa zákona č. 595/2003 Z. z. (19/25/30/35 %, NČZD 497,23 €/mes.), minimálna mzda 915 €, minimálny preddavok na zdravotné poistenie zo životného minima 284,13 € (16 % = 45,45 €), poistné zaokrúhlené na eurocent nadol, Zákonník práce (dovolenka, priepustky, príplatky)."};
 const r2=x=>Math.round((+x||0)*100+1e-9)/100,fl2=x=>Math.floor((+x||0)*100+1e-7)/100;
 const payProf=wid=>((S.payProf||{})[wid])||{};
 const payMonKey=(ym,wid)=>ym+"_"+wid;
@@ -2997,7 +2997,7 @@ function payCalc(w,ym){const P=payProf(w.id),M=payMon(ym,w.id),A=payAtt(w,ym),dh
   const rateH=hourly?wage:(A.fondDaysFull?wage/(A.fondDaysFull*dh):0);
   const L=[];const add=(l,v,info)=>{v=r2(v);if(v)L.push([l,v,info||""]);return v};
   let base=0;
-  if(hourly){base=add("Mzda za odpracované hodiny",(A.hWork+A.hOver+A.hSat+A.hSun+A.hHol)*wage,`${nf1(A.hTotal)} h × ${eur(wage)}`);
+  if(hourly){base=add(isDohoda(P)?`Odmena – ${PAY_CONTRACTS.find(x=>x[0]===P.contract)[1].toLowerCase()}`:"Mzda za odpracované hodiny",(A.hWork+A.hOver+A.hSat+A.hSun+A.hHol)*wage,`${nf1(A.hTotal)} h × ${eur(wage)}`);
     add("Náhrada mzdy – dovolenka",A.hD*rateH,`${nf1(A.hD)} h`);add("Náhrada mzdy – sviatok",A.holWork*dh*rateH,A.holWork?`${A.holWork} d`:"");
     add("Náhrada mzdy – priepustky a prekážky",(A.hP+A.hPS+A.hPI)*rateH,`${nf1(A.hP+A.hPS+A.hPI)} h`);add("Náhradné voľno",A.dNV*dh*rateH,A.dNV?`${nf1(A.dNV)} d`:"")}
   else{const paid=Math.max(0,A.fondDays-A.unpaidDays);base=add("Mesačná mzda",A.fondDaysFull?wage*paid/A.fondDaysFull:0,paid<A.fondDaysFull?`${paid} z ${A.fondDaysFull} prac. dní`:"");
@@ -3012,7 +3012,15 @@ function payCalc(w,ym){const P=payProf(w.id),M=payMon(ym,w.id),A=payAtt(w,ym),dh
   const monthEq=hourly?wage*dh*5*52/12:wage,dvz=+P.dvz||r2(monthEq*12/365);let pnPay=0,pn13=0,pn410=0;
   A.pn.forEach(d=>{const k=pnIndex(w.id,d);if(k<=3){pn13++;pnPay+=dvz*0.25}else if(k<=10){pn410++;pnPay+=dvz*0.55}});pnPay=r2(pnPay);
   const ztp=!!P.ztp,vz=gross,vzS=Math.min(vz,PAY.maxBase);
-  const ee=PAY.ee.map(([l,p])=>[l,r2(vzS*p/100)]);ee.push(["Zdravotné",r2(vz*(ztp?PAY.zpEEztp:PAY.zpEE)/100)]);
+  /* sociálne poistné sa zaokrúhľuje na eurocent nadol (§ 128 zákona č. 461/2003 Z. z.) */
+  const ee=PAY.ee.map(([l,p])=>[l,fl2(vzS*p/100)]);
+  /* zdravotné: zamestnanec platí spolu so zamestnávateľom aspoň minimálny preddavok zo životného minima (5 % + 11 %),
+     rozdiel doplatí zamestnanec – neplatí pre poistenca štátu (študent, dôchodca, ZŤP…); pomerne podľa dní trvania pomeru v mesiaci */
+  const zpER=r2(vz*(ztp?PAY.zpERztp:PAY.zpER)/100);let zpEE=r2(vz*(ztp?PAY.zpEEztp:PAY.zpEE)/100),zpMin=0;
+  if(!ztp&&!P.stateIns&&vz>0){const md=monthDays(ym),dd=md.filter(d=>(!P.start||P.start<=d)&&(!P.end||P.end>=d)).length,
+      mn=fl2(PAY.zivMin*PAY.zpEE/100)+fl2(PAY.zivMin*PAY.zpER/100);zpMin=r2(mn*dd/md.length);
+    if(zpEE+zpER<zpMin-0.004){zpEE=r2(zpMin-zpER);warn.push(`Zdravotné poistenie zamestnanca je doplatené do minimálneho preddavku ${eur(zpMin)} (16 % zo životného minima ${eur(PAY.zivMin)}). Ak je zamestnanec poistencom štátu (študent, dôchodca…), zaškrtni to v jeho karte.`)}}
+  ee.push(["Zdravotné",zpEE]);
   const eeSum=r2(ee.reduce((s,x)=>s+x[1],0));
   const zd=fl2(gross+pnPay-eeSum);
   const nczd=P.nczd===false?0:(zd<=PAY.nczdLim?PAY.nczd:Math.max(0,r2(PAY.nczdK-zd/3)));
@@ -3025,14 +3033,14 @@ function payCalc(w,ym){const P=payProf(w.id),M=payMon(ym,w.id),A=payAtt(w,ym),dh
     bonus=fl2(Math.min(raw,zd*PAY.bonusLim[Math.min(6,kids)]/100))}
   const net=r2(gross+pnPay-eeSum-tax+bonus);
   const nontax=+M.nontax||0,deduct=+M.deduct||0,advance=+M.advance||0,payout=r2(net+nontax-deduct-advance);
-  const er=PAY.er.map(([l,p])=>[l,r2(vzS*p/100)]).concat(PAY.erUncapped.map(([l,p])=>[l,r2(vz*p/100)]));er.push(["Zdravotné",r2(vz*(ztp?PAY.zpERztp:PAY.zpER)/100)]);
+  const er=PAY.er.map(([l,p])=>[l,fl2(vzS*p/100)]).concat(PAY.erUncapped.map(([l,p])=>[l,fl2(vz*p/100)]));er.push(["Zdravotné",zpER]);
   const erSum=r2(er.reduce((s,x)=>s+x[1],0)),cost=r2(gross+pnPay+erSum);
   if(!wage)warn.push("Chýba mzda v karte zamestnanca.");
   if(hourly&&wage&&wage<PAY.minHour-0.0005)warn.push(`Hodinová mzda je nižšia ako minimálna (${eur(PAY.minHour)} / h).`);
   if(!hourly&&wage&&wage<PAY.minWage*((+P.weekHours||40)/40)-0.005)warn.push(`Mesačná mzda je nižšia ako minimálna mzda (${eur(PAY.minWage)} pri plnom úväzku).`);
   if(A.empty.length)warn.push(`Nevyplnená dochádzka: ${A.empty.length} prac. dní (${ranges(A.empty)}).`);
   if(gross+pnPay>0&&A.pn.length>0&&!P.dvz)warn.push("Náhrada PN je odhad z mzdy – presný denný vymeriavací základ určí účtovníčka (môžeš ho zadať v karte zamestnanca).");
-  return {P,M,A,L,gross,pnPay,pn13,pn410,dvz,ee,eeSum,zd,nczd,tb,tax,bonus,kids,net,nontax,deduct,advance,payout,er,erSum,cost,rateH,warn}}
+  return {P,M,A,L,zpMin,gross,pnPay,pn13,pn410,dvz,ee,eeSum,zd,nczd,tb,tax,bonus,kids,net,nontax,deduct,advance,payout,er,erSum,cost,rateH,warn}}
 
 /* poznámky pre účtovníčku (obdobia PN, OČR, …) */
 function payNotes(C){const A=C.A,n=[];if(A.pn.length)n.push(`PN ${ranges(A.pn)}`);if(A.ocr.length)n.push(`OČR ${ranges(A.ocr)}`);if(A.npv.length)n.push(`NV bez náhrady ${ranges(A.npv)}`);
@@ -3072,8 +3080,8 @@ function payDetailHTML(w,ym,c,ed){const A=c.A,Y=+ym.slice(0,4),end=monthDays(ym)
     ${c.warn.map(x=>`<div class="warnbox">⚠ ${esc(x)}</div>`).join("")}
     <div class="paygrid">
       <div class="stack"><b>Dochádzka</b>${att.filter(([l,v],i)=>i<2||!/^0 [hd]/.test(v)).map(([l,v])=>kv(l,v)).join("")}
-        <b style="margin-top:8px">Dovolenka ${Y}</b>${kv("Nárok za rok",`${nf1(v.ent)} d${v.months<12?` (${v.months}/12)`:""}`)}${kv("Prenesená z minulého roka",`${nf1(v.carry)} d`)}${kv("Vyčerpaná do konca mesiaca",`${nf1(v.used)} d`)}${kv("Zostatok",`${nf1(v.left)} d`,"tot")}
-        <b style="margin-top:8px">Priepustky ${Y} (nárok ${PAY.priepDays} dní = ${nf1(pr.lim)} h)</b>${kv("Lekár – vyčerpané / zostáva",`${nf1(pr.p)} h / ${nf1(pr.pLeft)} h`)}${kv("Sprevádzanie – vyčerpané / zostáva",`${nf1(pr.ps)} h / ${nf1(pr.psLeft)} h`)}</div>
+        ${isDohoda(c.P)?`<div class="muted" style="font-size:13px;margin-top:8px">${PAY_CONTRACTS.find(x=>x[0]===c.P.contract)[1]} – bez nároku na dovolenku a priepustky.</div>`:`<b style="margin-top:8px">Dovolenka ${Y}</b>${kv("Nárok za rok",`${nf1(v.ent)} d${v.months<12?` (${v.months}/12)`:""}`)}${kv("Prenesená z minulého roka",`${nf1(v.carry)} d`)}${kv("Vyčerpaná do konca mesiaca",`${nf1(v.used)} d`)}${kv("Zostatok",`${nf1(v.left)} d`,"tot")}
+        <b style="margin-top:8px">Priepustky ${Y} (nárok ${PAY.priepDays} dní = ${nf1(pr.lim)} h)</b>${kv("Lekár – vyčerpané / zostáva",`${nf1(pr.p)} h / ${nf1(pr.pLeft)} h`)}${kv("Sprevádzanie – vyčerpané / zostáva",`${nf1(pr.ps)} h / ${nf1(pr.psLeft)} h`)}`}</div>
       <div class="stack"><b>Mzda – orientačný výpočet</b>
         ${c.L.map(([l,x,i])=>kv(`${l}${i?` <small class="muted">${esc(i)}</small>`:""}`,eur(x))).join("")}
         ${kv("Hrubá mzda",eur(c.gross),"tot")}
@@ -3125,6 +3133,8 @@ const uvHint=(mo,v)=>{v=+v||0;if(!v)return "";return mo?`= ${nf1(Math.round(uvWe
 document.addEventListener("change",ev=>{const t=ev.target;if(t.id!=="pUvMode")return;const i=$("#pWeek");if(!i)return;const v=+i.value||0,mo=t.value==="month";
   if(v)i.value=mo?uvMonth(v):Math.round(uvWeek(v)*100)/100;i.max=mo?208:48;const h=$("#pUvHint");if(h)h.textContent=uvHint(mo,i.value);if(typeof updCost==="function")updCost()});
 document.addEventListener("input",ev=>{if(ev.target.id!=="pWeek")return;const h=$("#pUvHint");if(h)h.textContent=uvHint($("#pUvMode")?.value==="month",ev.target.value)});
+const PAY_CONTRACTS=[["pp","Pracovný pomer"],["dopc","Dohoda o pracovnej činnosti"],["dovp","Dohoda o vykonaní práce"]];
+const isDohoda=P=>P&&(P.contract==="dopc"||P.contract==="dovp");
 function payFormHTML(w){const P=w.id?payProf(w.id):{},I=P.init||{};
   return `<fieldset class="modes" id="payBox"><legend>Mzdové údaje</legend>
     <div class="grid3">${(()=>{const mo=P.uvMode==="month",val=mo?(P.monthHours||uvMonth(P.weekHours||40)):(P.weekHours||40);
@@ -3133,11 +3143,13 @@ function payFormHTML(w){const P=w.id?payProf(w.id):{},I=P.init||{};
     <div class="grid3"><label>Rok narodenia<input type="number" id="pBirth" min="1940" max="2015" value="${esc(P.birthYear)}" placeholder="pre nárok na 25 dní dovolenky"></label>
       <label>Zmluvný nárok na dovolenku (dni)<input type="number" id="pVacDays" min="20" max="40" step="0.5" value="${esc(P.vacDays)}" placeholder="ak je vyšší ako zákonný"></label>
       <label>Denný vymeriavací základ pre PN €<input type="number" id="pDvz" min="0" step="0.0001" value="${esc(P.dvz)}" placeholder="od účtovníčky (inak odhad)"></label></div>
-    <div class="grid3"><label>Zdravotná poisťovňa<input id="pHi" list="hiList" value="${esc(P.hi)}" placeholder="vyber alebo napíš"></label><span></span><span></span></div>
+    <div class="grid3"><label>Zdravotná poisťovňa<input id="pHi" list="hiList" value="${esc(P.hi)}" placeholder="vyber alebo napíš"></label>
+      <label>Druh pomeru<select id="pContract">${PAY_CONTRACTS.map(([k,l])=>`<option value="${k}" ${(P.contract||"pp")===k?"selected":""}>${l}</option>`).join("")}</select></label><span></span></div>
     <datalist id="hiList">${HI_LIST.map(x=>`<option value="${x}">`).join("")}</datalist>
     <label class="chk"><input type="checkbox" id="pChildCare" ${P.childCare?"checked":""}> Trvale sa stará o dieťa (nárok 25 dní dovolenky)</label>
     <label class="chk"><input type="checkbox" id="pNczd" ${P.nczd===false?"":"checked"}> Podpísané vyhlásenie na zdanenie (nezdaniteľná časť a daňový bonus)</label>
     <label class="chk"><input type="checkbox" id="pZtp" ${P.ztp?"checked":""}> Zamestnanec so zdravotným postihnutím (polovičné zdravotné poistenie)</label>
+    <label class="chk"><input type="checkbox" id="pStateIns" ${P.stateIns?"checked":""}> Poistenec štátu – študent, dôchodca, rodič na materskej… (neplatí minimálny preddavok na zdravotné poistenie)</label>
     <div class="stack"><b style="font-size:14px">Deti na daňový bonus</b><div class="stack" id="childBox">${(P.children||[]).map(childRow).join("")}</div>
       <button type="button" class="btn small" data-a="addChild" style="align-self:flex-start">+ Pridať dieťa</button></div>
     <div class="stack"><b style="font-size:14px">Počiatočné stavy pri prechode do systému</b>
@@ -3150,7 +3162,7 @@ function payFormHTML(w){const P=w.id?payProf(w.id):{},I=P.init||{};
   </fieldset>`}
 function readPayForm(){if(!$("#payBox"))return null;const v=id=>($("#"+id)?.value||"").trim(),n=id=>v(id)===""?undefined:+v(id),c=id=>!!$("#"+id)?.checked;
   const uvMo=v("pUvMode")==="month",uvX=n("pWeek");
-  const P={weekHours:uvMo&&uvX?uvWeek(uvX):(uvX||40),...(uvMo&&uvX?{uvMode:"month",monthHours:uvX}:{}),start:v("pStart")||undefined,end:v("pEnd")||undefined,birthYear:n("pBirth"),vacDays:n("pVacDays"),dvz:n("pDvz"),childCare:c("pChildCare"),nczd:c("pNczd"),ztp:c("pZtp"),hi:v("pHi")||undefined,
+  const P={weekHours:uvMo&&uvX?uvWeek(uvX):(uvX||40),...(uvMo&&uvX?{uvMode:"month",monthHours:uvX}:{}),start:v("pStart")||undefined,end:v("pEnd")||undefined,birthYear:n("pBirth"),vacDays:n("pVacDays"),dvz:n("pDvz"),childCare:c("pChildCare"),nczd:c("pNczd"),ztp:c("pZtp"),stateIns:c("pStateIns")||undefined,contract:v("pContract")&&v("pContract")!=="pp"?v("pContract"):undefined,hi:v("pHi")||undefined,
     children:[...document.querySelectorAll("#childBox .chrow")].map(r=>({name:r.querySelector('[data-c="name"]').value.trim(),born:r.querySelector('[data-c="born"]').value})).filter(x=>x.born||x.name),
     init:{asOf:v("iAsOf")||undefined,carry:n("iCarry"),used:n("iUsed"),pl:n("iPl"),ps:n("iPs")}};
   if(P.start&&P.end&&P.end<P.start)return {error:"Dátum ukončenia je skôr ako dátum nástupu."};
@@ -3168,6 +3180,7 @@ function payslipBlock(doc,w,ym,c,y0){const A=c.A,Y=+ym.slice(0,4),end=monthDays(
     ["Dovolenka",`${nf1(A.dD)} d`],["PN / OČR",`${A.pnCal} / ${A.dOCR} d`],["Lekár / sprevádzanie / iné",`${nf1(A.hP)} / ${nf1(A.hPS)} / ${nf1(A.hPI)} h`],["Náhr. voľno / neplat. voľno / abs.",`${nf1(A.dNV)} / ${A.dNPV} / ${A.dA} d`],
     [{content:`Dovolenka ${Y}`,styles:{fontStyle:"bold"}},""],["Nárok + prenos",`${nf1(v.ent)} + ${nf1(v.carry)} d`],["Vyčerpané",`${nf1(v.used)} d`],[{content:"Zostatok",styles:{fontStyle:"bold"}},{content:`${nf1(v.left)} d`,styles:{fontStyle:"bold"}}],
     ["Priepustky lekár zost.",`${nf1(pr.pLeft)} h`],["Sprevádzanie zost.",`${nf1(pr.psLeft)} h`]];
+  if(isDohoda(c.P)){left.splice(left.findIndex(r=>r[0]&&r[0].content===`Dovolenka ${Y}`));left.push(["Druh pomeru",PAY_CONTRACTS.find(x=>x[0]===c.P.contract)[1]])}
   const b=x=>({content:x,styles:{fontStyle:"bold"}});
   const right=[...c.L.map(([l,x])=>[l,eur(x)]),[b("Hrubá mzda"),b(eur(c.gross))]];
   if(c.pnPay)right.push([`Náhrada PN (${c.pn13}×25 % + ${c.pn410}×55 %)`,eur(c.pnPay)]);
